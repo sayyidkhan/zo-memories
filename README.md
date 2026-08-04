@@ -7,6 +7,8 @@ Zo Moments is a private, mobile-first memory space for couples, families, friend
 ## MVP
 
 - Email and password accounts with secure cookie sessions
+- Private profile-picture upload and account settings
+- Application admin console for user roles and account suspension
 - Private shared spaces and role-based membership
 - Email-bound invitations that activate when the invited person signs in
 - Photo, video, audio, PDF, and document uploads
@@ -49,6 +51,8 @@ This runs TypeScript checks for every workspace, API integration tests, and the 
 ## Production
 
 Production uses `FileSystemBlobStore` with data outside the repository in the sibling `zo-memories-data` directory. The app runs as an internal Zo process service and is exposed at `/moments` by the public Zo Router gateway.
+
+Application administrators are explicitly bootstrapped through `ADMIN_EMAILS`. They can manage account access and roles, but do not bypass shared-space membership or gain access to private memories.
 
 The server refuses to start with in-memory storage in production. S3 remains available as an optional storage driver. See [Deployment](docs/DEPLOYMENT.md) for the complete Zo setup.
 

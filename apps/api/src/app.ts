@@ -4,8 +4,11 @@ import {
   createAlbumSchema,
   createSpaceSchema,
   inviteMemberSchema,
+  updateAccountStatusSchema,
+  updateAdminRoleSchema,
   updateProfileSchema,
   type Album,
+  type Avatar,
   type Invitation,
   type Member,
   type MomentObject,
@@ -19,6 +22,18 @@ import { secureHeaders } from "hono/secure-headers";
 import { createAuth, type AuthSession } from "./auth";
 import { createRepositories, type Repositories } from "./repositories";
 import type { BlobStore } from "./storage/blob-store";
+import { JsonCollection } from "./storage/json-collection";
+
+interface AuthUserRecord {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  role?: string | null;
+  banned?: boolean | null;
+  banReason?: string | null;
+  createdAt: string | Date;
+}
 
 interface AppBindings {
   Variables: {
@@ -38,6 +53,51 @@ function now(): string {
 
 function id(): string {
   return crypto.randomUUID();
+}
+
+function adminEmails(): Set<string> {
+  return new Set(
+    (process.env.ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+function isBootstrapAdmin(email: string): boolean {
+  return adminEmails().has(email.toLowerCase());
+}
+
+async function promoteBootstrapAdmin(
+  users: JsonCollection<AuthUserRecord>,
+  user: AuthSession["user"],
+): Promise<boolean> {
+  if (!isBootstrapAdmin(user.email) || user.role === "admin") return false;
+  const record = await users.get(user.id);
+  if (!record) return false;
+  await users.put({ ...record, role: "admin" });
+  return true;
+}
+
+function requireAdmin(user: AuthSession["user"]): void {
+  if (user.role !== "admin") throw new HTTPException(403, { message: "Administrator access is required" });
+}
+
+function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) {
+    return { mimeType: "image/png", extension: "png" };
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { mimeType: "image/jpeg", extension: "jpg" };
+  }
+  if (bytes.length >= 12 && new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP") {
+    return { mimeType: "image/webp", extension: "webp" };
+  }
+  if (bytes.length >= 6) {
+    const header = new TextDecoder().decode(bytes.slice(0, 6));
+    if (header === "GIF87a" || header === "GIF89a") return { mimeType: "image/gif", extension: "gif" };
+  }
+  return null;
 }
 
 function objectKind(mimeType: string): ObjectKind {
@@ -157,6 +217,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   const app = new Hono<AppBindings>();
   const repositories = createRepositories(store);
   const auth = createAuth(store);
+  const authUsers = new JsonCollection<AuthUserRecord>(store, "auth/user");
 
   if (log) app.use("*", logger());
   app.use("*", secureHeaders());
@@ -169,12 +230,23 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   app.post("/auth/register", (c) => forwardAuth(c.req.raw, "/auth/sign-up/email", auth));
   app.post("/auth/login", (c) => forwardAuth(c.req.raw, "/auth/sign-in/email", auth));
   app.post("/auth/logout", (c) => forwardAuth(c.req.raw, "/auth/sign-out", auth));
-  app.get("/auth/me", (c) => forwardAuth(c.req.raw, "/auth/get-session", auth));
+  app.get("/auth/me", async (c) => {
+    let session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session && await promoteBootstrapAdmin(authUsers, session.user)) {
+      session = await auth.api.getSession({ headers: c.req.raw.headers });
+    }
+    if (!session) throw new HTTPException(401, { message: "Sign in to continue" });
+    return c.json(session);
+  });
   app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
 
   app.use("/api/*", async (c, next) => {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    let session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (!session) throw new HTTPException(401, { message: "Sign in to continue" });
+    if (await promoteBootstrapAdmin(authUsers, session.user)) {
+      session = await auth.api.getSession({ headers: c.req.raw.headers });
+      if (!session) throw new HTTPException(401, { message: "Sign in to continue" });
+    }
     c.set("user", session.user);
     c.set("session", session.session);
     await acceptPendingInvitations(repositories, session.user);
@@ -197,6 +269,124 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     return forwardAuthJson(c.req.raw, "/auth/change-password", auth, {
       ...input,
       revokeOtherSessions: true,
+    });
+  });
+
+  app.post("/api/account/avatar", async (c) => {
+    const user = c.get("user")!;
+    const body = await c.req.parseBody();
+    const file = body.file;
+    if (!(file instanceof File)) throw new HTTPException(400, { message: "Choose an image to upload" });
+    if (file.size <= 0) throw new HTTPException(400, { message: "The selected image is empty" });
+    if (file.size > 5 * 1024 * 1024) throw new HTTPException(413, { message: "Profile pictures are limited to 5 MB" });
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const image = detectedImage(bytes);
+    if (!image) throw new HTTPException(415, { message: "Use a PNG, JPEG, WebP, or GIF image" });
+
+    const previous = await repositories.avatars.get(user.id);
+    const version = id();
+    const avatar: Avatar = {
+      id: user.id,
+      userId: user.id,
+      storageKey: `zo-moments/profile-images/${user.id}/${version}.${image.extension}`,
+      mimeType: image.mimeType,
+      size: file.size,
+      updatedAt: now(),
+    };
+    await store.put(avatar.storageKey, bytes, { contentType: avatar.mimeType });
+    const response = await forwardAuthJson(c.req.raw, "/auth/update-user", auth, { image: version });
+    if (!response.ok) {
+      await store.delete(avatar.storageKey);
+      return response;
+    }
+    await repositories.avatars.put(avatar);
+    if (previous) await store.delete(previous.storageKey);
+    return c.json({ image: version });
+  });
+
+  app.delete("/api/account/avatar", async (c) => {
+    const user = c.get("user")!;
+    const avatar = await repositories.avatars.get(user.id);
+    const response = await forwardAuthJson(c.req.raw, "/auth/update-user", auth, { image: null });
+    if (!response.ok) return response;
+    if (avatar) await store.delete(avatar.storageKey);
+    await repositories.avatars.delete(user.id);
+    return c.body(null, 204);
+  });
+
+  app.get("/api/users/:userId/avatar", async (c) => {
+    const avatar = await repositories.avatars.get(c.req.param("userId"));
+    if (!avatar) throw new HTTPException(404, { message: "Profile picture not found" });
+    const blob = await store.get(avatar.storageKey);
+    if (!blob) throw new HTTPException(404, { message: "Stored profile picture not found" });
+    return new Response(blob, {
+      headers: {
+        "Cache-Control": "private, max-age=3600",
+        "Content-Length": String(avatar.size),
+        "Content-Type": avatar.mimeType,
+      },
+    });
+  });
+
+  app.get("/api/admin/users", async (c) => {
+    const currentUser = c.get("user")!;
+    requireAdmin(currentUser);
+    const search = c.req.query("search")?.trim().toLowerCase() ?? "";
+    const [users, memberships] = await Promise.all([authUsers.list(), repositories.members.list()]);
+    const spaceCounts = new Map<string, number>();
+    for (const membership of memberships) {
+      spaceCounts.set(membership.userId, (spaceCounts.get(membership.userId) ?? 0) + 1);
+    }
+    const results = users
+      .filter((user) => !search || `${user.name} ${user.email}`.toLowerCase().includes(search))
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      .slice(0, 200)
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image ?? null,
+        role: user.role === "admin" ? "admin" : "user",
+        status: user.banned ? "suspended" : "active",
+        banReason: user.banReason ?? null,
+        createdAt: new Date(user.createdAt).toISOString(),
+        spaceCount: spaceCounts.get(user.id) ?? 0,
+      }));
+    return c.json({ users: results, total: results.length });
+  });
+
+  app.post("/api/admin/users/:userId/role", zValidator("json", updateAdminRoleSchema), async (c) => {
+    const currentUser = c.get("user")!;
+    requireAdmin(currentUser);
+    const targetId = c.req.param("userId");
+    const { role } = c.req.valid("json");
+    if (targetId === currentUser.id) throw new HTTPException(400, { message: "You cannot change your own administrator role" });
+    const target = await authUsers.get(targetId);
+    if (!target) throw new HTTPException(404, { message: "User not found" });
+    if (role !== "admin" && isBootstrapAdmin(target.email)) {
+      throw new HTTPException(400, { message: "A configured bootstrap administrator cannot be demoted" });
+    }
+    return forwardAuthJson(c.req.raw, "/auth/admin/set-role", auth, { userId: targetId, role });
+  });
+
+  app.post("/api/admin/users/:userId/status", zValidator("json", updateAccountStatusSchema), async (c) => {
+    const currentUser = c.get("user")!;
+    requireAdmin(currentUser);
+    const targetId = c.req.param("userId");
+    const input = c.req.valid("json");
+    if (targetId === currentUser.id) throw new HTTPException(400, { message: "You cannot suspend your own account" });
+    const target = await authUsers.get(targetId);
+    if (!target) throw new HTTPException(404, { message: "User not found" });
+    if (input.status === "suspended" && isBootstrapAdmin(target.email)) {
+      throw new HTTPException(400, { message: "A configured bootstrap administrator cannot be suspended" });
+    }
+    if (input.status === "active") {
+      return forwardAuthJson(c.req.raw, "/auth/admin/unban-user", auth, { userId: targetId });
+    }
+    return forwardAuthJson(c.req.raw, "/auth/admin/ban-user", auth, {
+      userId: targetId,
+      banReason: input.reason || "Suspended by an administrator",
     });
   });
 

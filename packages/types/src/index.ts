@@ -7,6 +7,28 @@ export const userSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   image: z.string().nullable().optional(),
+  role: z.enum(["user", "admin"]).optional(),
+  banned: z.boolean().nullable().optional(),
+});
+
+export const appRoleSchema = z.enum(["user", "admin"]);
+export const accountStatusSchema = z.enum(["active", "suspended"]);
+
+export const avatarSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  storageKey: z.string(),
+  mimeType: z.string(),
+  size: z.number().int().positive(),
+  updatedAt: isoDateSchema,
+});
+
+export const adminUserSchema = userSchema.extend({
+  role: appRoleSchema,
+  status: accountStatusSchema,
+  banReason: z.string().nullable(),
+  createdAt: isoDateSchema,
+  spaceCount: z.number().int().nonnegative(),
 });
 
 export const memberRoleSchema = z.enum(["owner", "member"]);
@@ -102,6 +124,15 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+export const updateAdminRoleSchema = z.object({
+  role: appRoleSchema,
+});
+
+export const updateAccountStatusSchema = z.object({
+  status: accountStatusSchema,
+  reason: z.string().trim().max(240).optional(),
+});
+
 export const spaceSummarySchema = spaceSchema.extend({
   role: memberRoleSchema,
   memberCount: z.number().int().nonnegative(),
@@ -123,6 +154,10 @@ export const apiErrorSchema = z.object({
 });
 
 export type User = z.infer<typeof userSchema>;
+export type AppRole = z.infer<typeof appRoleSchema>;
+export type AccountStatus = z.infer<typeof accountStatusSchema>;
+export type Avatar = z.infer<typeof avatarSchema>;
+export type AdminUser = z.infer<typeof adminUserSchema>;
 export type MemberRole = z.infer<typeof memberRoleSchema>;
 export type Space = z.infer<typeof spaceSchema>;
 export type SpaceSummary = z.infer<typeof spaceSummarySchema>;
@@ -139,3 +174,5 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type UpdateAdminRoleInput = z.infer<typeof updateAdminRoleSchema>;
+export type UpdateAccountStatusInput = z.infer<typeof updateAccountStatusSchema>;

@@ -1,4 +1,5 @@
 import type {
+  AdminUser,
   Album,
   ChangePasswordInput,
   CreateAlbumInput,
@@ -12,6 +13,8 @@ import type {
   SpaceDetail,
   SpaceSummary,
   UpdateProfileInput,
+  UpdateAccountStatusInput,
+  UpdateAdminRoleInput,
   User,
 } from "@zo-moments/types";
 
@@ -102,6 +105,40 @@ export class ZoMomentsClient {
 
   changePassword(input: ChangePasswordInput): Promise<{ token: string | null; user: User }> {
     return this.request("/api/account/password", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  uploadAvatar(file: File): Promise<{ image: string }> {
+    const body = new FormData();
+    body.set("file", file);
+    return this.request("/api/account/avatar", { method: "POST", body });
+  }
+
+  deleteAvatar(): Promise<void> {
+    return this.request("/api/account/avatar", { method: "DELETE" });
+  }
+
+  avatarUrl(userId: string, version?: string | null): string {
+    const query = version ? `?v=${encodeURIComponent(version)}` : "";
+    return `${this.baseUrl}/api/users/${encodeURIComponent(userId)}/avatar${query}`;
+  }
+
+  listAdminUsers(search = ""): Promise<{ users: AdminUser[]; total: number }> {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    return this.request(`/api/admin/users${query}`);
+  }
+
+  updateAdminRole(userId: string, input: UpdateAdminRoleInput): Promise<{ user: User }> {
+    return this.request(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  updateAccountStatus(userId: string, input: UpdateAccountStatusInput): Promise<{ user: User }> {
+    return this.request(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   }
 
   listSpaces(): Promise<{ spaces: SpaceSummary[] }> {

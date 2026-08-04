@@ -22,6 +22,7 @@ BETTER_AUTH_SECRET=<at-least-32-random-characters>
 BETTER_AUTH_URL=https://public-apps-sayyidkhan.zocomputer.io
 APP_ORIGIN=https://public-apps-sayyidkhan.zocomputer.io
 APP_BASE_PATH=/moments
+ADMIN_EMAILS=<comma-separated-initial-admin-email-addresses>
 PORT=8790
 MAX_UPLOAD_BYTES=104857600
 ```
@@ -66,10 +67,16 @@ zo-moments/
     invitations/<id>.json
     albums/<id>.json
     objects/<id>.json
+    avatars/<user-id>.json
+    auth/user/<id>.json
+      # Includes Better Auth role and suspension state
   media/<space-id>/<object-id>/<filename>
+  profile-images/<user-id>/<version>.<extension>
 ```
 
 The data directory is not served by Zo Router. Media is streamed through authenticated API routes after membership checks.
+
+`ADMIN_EMAILS` is the recovery-safe source for initial administrators. Matching signed-in accounts are promoted automatically and cannot be demoted in the Admin Console. Other administrators may be promoted or demoted in the application. Administrators can manage account access but cannot open shared spaces unless they are members.
 
 ## MVP Constraints
 

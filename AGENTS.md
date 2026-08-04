@@ -13,6 +13,8 @@
 - `packages/types` owns shared Zod schemas and domain types.
 - `packages/sdk` owns the transport client used by web and future clients.
 - Production persistence goes through `FileSystemBlobStore` into the sibling `zo-memories-data` directory on Zo's persistent server storage.
+- Better Auth's admin plugin owns application roles and suspension state. `ADMIN_EMAILS` promotes configured accounts; app admins never bypass shared-space membership.
+- Profile images are private blobs under `zo-moments/profile-images` and are streamed only through authenticated API routes.
 - Development and tests may use `MemoryBlobStore`; production rejects it. S3 remains an optional `BlobStore` driver.
 
 ## Commands
@@ -28,3 +30,5 @@
 - Only owners may invite, remove members, or delete a space.
 - Only an uploader or space owner may delete a memory.
 - Never expose storage paths or direct public object URLs.
+- Never make the first registrant an implicit administrator; bootstrap admins explicitly with `ADMIN_EMAILS`.
+- Admins cannot change their own role or suspend themselves through the application.

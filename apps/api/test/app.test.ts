@@ -7,6 +7,7 @@ process.env.STORAGE_DRIVER = "memory";
 process.env.BETTER_AUTH_SECRET = "test-secret-that-is-longer-than-thirty-two-characters";
 process.env.BETTER_AUTH_URL = "http://localhost";
 process.env.APP_ORIGIN = "http://localhost";
+process.env.ADMIN_EMAILS = "admin@example.com";
 
 class BrowserSession {
   private cookies = new Map<string, string>();
@@ -156,5 +157,88 @@ describe("Zo Moments API", () => {
       method: "POST",
       body: JSON.stringify({ email: "profile@example.com", password: "new-password-456" }),
     })).status).toBe(200);
+  });
+
+  test("uploads, serves, replaces, and removes a private profile picture", async () => {
+    const account = new BrowserSession(app);
+    expect((await account.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Avatar Person", email: "avatar@example.com", password: "password123" }),
+    })).status).toBe(200);
+
+    const invalid = new FormData();
+    invalid.set("file", new File(["not really an image"], "fake.png", { type: "image/png" }));
+    expect((await account.request("/api/account/avatar", { method: "POST", body: invalid })).status).toBe(415);
+
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+    const upload = new FormData();
+    upload.set("file", new File([png], "profile.png", { type: "image/png" }));
+    const uploaded = await account.json<{ image: string }>("/api/account/avatar", { method: "POST", body: upload });
+    expect(uploaded.response.status).toBe(200);
+
+    const me = await account.json<{ user: { id: string; image: string } }>("/auth/me");
+    expect(me.body.user.image).toBe(uploaded.body.image);
+    const content = await account.request(`/api/users/${me.body.user.id}/avatar`);
+    expect(content.status).toBe(200);
+    expect(content.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await content.arrayBuffer())).toEqual(png);
+
+    expect((await app.request(`/api/users/${me.body.user.id}/avatar`)).status).toBe(401);
+    expect((await account.request("/api/account/avatar", { method: "DELETE" })).status).toBe(204);
+    expect((await account.request(`/api/users/${me.body.user.id}/avatar`)).status).toBe(404);
+  });
+
+  test("lets administrators manage account roles and access", async () => {
+    const admin = new BrowserSession(app);
+    const managed = new BrowserSession(app);
+    expect((await admin.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Administrator", email: "admin@example.com", password: "password123" }),
+    })).status).toBe(200);
+    const adminMe = await admin.json<{ user: { id: string; role: string } }>("/auth/me");
+    expect(adminMe.body.user.role).toBe("admin");
+
+    const managedRegistration = await managed.json<{ user: { id: string } }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Managed Person", email: "managed@example.com", password: "password123" }),
+    });
+    expect(managedRegistration.response.status).toBe(200);
+    const managedId = managedRegistration.body.user.id;
+
+    expect((await owner.request("/api/admin/users")).status).toBe(403);
+    const directory = await admin.json<{ users: { id: string; email: string }[] }>("/api/admin/users?search=managed");
+    expect(directory.response.status).toBe(200);
+    expect(directory.body.users.map((user) => user.email)).toEqual(["managed@example.com"]);
+
+    const role = await admin.request(`/api/admin/users/${managedId}/role`, {
+      method: "POST",
+      body: JSON.stringify({ role: "admin" }),
+    });
+    expect(role.status).toBe(200);
+
+    const suspended = await admin.request(`/api/admin/users/${managedId}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: "suspended", reason: "Integration test" }),
+    });
+    expect(suspended.status).toBe(200);
+    expect((await managed.request("/api/spaces")).status).toBe(401);
+    expect((await managed.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "managed@example.com", password: "password123" }),
+    })).status).toBe(403);
+
+    expect((await admin.request(`/api/admin/users/${managedId}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: "active" }),
+    })).status).toBe(200);
+    expect((await managed.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "managed@example.com", password: "password123" }),
+    })).status).toBe(200);
+
+    expect((await admin.request(`/api/admin/users/${adminMe.body.user.id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: "suspended" }),
+    })).status).toBe(400);
   });
 });

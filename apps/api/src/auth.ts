@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins/admin";
 import type { BlobStore } from "./storage/blob-store";
 import { objectStoreAdapter } from "./storage/auth-adapter";
 
@@ -20,6 +21,7 @@ export function createAuth(store: BlobStore) {
       maxPasswordLength: 128,
       autoSignIn: true,
     },
+    plugins: [admin({ defaultRole: "user", adminRoles: ["admin"] })],
     advanced: {
       useSecureCookies: process.env.NODE_ENV === "production",
     },

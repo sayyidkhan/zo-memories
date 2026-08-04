@@ -1,5 +1,6 @@
 import type {
   Album,
+  Avatar,
   Invitation,
   Member,
   MomentObject,
@@ -14,6 +15,7 @@ export interface Repositories {
   invitations: JsonCollection<Invitation>;
   albums: JsonCollection<Album>;
   objects: JsonCollection<MomentObject>;
+  avatars: JsonCollection<Avatar>;
 }
 
 export function createRepositories(store: BlobStore): Repositories {
@@ -23,5 +25,6 @@ export function createRepositories(store: BlobStore): Repositories {
     invitations: new JsonCollection(store, "invitations"),
     albums: new JsonCollection(store, "albums"),
     objects: new JsonCollection(store, "objects"),
+    avatars: new JsonCollection(store, "avatars"),
   };
 }

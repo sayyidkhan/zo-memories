@@ -45,6 +45,7 @@ button { cursor: pointer; }
   }
   .modal-panel--md { max-width: 32rem; }
   .modal-panel--lg { max-width: 44rem; }
+  .modal-panel--xl { max-width: 62rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

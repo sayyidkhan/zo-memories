@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Heart, Plus, Settings2 } from "lucide-react";
+import { ChevronDown, Heart, Plus, Settings2, ShieldCheck } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { User } from "@zo-moments/types";
 import { useAppStore } from "@/lib/store";
-import { initials } from "@/lib/utils";
 import { AuthPage } from "./components/auth-page";
 import { AccountDialog } from "./components/account-dialog";
+import { AdminDialog } from "./components/admin-dialog";
 import { CreateSpaceDialog } from "./components/dialogs";
+import { ProfileAvatar } from "./components/profile-avatar";
 import { SpaceView } from "./components/space-view";
 import { Button, Spinner } from "./components/ui";
 
@@ -15,6 +16,7 @@ function AppShell({ user }: { user: User }) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const { selectedSpaceId, setSelectedSpaceId } = useAppStore();
   const spaces = useQuery({ queryKey: ["spaces"], queryFn: () => api.listSpaces() });
   const logout = useMutation({
@@ -59,8 +61,14 @@ function AppShell({ user }: { user: User }) {
         </nav>
         <button onClick={() => setCreateOpen(true)} className="mt-4 flex items-center gap-3 rounded-[18px] border border-dashed border-[#c9baa5] px-3 py-3 text-sm font-semibold text-[#647067] hover:bg-[#e5dbcc]"><span className="grid size-9 place-items-center rounded-[13px] bg-[#ded3c2]"><Plus className="size-4" /></span>New shared space</button>
         <div className="mt-auto border-t border-[#d8cdbd] pt-4">
+          {user.role === "admin" ? (
+            <button onClick={() => setAdminOpen(true)} className="mb-2 flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm font-semibold text-[#526158] transition hover:bg-[#e3d8c8]" aria-label="Open admin console">
+              <span className="grid size-9 place-items-center rounded-[13px] bg-[#d6e2d8] text-[#365044]"><ShieldCheck className="size-4" /></span>
+              Admin console
+            </button>
+          ) : null}
           <button onClick={() => setAccountOpen(true)} className="flex w-full items-center gap-3 rounded-[18px] px-2 py-2 text-left transition hover:bg-[#e3d8c8]" aria-label="Open account settings">
-            <span className="grid size-10 place-items-center rounded-full bg-[#6e8478] text-xs font-bold text-white">{initials(user.name)}</span>
+            <ProfileAvatar user={user} className="size-10" textClassName="text-xs" />
             <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.name}</strong><span className="block truncate text-[11px] text-[#847d73]">{user.email}</span></span>
             <Settings2 className="size-4 shrink-0 text-[#69746d]" />
           </button>
@@ -68,19 +76,20 @@ function AppShell({ user }: { user: User }) {
       </aside>
 
       <div className="min-w-0">
-        <header className="flex h-16 items-center justify-between border-b border-[#d8cdbd] bg-[#eee5d8] px-4 lg:hidden">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em]"><span className="grid size-9 place-items-center rounded-full bg-[#26372f] text-white"><Heart className="size-3.5" fill="currentColor" /></span>Zo Moments</div>
+        <header className="flex h-16 items-center justify-between gap-2 border-b border-[#d8cdbd] bg-[#eee5d8] px-3 sm:px-4 lg:hidden">
+          <div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.14em]"><span className="grid size-9 place-items-center rounded-full bg-[#26372f] text-white"><Heart className="size-3.5" fill="currentColor" /></span><span className="hidden min-[480px]:inline">Zo Moments</span></div>
           <div className="flex items-center gap-2">
             {spaces.data?.spaces.length ? (
               <label className="relative">
-                <select aria-label="Current shared space" value={selectedSpaceId ?? ""} onChange={(event) => setSelectedSpaceId(event.target.value)} className="h-10 max-w-40 appearance-none rounded-full bg-[#fffaf2] pl-4 pr-9 text-sm font-semibold outline-none">
+                <select aria-label="Current shared space" value={selectedSpaceId ?? ""} onChange={(event) => setSelectedSpaceId(event.target.value)} className="h-10 max-w-28 appearance-none rounded-full bg-[#fffaf2] pl-3 pr-8 text-sm font-semibold outline-none min-[480px]:max-w-40 min-[480px]:pl-4 min-[480px]:pr-9">
                   {spaces.data.spaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4" />
               </label>
             ) : null}
             <button onClick={() => setCreateOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#26372f] text-white" aria-label="Create shared space"><Plus className="size-4" /></button>
-            <button onClick={() => setAccountOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#6e8478] text-[10px] font-bold text-white" aria-label="Open account settings">{initials(user.name)}</button>
+            {user.role === "admin" ? <button onClick={() => setAdminOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#d8e3da] text-[#365044]" aria-label="Open admin console"><ShieldCheck className="size-4" /></button> : null}
+            <button onClick={() => setAccountOpen(true)} aria-label="Open account settings"><ProfileAvatar user={user} className="size-10" textClassName="text-[10px]" /></button>
           </div>
         </header>
 
@@ -98,6 +107,7 @@ function AppShell({ user }: { user: User }) {
       </div>
       <CreateSpaceDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={setSelectedSpaceId} />
       <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} user={user} onSignOut={() => logout.mutate()} signingOut={logout.isPending} />
+      {user.role === "admin" ? <AdminDialog open={adminOpen} onClose={() => setAdminOpen(false)} currentUser={user} /> : null}
     </main>
   );
 }

@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, LockKeyhole, LogOut, UserRound } from "lucide-react";
+import { Camera, KeyRound, LockKeyhole, LogOut, Trash2, UserRound } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { User } from "@zo-moments/types";
 import { toast } from "sonner";
-import { initials } from "@/lib/utils";
 import { Button, Field, Input, Modal, Spinner } from "./ui";
+import { ProfileAvatar } from "./profile-avatar";
 
 function messageFor(error: unknown): string {
   return error instanceof ZoMomentsApiError ? error.message : "Something went wrong";
@@ -32,6 +32,7 @@ export function AccountDialog({
   const passwordForm = useRef<HTMLFormElement>(null);
   const [profileError, setProfileError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [avatarError, setAvatarError] = useState("");
 
   const profile = useMutation({
     mutationFn: (name: string) => api.updateProfile({ name }),
@@ -52,6 +53,24 @@ export function AccountDialog({
       toast.success("Password changed");
     },
     onError: (error) => setPasswordError(messageFor(error)),
+  });
+
+  const avatar = useMutation({
+    mutationFn: (file: File) => api.uploadAvatar(file),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      toast.success("Profile picture updated");
+    },
+    onError: (error) => setAvatarError(messageFor(error)),
+  });
+
+  const removeAvatar = useMutation({
+    mutationFn: () => api.deleteAvatar(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      toast.success("Profile picture removed");
+    },
+    onError: (error) => setAvatarError(messageFor(error)),
   });
 
   function updateProfile(event: FormEvent<HTMLFormElement>) {
@@ -76,14 +95,34 @@ export function AccountDialog({
   return (
     <Modal open={open} onClose={onClose} title="Your account" description="Review your profile and keep your sign-in details secure.">
       <div className="mb-7 flex items-center gap-4 rounded-[22px] bg-[#eee5d8] p-4">
-        <span className="grid size-14 shrink-0 place-items-center rounded-full bg-[#6e8478] text-sm font-bold text-white">{initials(user.name)}</span>
-        <div className="min-w-0">
+        <ProfileAvatar user={user} className="size-16" textClassName="text-sm" />
+        <div className="min-w-0 flex-1">
           <strong className="block truncate text-base text-[#26372f]">{user.name}</strong>
           <span className="block truncate text-sm text-[#766f65]">{user.email}</span>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#d2c5b3] bg-[#fffaf2] px-3 text-xs font-semibold text-[#34443a] transition hover:bg-[#f5ecdf]">
+              <Camera className="size-3.5" />{avatar.isPending ? "Uploading…" : user.image ? "Change photo" : "Add photo"}
+              <input
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                disabled={avatar.isPending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  setAvatarError("");
+                  avatar.mutate(file);
+                }}
+              />
+            </label>
+            {user.image ? <Button className="h-9 px-3 text-xs" variant="ghost" onClick={() => removeAvatar.mutate()} disabled={removeAvatar.isPending}><Trash2 className="size-3.5" />Remove</Button> : null}
+          </div>
         </div>
       </div>
+      <ErrorMessage message={avatarError} />
 
-      <section>
+      <section className={avatarError ? "mt-5" : undefined}>
         <div className="mb-4 flex items-center gap-2 text-[#34443a]">
           <UserRound className="size-4" />
           <h3 className="text-sm font-bold">Profile details</h3>

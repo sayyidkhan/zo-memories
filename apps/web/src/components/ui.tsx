@@ -59,7 +59,7 @@ export function Modal({
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
 }) {
   const titleId = useId();
   useEffect(() => {
@@ -85,7 +85,7 @@ export function Modal({
         aria-labelledby={titleId}
         className={cn(
           "modal-panel overflow-x-hidden rounded-t-[30px] bg-[#fffaf2] p-5 shadow-2xl animate-in sm:rounded-[30px] sm:p-8",
-          size === "md" ? "modal-panel--md" : "modal-panel--lg",
+          size === "md" ? "modal-panel--md" : size === "lg" ? "modal-panel--lg" : "modal-panel--xl",
         )}
         onMouseDown={(event) => event.stopPropagation()}
       >
