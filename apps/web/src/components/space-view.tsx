@@ -72,7 +72,7 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
           </div>
           <label className="relative block md:w-64">
             <Search className="absolute left-4 top-3 size-4 text-[#827a70]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search moments" className="h-10 w-full rounded-full border border-[#d5c9b8] bg-[#fffaf2]/80 pl-10 pr-4 text-sm outline-none focus:border-[#718277]" />
+            <input aria-label="Search moments" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search moments" className="h-10 w-full rounded-full border border-[#d5c9b8] bg-[#fffaf2]/80 pl-10 pr-4 text-sm outline-none focus:border-[#718277]" />
           </label>
         </div>
       </div>

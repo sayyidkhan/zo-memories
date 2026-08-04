@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Heart, LogOut, Plus, Settings2 } from "lucide-react";
+import { ChevronDown, Heart, Plus, Settings2 } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { User } from "@zo-moments/types";
 import { useAppStore } from "@/lib/store";
 import { initials } from "@/lib/utils";
 import { AuthPage } from "./components/auth-page";
+import { AccountDialog } from "./components/account-dialog";
 import { CreateSpaceDialog } from "./components/dialogs";
 import { SpaceView } from "./components/space-view";
 import { Button, Spinner } from "./components/ui";
@@ -13,11 +14,15 @@ import { Button, Spinner } from "./components/ui";
 function AppShell({ user }: { user: User }) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const { selectedSpaceId, setSelectedSpaceId } = useAppStore();
   const spaces = useQuery({ queryKey: ["spaces"], queryFn: () => api.listSpaces() });
   const logout = useMutation({
     mutationFn: () => api.logout(),
-    onSuccess: () => queryClient.clear(),
+    onSuccess: () => {
+      setAccountOpen(false);
+      queryClient.clear();
+    },
   });
 
   useEffect(() => {
@@ -54,11 +59,11 @@ function AppShell({ user }: { user: User }) {
         </nav>
         <button onClick={() => setCreateOpen(true)} className="mt-4 flex items-center gap-3 rounded-[18px] border border-dashed border-[#c9baa5] px-3 py-3 text-sm font-semibold text-[#647067] hover:bg-[#e5dbcc]"><span className="grid size-9 place-items-center rounded-[13px] bg-[#ded3c2]"><Plus className="size-4" /></span>New shared space</button>
         <div className="mt-auto border-t border-[#d8cdbd] pt-4">
-          <div className="flex items-center gap-3 rounded-[18px] px-2 py-2">
+          <button onClick={() => setAccountOpen(true)} className="flex w-full items-center gap-3 rounded-[18px] px-2 py-2 text-left transition hover:bg-[#e3d8c8]" aria-label="Open account settings">
             <span className="grid size-10 place-items-center rounded-full bg-[#6e8478] text-xs font-bold text-white">{initials(user.name)}</span>
             <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.name}</strong><span className="block truncate text-[11px] text-[#847d73]">{user.email}</span></span>
-            <button onClick={() => logout.mutate()} title="Sign out" className="grid size-9 place-items-center rounded-full text-[#69746d] hover:bg-[#ddd2c2]"><LogOut className="size-4" /></button>
-          </div>
+            <Settings2 className="size-4 shrink-0 text-[#69746d]" />
+          </button>
         </div>
       </aside>
 
@@ -68,13 +73,14 @@ function AppShell({ user }: { user: User }) {
           <div className="flex items-center gap-2">
             {spaces.data?.spaces.length ? (
               <label className="relative">
-                <select value={selectedSpaceId ?? ""} onChange={(event) => setSelectedSpaceId(event.target.value)} className="h-10 max-w-40 appearance-none rounded-full bg-[#fffaf2] pl-4 pr-9 text-sm font-semibold outline-none">
+                <select aria-label="Current shared space" value={selectedSpaceId ?? ""} onChange={(event) => setSelectedSpaceId(event.target.value)} className="h-10 max-w-40 appearance-none rounded-full bg-[#fffaf2] pl-4 pr-9 text-sm font-semibold outline-none">
                   {spaces.data.spaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4" />
               </label>
             ) : null}
-            <button onClick={() => setCreateOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#26372f] text-white"><Plus className="size-4" /></button>
+            <button onClick={() => setCreateOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#26372f] text-white" aria-label="Create shared space"><Plus className="size-4" /></button>
+            <button onClick={() => setAccountOpen(true)} className="grid size-10 place-items-center rounded-full bg-[#6e8478] text-[10px] font-bold text-white" aria-label="Open account settings">{initials(user.name)}</button>
           </div>
         </header>
 
@@ -91,6 +97,7 @@ function AppShell({ user }: { user: User }) {
         )}
       </div>
       <CreateSpaceDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={setSelectedSpaceId} />
+      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} user={user} onSignOut={() => logout.mutate()} signingOut={logout.isPending} />
     </main>
   );
 }

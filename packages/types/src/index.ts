@@ -93,6 +93,15 @@ export const loginSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(128),
+  newPassword: z.string().min(8).max(128),
+});
+
 export const spaceSummarySchema = spaceSchema.extend({
   role: memberRoleSchema,
   memberCount: z.number().int().nonnegative(),
@@ -128,3 +137,5 @@ export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

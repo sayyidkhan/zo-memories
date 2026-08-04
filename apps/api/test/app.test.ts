@@ -113,4 +113,48 @@ describe("Zo Moments API", () => {
     const response = await stranger.request(`/api/spaces/${spaceId}`);
     expect(response.status).toBe(403);
   });
+
+  test("updates profile details and rotates the account password", async () => {
+    const account = new BrowserSession(app);
+    const register = await account.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Old Name", email: "profile@example.com", password: "password123" }),
+    });
+    expect(register.status).toBe(200);
+
+    const created = await account.json<{ space: { id: string } }>("/api/spaces", {
+      method: "POST",
+      body: JSON.stringify({ name: "Profile Test" }),
+    });
+    expect(created.response.status).toBe(201);
+
+    const profile = await account.request("/api/account/profile", {
+      method: "POST",
+      body: JSON.stringify({ name: "New Name" }),
+    });
+    expect(profile.status).toBe(200);
+
+    const me = await account.json<{ user: { name: string; email: string } }>("/auth/me");
+    expect(me.body.user.name).toBe("New Name");
+    expect(me.body.user.email).toBe("profile@example.com");
+
+    const detail = await account.json<{ members: { name: string }[] }>(`/api/spaces/${created.body.space.id}`);
+    expect(detail.body.members[0]?.name).toBe("New Name");
+
+    const password = await account.request("/api/account/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword: "password123", newPassword: "new-password-456" }),
+    });
+    expect(password.status).toBe(200);
+
+    expect((await account.request("/auth/logout", { method: "POST" })).status).toBe(200);
+    expect((await account.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "profile@example.com", password: "password123" }),
+    })).status).toBe(401);
+    expect((await account.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "profile@example.com", password: "new-password-456" }),
+    })).status).toBe(200);
+  });
 });

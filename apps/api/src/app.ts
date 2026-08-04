@@ -1,8 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
 import {
+  changePasswordSchema,
   createAlbumSchema,
   createSpaceSchema,
   inviteMemberSchema,
+  updateProfileSchema,
   type Album,
   type Invitation,
   type Member,
@@ -133,6 +135,24 @@ async function forwardAuth(request: Request, path: string, auth: ReturnType<type
   );
 }
 
+async function forwardAuthJson(
+  request: Request,
+  path: string,
+  auth: ReturnType<typeof createAuth>,
+  body: unknown,
+) {
+  const url = new URL(request.url);
+  url.pathname = path;
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  headers.set("content-type", "application/json");
+  return auth.handler(new Request(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  }));
+}
+
 export function createApp({ store, log = process.env.NODE_ENV !== "test" }: CreateAppOptions) {
   const app = new Hono<AppBindings>();
   const repositories = createRepositories(store);
@@ -159,6 +179,25 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     c.set("session", session.session);
     await acceptPendingInvitations(repositories, session.user);
     await next();
+  });
+
+  app.post("/api/account/profile", zValidator("json", updateProfileSchema), async (c) => {
+    const user = c.get("user")!;
+    const input = c.req.valid("json");
+    const response = await forwardAuthJson(c.req.raw, "/auth/update-user", auth, input);
+    if (!response.ok) return response;
+
+    const memberships = await repositories.members.find((member) => member.userId === user.id);
+    await Promise.all(memberships.map((member) => repositories.members.put({ ...member, name: input.name })));
+    return response;
+  });
+
+  app.post("/api/account/password", zValidator("json", changePasswordSchema), async (c) => {
+    const input = c.req.valid("json");
+    return forwardAuthJson(c.req.raw, "/auth/change-password", auth, {
+      ...input,
+      revokeOtherSessions: true,
+    });
   });
 
   app.get("/api/spaces", async (c) => {

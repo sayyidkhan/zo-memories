@@ -1,5 +1,6 @@
 import type {
   Album,
+  ChangePasswordInput,
   CreateAlbumInput,
   CreateSpaceInput,
   InviteMemberInput,
@@ -10,6 +11,7 @@ import type {
   RegisterInput,
   SpaceDetail,
   SpaceSummary,
+  UpdateProfileInput,
   User,
 } from "@zo-moments/types";
 
@@ -65,10 +67,10 @@ export class ZoMomentsClient {
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as
-        | { error?: string; code?: string }
+        | { error?: string; message?: string; code?: string }
         | null;
       throw new ZoMomentsApiError(
-        body?.error ?? `Request failed with status ${response.status}`,
+        body?.error ?? body?.message ?? `Request failed with status ${response.status}`,
         response.status,
         body?.code,
       );
@@ -92,6 +94,14 @@ export class ZoMomentsClient {
 
   me(): Promise<{ user: User }> {
     return this.request("/auth/me");
+  }
+
+  updateProfile(input: UpdateProfileInput): Promise<{ status: boolean }> {
+    return this.request("/api/account/profile", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  changePassword(input: ChangePasswordInput): Promise<{ token: string | null; user: User }> {
+    return this.request("/api/account/password", { method: "POST", body: JSON.stringify(input) });
   }
 
   listSpaces(): Promise<{ spaces: SpaceSummary[] }> {
