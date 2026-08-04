@@ -1,0 +1,182 @@
+import type {
+  Album,
+  CreateAlbumInput,
+  CreateSpaceInput,
+  InviteMemberInput,
+  Invitation,
+  LoginInput,
+  Member,
+  MomentObject,
+  RegisterInput,
+  SpaceDetail,
+  SpaceSummary,
+  User,
+} from "@zo-moments/types";
+
+export class ZoMomentsApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ZoMomentsApiError";
+  }
+}
+
+export interface ListObjectsInput {
+  albumId?: string;
+  search?: string;
+}
+
+export interface UploadObjectInput {
+  spaceId: string;
+  file: File;
+  albumId?: string;
+  caption?: string;
+  occurredAt?: string;
+}
+
+export interface ZoMomentsClientOptions {
+  baseUrl?: string;
+  fetch?: typeof globalThis.fetch;
+}
+
+export class ZoMomentsClient {
+  private readonly baseUrl: string;
+  private readonly requestFetch: typeof globalThis.fetch;
+
+  constructor(options: ZoMomentsClientOptions = {}) {
+    this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? "";
+    this.requestFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  }
+
+  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const headers = new Headers(init.headers);
+    if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) {
+      headers.set("content-type", "application/json");
+    }
+
+    const response = await this.requestFetch(`${this.baseUrl}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string; code?: string }
+        | null;
+      throw new ZoMomentsApiError(
+        body?.error ?? `Request failed with status ${response.status}`,
+        response.status,
+        body?.code,
+      );
+    }
+
+    if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
+
+  register(input: RegisterInput): Promise<{ user: User }> {
+    return this.request("/auth/register", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  login(input: LoginInput): Promise<{ user: User }> {
+    return this.request("/auth/login", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  logout(): Promise<void> {
+    return this.request("/auth/logout", { method: "POST" });
+  }
+
+  me(): Promise<{ user: User }> {
+    return this.request("/auth/me");
+  }
+
+  listSpaces(): Promise<{ spaces: SpaceSummary[] }> {
+    return this.request("/api/spaces");
+  }
+
+  createSpace(input: CreateSpaceInput): Promise<{ space: SpaceDetail["space"] }> {
+    return this.request("/api/spaces", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  getSpace(spaceId: string): Promise<SpaceDetail> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}`);
+  }
+
+  deleteSpace(spaceId: string): Promise<void> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}`, { method: "DELETE" });
+  }
+
+  inviteMember(spaceId: string, input: InviteMemberInput): Promise<{ invitation: Invitation }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/invite`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  listMembers(spaceId: string): Promise<{ members: Member[]; invitations: Invitation[] }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/members`);
+  }
+
+  removeMember(spaceId: string, userId: string): Promise<void> {
+    return this.request(
+      `/api/spaces/${encodeURIComponent(spaceId)}/members/${encodeURIComponent(userId)}`,
+      { method: "DELETE" },
+    );
+  }
+
+  listAlbums(spaceId: string): Promise<{ albums: Album[] }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/albums`);
+  }
+
+  createAlbum(spaceId: string, input: CreateAlbumInput): Promise<{ album: Album }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/albums`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  deleteAlbum(spaceId: string, albumId: string): Promise<void> {
+    return this.request(
+      `/api/spaces/${encodeURIComponent(spaceId)}/albums/${encodeURIComponent(albumId)}`,
+      { method: "DELETE" },
+    );
+  }
+
+  listObjects(spaceId: string, input: ListObjectsInput = {}): Promise<{ objects: MomentObject[] }> {
+    const params = new URLSearchParams();
+    if (input.albumId) params.set("albumId", input.albumId);
+    if (input.search) params.set("search", input.search);
+    const query = params.size ? `?${params.toString()}` : "";
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/objects${query}`);
+  }
+
+  uploadObject(input: UploadObjectInput): Promise<{ object: MomentObject }> {
+    const body = new FormData();
+    body.set("file", input.file);
+    if (input.albumId) body.set("albumId", input.albumId);
+    if (input.caption) body.set("caption", input.caption);
+    if (input.occurredAt) body.set("occurredAt", input.occurredAt);
+    return this.request(`/api/spaces/${encodeURIComponent(input.spaceId)}/objects`, {
+      method: "POST",
+      body,
+    });
+  }
+
+  deleteObject(spaceId: string, objectId: string): Promise<void> {
+    return this.request(
+      `/api/spaces/${encodeURIComponent(spaceId)}/objects/${encodeURIComponent(objectId)}`,
+      { method: "DELETE" },
+    );
+  }
+
+  objectContentUrl(spaceId: string, objectId: string, download = false): string {
+    const suffix = download ? "?download=1" : "";
+    return `${this.baseUrl}/api/spaces/${encodeURIComponent(spaceId)}/objects/${encodeURIComponent(objectId)}${suffix}`;
+  }
+}
+
+export const api = new ZoMomentsClient();

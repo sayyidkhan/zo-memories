@@ -1,0 +1,21 @@
+{
+  "name": "@zo-moments/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.2",
+    "@zo-moments/types": "workspace:*",
+    "better-auth": "^1.6.25",
+    "hono": "^4.13.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "typescript": "^5.9.3"
+  }
+}
