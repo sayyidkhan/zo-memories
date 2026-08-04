@@ -2,7 +2,7 @@
 
 > A shared digital home for the moments that matter.
 
-Zo Moments is a private, mobile-first memory space for couples, families, friends, and other people who share a life. It is built as a Bun monorepo with React 19, Hono, Better Auth, and S3-compatible Zo Object Storage.
+Zo Moments is a private, mobile-first memory space for couples, families, friends, and other people who share a life. It is built as a Bun monorepo with React 19, Hono, Better Auth, and Zo persistent server storage.
 
 ## MVP
 
@@ -12,7 +12,7 @@ Zo Moments is a private, mobile-first memory space for couples, families, friend
 - Photo, video, audio, PDF, and document uploads
 - Chronological timeline, albums, search, preview, and original downloads
 - Responsive desktop and mobile interface
-- Object-storage-only persistence for both metadata and media
+- Persistent Zo storage for both metadata and media
 
 ## Repository
 
@@ -36,7 +36,7 @@ bun install
 bun run dev
 ```
 
-Open `http://localhost:5173`. Development explicitly uses an in-memory object store, so test accounts and uploads disappear when the API restarts and nothing is written to the local filesystem.
+Open `http://localhost:5173`. Development explicitly uses an in-memory store, so test accounts and uploads disappear when the API restarts.
 
 ## Verification
 
@@ -46,11 +46,11 @@ bun run check
 
 This runs TypeScript checks for every workspace, API integration tests, and the production Vite build.
 
-## Production Storage
+## Production
 
-Production requires an S3-compatible object store. Copy `.env.example`, configure the bucket credentials, set `NODE_ENV=production`, and use a unique `BETTER_AUTH_SECRET` of at least 32 random characters.
+Production uses `FileSystemBlobStore` with data outside the repository in the sibling `zo-memories-data` directory. The app runs as an internal Zo process service and is exposed at `/moments` by the public Zo Router gateway.
 
-The server refuses to start with in-memory storage in production. See [Deployment](docs/DEPLOYMENT.md) for the complete Zo setup.
+The server refuses to start with in-memory storage in production. S3 remains available as an optional storage driver. See [Deployment](docs/DEPLOYMENT.md) for the complete Zo setup.
 
 ## Product Documents
 

@@ -23,10 +23,10 @@ React Web App
     |
 REST API (Hono)
     |
-Zo Object Storage
+Zo Persistent Storage
 ```
 
-For the MVP, Zo Object Storage is the single source of truth.
+For the MVP, Zo persistent server storage is the single source of truth.
 
 ---
 
@@ -60,14 +60,14 @@ For the MVP, Zo Object Storage is the single source of truth.
 
 ## Storage
 
-Zo Object Storage stores:
+Zo persistent server storage stores:
 
 - Photos
 - Videos
 - Voice notes
 - Documents
 
-No local filesystem.
+Data is stored outside the application repository through the shared `BlobStore` boundary.
 
 ---
 
@@ -82,7 +82,7 @@ Zo Static
   |
 Hono
   |
-Zo Storage
+Zo Persistent Storage
 ```
 
 ---
@@ -197,7 +197,7 @@ Authentication is required. Every object belongs to exactly one shared space, an
 
 - Cloud Native
 - API First
-- Object Storage First
+- Blob Storage First
 - Shared Spaces
 - Mobile Friendly
 - Type Safe

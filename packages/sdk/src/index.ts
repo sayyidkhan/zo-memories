@@ -179,4 +179,9 @@ export class ZoMomentsClient {
   }
 }
 
-export const api = new ZoMomentsClient();
+function browserBaseUrl(): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLMetaElement>('meta[name="application-base-path"]')?.content.replace(/\/$/, "") ?? "";
+}
+
+export const api = new ZoMomentsClient({ baseUrl: browserBaseUrl() });

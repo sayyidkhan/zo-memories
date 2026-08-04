@@ -1,4 +1,6 @@
 import { S3Client } from "bun";
+import { mkdir, readdir, rename, rm } from "node:fs/promises";
+import path from "node:path";
 
 export interface PutOptions {
   contentType?: string;
@@ -41,6 +43,74 @@ export class MemoryBlobStore implements BlobStore {
   }
 
   async health(): Promise<void> {}
+}
+
+export class FileSystemBlobStore implements BlobStore {
+  private readonly root: string;
+
+  constructor(root: string) {
+    this.root = path.resolve(root);
+  }
+
+  private resolve(key: string): string {
+    const resolved = path.resolve(this.root, key);
+    if (resolved !== this.root && !resolved.startsWith(`${this.root}${path.sep}`)) {
+      throw new Error(`Invalid storage key: ${key}`);
+    }
+    return resolved;
+  }
+
+  async get(key: string): Promise<Blob | null> {
+    const file = Bun.file(this.resolve(key));
+    return (await file.exists()) ? file : null;
+  }
+
+  async put(
+    key: string,
+    value: Blob | string | Uint8Array,
+    _options: PutOptions = {},
+  ): Promise<void> {
+    const destination = this.resolve(key);
+    await mkdir(path.dirname(destination), { recursive: true });
+    const temporary = `${destination}.tmp-${crypto.randomUUID()}`;
+    try {
+      await Bun.write(temporary, value);
+      await rename(temporary, destination);
+    } finally {
+      await rm(temporary, { force: true });
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    await rm(this.resolve(key), { force: true });
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    const prefixPath = this.resolve(prefix);
+    const keys: string[] = [];
+
+    const walk = async (directory: string): Promise<void> => {
+      const entries = await readdir(directory, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return [];
+        throw error;
+      });
+      for (const entry of entries) {
+        const entryPath = path.join(directory, entry.name);
+        if (entry.isDirectory()) await walk(entryPath);
+        else if (!entry.name.includes(".tmp-")) keys.push(path.relative(this.root, entryPath).split(path.sep).join("/"));
+      }
+    };
+
+    await walk(prefixPath);
+    return keys.filter((key) => key.startsWith(prefix)).sort();
+  }
+
+  async health(): Promise<void> {
+    await mkdir(this.root, { recursive: true });
+    const key = `.health-${crypto.randomUUID()}`;
+    await this.put(key, "ok");
+    await this.delete(key);
+  }
 }
 
 export interface S3BlobStoreOptions {
@@ -110,12 +180,17 @@ function required(name: string): string {
 }
 
 export function createBlobStore(): BlobStore {
-  const driver = process.env.STORAGE_DRIVER ?? "s3";
+  const driver = process.env.STORAGE_DRIVER ?? (process.env.NODE_ENV === "production" ? "filesystem" : "memory");
   if (driver === "memory") {
     if (process.env.NODE_ENV === "production") {
       throw new Error("The memory storage driver is disabled in production");
     }
     return new MemoryBlobStore();
+  }
+  if (driver === "filesystem") {
+    return new FileSystemBlobStore(
+      process.env.STORAGE_ROOT ?? "/home/workspace/Start/garden-of-zo/zo-memories-data",
+    );
   }
   if (driver !== "s3") throw new Error(`Unsupported storage driver: ${driver}`);
 

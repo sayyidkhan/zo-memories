@@ -143,7 +143,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
 
   app.get("/health", async (c) => {
     await store.health();
-    return c.json({ status: "ok", storage: process.env.STORAGE_DRIVER ?? "s3" });
+    return c.json({ status: "ok", storage: process.env.STORAGE_DRIVER ?? (process.env.NODE_ENV === "production" ? "filesystem" : "memory") });
   });
 
   app.post("/auth/register", (c) => forwardAuth(c.req.raw, "/auth/sign-up/email", auth));

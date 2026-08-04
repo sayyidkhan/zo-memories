@@ -12,8 +12,8 @@
 - `apps/api` is the Hono API and Better Auth server.
 - `packages/types` owns shared Zod schemas and domain types.
 - `packages/sdk` owns the transport client used by web and future clients.
-- Production persistence must go through the `BlobStore` interface and S3-compatible Zo Object Storage. Never add local user-data persistence.
-- Development and tests may use `MemoryBlobStore`; production rejects it.
+- Production persistence goes through `FileSystemBlobStore` into the sibling `zo-memories-data` directory on Zo's persistent server storage.
+- Development and tests may use `MemoryBlobStore`; production rejects it. S3 remains an optional `BlobStore` driver.
 
 ## Commands
 
@@ -27,4 +27,4 @@
 - Resolve space membership before reading metadata or media.
 - Only owners may invite, remove members, or delete a space.
 - Only an uploader or space owner may delete a memory.
-- Never expose bucket credentials or direct public object URLs.
+- Never expose storage paths or direct public object URLs.

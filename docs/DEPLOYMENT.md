@@ -4,57 +4,54 @@ Version: v0.1
 
 ## Runtime
 
-Zo Moments deploys as one public Zo HTTP service. The Hono process serves the REST API, Better Auth endpoints, and the built React application from the same origin.
+Zo Moments runs as an internal Zo process service on `127.0.0.1:8790`. The public Zo Router gateway exposes it at `/moments` and strips that prefix before proxying to Hono. Hono serves the REST API, Better Auth endpoints, and built React application.
 
 ## Prerequisites
 
-- An S3-compatible Zo Object Storage bucket
-- Bucket access key and secret
-- The bucket endpoint and region
-- A public HTTPS URL for the service
+- Zo's persistent server storage
+- The public Zo Router gateway
+- A unique Better Auth secret of at least 32 random characters
 
 ## Required Environment
 
 ```dotenv
 NODE_ENV=production
-STORAGE_DRIVER=s3
+STORAGE_DRIVER=filesystem
+STORAGE_ROOT=/home/workspace/Start/garden-of-zo/zo-memories-data
 BETTER_AUTH_SECRET=<at-least-32-random-characters>
-BETTER_AUTH_URL=https://<service-url>
-APP_ORIGIN=https://<service-url>
-S3_BUCKET=<bucket-name>
-S3_ACCESS_KEY_ID=<access-key>
-S3_SECRET_ACCESS_KEY=<secret-key>
-S3_ENDPOINT=<s3-compatible-endpoint>
-S3_REGION=auto
+BETTER_AUTH_URL=https://public-apps-sayyidkhan.zocomputer.io
+APP_ORIGIN=https://public-apps-sayyidkhan.zocomputer.io
+APP_BASE_PATH=/moments
+PORT=8790
 MAX_UPLOAD_BYTES=104857600
 ```
 
-Store secrets in Zo's service environment. Do not create or commit a `.env` file with live credentials.
+The deployed service loads `BETTER_AUTH_SECRET` from a mode `0600` file in the data directory. Never commit that file.
 
 ## Build
 
 ```bash
 bun install --frozen-lockfile
-bun run check
+APP_BASE_PATH=/moments bun run check
 ```
 
 The production web build is written to `apps/web/dist` and served by Hono.
 
 ## Service
 
-Create a public Zo HTTP service with:
+Create a Zo process service with:
 
 - Working directory: `/home/workspace/Start/garden-of-zo/zo-memories`
-- Entrypoint: `bun run start`
-- Local port: any available HTTP port; Zo passes it through `PORT`
-- Environment: all variables listed above
+- Entrypoint: `bash -c 'set -a; source /home/workspace/Start/garden-of-zo/zo-memories-data/service.env; set +a; bun run build && exec bun run start'`
+- Fixed local port: `8790`
+- Router mapping: `/moments` to `http://127.0.0.1:8790` with `stripPrefix: true`
 
-Verify the deployment with `GET /health`. A healthy response is:
+Verify the deployment through `GET /moments/health`. A healthy response is:
 
 ```json
 {
   "status": "ok",
-  "storage": "s3"
+  "storage": "filesystem"
 }
 ```
 
@@ -72,10 +69,10 @@ zo-moments/
   media/<space-id>/<object-id>/<filename>
 ```
 
-All objects remain private. Media is streamed through authenticated API routes after membership checks.
+The data directory is not served by Zo Router. Media is streamed through authenticated API routes after membership checks.
 
 ## MVP Constraints
 
 - Invitations are email-bound access reservations; v0.1 does not send transactional email.
 - Metadata queries scan JSON records under a collection prefix. This is suitable for an MVP and small shared spaces, not high-volume multi-tenant workloads.
-- S3 does not provide multi-object transactions. A later scale phase should move auth and metadata indexes to a transactional Zo database while keeping media in object storage.
+- Filesystem records do not provide multi-object transactions. A later scale phase should move auth and metadata indexes to a transactional Zo database while keeping media in blob storage.
