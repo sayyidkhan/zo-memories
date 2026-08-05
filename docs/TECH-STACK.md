@@ -129,6 +129,10 @@ The shared SDK supports React, with future support planned for:
 ### Members
 
 - `POST /spaces/:id/invite`
+- `POST /spaces/:id/share-invitation`
+- `DELETE /spaces/:id/share-invitation`
+- `GET /public/invitations/:token`
+- `POST /invitations/:token/accept`
 - `GET /spaces/:id/members`
 - `DELETE /spaces/:id/members/:userId`
 
@@ -169,7 +173,7 @@ Browser
 
 ## Security
 
-Authentication is required. Every object belongs to exactly one shared space, and only members of that space can access its contents.
+Authentication is required for space membership and content access. A shareable invitation exposes only the space and inviter names; it is single-use, expires after 30 days, and can be revoked. Every object belongs to exactly one shared space, and only members of that space can access its contents.
 
 ---
 

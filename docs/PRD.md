@@ -137,6 +137,12 @@ Future: natural-language search.
 
 Every member of a space can upload memories.
 
+### Shareable Invitations
+
+Space owners create a single-use invitation link and share it through WhatsApp, Telegram, SMS, the device share sheet, or any other messaging app. Links expire after 30 days and can be replaced or revoked by the owner.
+
+Recipients can preview the space name, then create an account or sign in before joining.
+
 ### AI Memory Timeline (Future)
 
 AI automatically creates:
@@ -181,6 +187,7 @@ AI Story
 - Authentication
 - Create shared space
 - Invite another user
+- Share invitations through existing messaging apps
 - Upload media
 - Timeline
 - Albums

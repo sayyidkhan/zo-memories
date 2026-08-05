@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, FileUp, FolderPlus, MailPlus, UsersRound } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, Copy, FileUp, FolderPlus, MessageCircle, MessagesSquare, Phone, RefreshCw, Share2, Trash2, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Album } from "@zo-moments/types";
@@ -43,22 +43,80 @@ export function CreateSpaceDialog({ open, onClose, onCreated }: { open: boolean;
 
 export function InviteDialog({ open, onClose, spaceId }: { open: boolean; onClose: () => void; spaceId: string }) {
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (email: string) => api.inviteMember(spaceId, { email }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["space", spaceId] });
-      toast.success("Invitation added");
+  const invitation = useQuery({
+    queryKey: ["share-invitation", spaceId],
+    queryFn: () => api.createShareInvitation(spaceId),
+    enabled: open,
+    staleTime: 0,
+  });
+  const regenerate = useMutation({
+    mutationFn: () => api.createShareInvitation(spaceId, { regenerate: true }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["share-invitation", spaceId], data);
+      toast.success("A new invitation link is ready");
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: () => api.revokeShareInvitation(spaceId),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["share-invitation", spaceId] });
+      toast.success("Invitation link revoked");
       onClose();
     },
   });
+  const token = invitation.data?.invitation.token;
+  const basePath = document.querySelector<HTMLMetaElement>('meta[name="application-base-path"]')?.content ?? "/";
+  const shareUrl = token ? `${window.location.origin}${basePath}?invite=${encodeURIComponent(token)}` : "";
+  const message = shareUrl ? `Join my shared space on Zo Moments: ${shareUrl}` : "";
+
+  async function copyLink() {
+    if (!shareUrl) return;
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+    } else {
+      const input = document.createElement("textarea");
+      input.value = shareUrl;
+      document.body.append(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    toast.success("Invitation link copied");
+  }
+
+  async function nativeShare() {
+    if (!shareUrl || !navigator.share) return;
+    try {
+      await navigator.share({ title: "Join me on Zo Moments", text: "Join my shared space on Zo Moments.", url: shareUrl });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+    }
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title="Invite someone important" description="Their access activates automatically when they create an account using this email.">
-      <form className="grid gap-5" onSubmit={(event) => { event.preventDefault(); mutation.mutate(String(new FormData(event.currentTarget).get("email") ?? "")); }}>
-        <div className="grid size-14 place-items-center rounded-[20px] bg-[#e6d7c1] text-[#526359]"><MailPlus className="size-6" /></div>
-        <Field label="Email address"><Input name="email" type="email" placeholder="person@example.com" autoFocus required /></Field>
-        <ErrorMessage error={mutation.error} />
-        <Button disabled={mutation.isPending}>{mutation.isPending ? <Spinner /> : "Send invitation"}</Button>
-      </form>
+    <Modal open={open} onClose={onClose} title="Share an invitation" description="Send this private link through the app you already use. It works once and expires after 30 days.">
+      {invitation.isPending ? <div className="grid min-h-52 place-items-center text-[#607066]"><Spinner /></div> : null}
+      {invitation.isError ? <ErrorMessage error={invitation.error} /> : null}
+      {shareUrl ? (
+        <div className="grid min-w-0 gap-5">
+          <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d8cdbc] bg-[#f7f0e6] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8f5547]">Invitation link</p>
+            <p className="mt-2 block max-w-full truncate text-sm text-[#536158]">{shareUrl}</p>
+          </div>
+          {"share" in navigator ? <Button onClick={() => void nativeShare()}><Share2 className="size-4" />Share invitation</Button> : null}
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
+            <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer" className="grid min-h-20 min-w-0 place-items-center gap-1 rounded-[20px] border border-[#d8cdbc] bg-[#fffdf8] p-3 text-center text-xs font-semibold text-[#34443a] transition hover:bg-[#f3ebdf]"><MessageCircle className="size-5" />WhatsApp</a>
+            <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent("Join my shared space on Zo Moments")}`} target="_blank" rel="noreferrer" className="grid min-h-20 min-w-0 place-items-center gap-1 rounded-[20px] border border-[#d8cdbc] bg-[#fffdf8] p-3 text-center text-xs font-semibold text-[#34443a] transition hover:bg-[#f3ebdf]"><MessagesSquare className="size-5" />Telegram</a>
+            <a href={`sms:?body=${encodeURIComponent(message)}`} className="grid min-h-20 min-w-0 place-items-center gap-1 rounded-[20px] border border-[#d8cdbc] bg-[#fffdf8] p-3 text-center text-xs font-semibold text-[#34443a] transition hover:bg-[#f3ebdf]"><Phone className="size-5" />SMS</a>
+            <button type="button" onClick={() => void copyLink()} className="grid min-h-20 min-w-0 place-items-center gap-1 rounded-[20px] border border-[#d8cdbc] bg-[#fffdf8] p-3 text-center text-xs font-semibold text-[#34443a] transition hover:bg-[#f3ebdf]"><Copy className="size-5" />Copy link</button>
+          </div>
+          <p className="text-xs leading-5 text-[#81796f]">The first person who accepts this link becomes a member. You can replace or revoke it at any time.</p>
+          <div className="flex flex-col gap-2 border-t border-[#e1d7c9] pt-4 sm:flex-row sm:justify-end">
+            <Button variant="ghost" onClick={() => regenerate.mutate()} disabled={regenerate.isPending || revoke.isPending}>{regenerate.isPending ? <Spinner /> : <><RefreshCw className="size-4" />New link</>}</Button>
+            <Button variant="ghost" className="text-[#9f3f31]" onClick={() => revoke.mutate()} disabled={regenerate.isPending || revoke.isPending}>{revoke.isPending ? <Spinner /> : <><Trash2 className="size-4" />Revoke</>}</Button>
+          </div>
+        </div>
+      ) : null}
     </Modal>
   );
 }

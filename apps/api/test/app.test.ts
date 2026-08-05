@@ -82,6 +82,55 @@ describe("Zo Moments API", () => {
     expect(spaces.body.spaces.map(({ id }) => id)).toContain(spaceId);
   });
 
+  test("shares, accepts, regenerates, and revokes invitation links", async () => {
+    const create = await owner.json<{ invitation: { token: string } }>(`/api/spaces/${spaceId}/share-invitation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(create.response.status).toBe(201);
+    expect(create.body.invitation.token).toHaveLength(48);
+    const token = create.body.invitation.token;
+
+    const reused = await owner.json<{ invitation: { token: string } }>(`/api/spaces/${spaceId}/share-invitation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(reused.response.status).toBe(200);
+    expect(reused.body.invitation.token).toBe(token);
+
+    const preview = await app.request(`/public/invitations/${token}`);
+    expect(preview.status).toBe(200);
+    expect((await preview.json() as { invitation: { spaceName: string } }).invitation.spaceName).toBe("Our Story");
+
+    const invited = new BrowserSession(app);
+    expect((await invited.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Link Member", email: "link-member@example.com", password: "password123" }),
+    })).status).toBe(200);
+    const accepted = await invited.json<{ space: { id: string } }>(`/api/invitations/${token}/accept`, { method: "POST" });
+    expect(accepted.response.status).toBe(200);
+    expect(accepted.body.space.id).toBe(spaceId);
+    const spaces = await invited.json<{ spaces: { id: string }[] }>("/api/spaces");
+    expect(spaces.body.spaces.map(({ id }) => id)).toContain(spaceId);
+    expect((await app.request(`/public/invitations/${token}`)).status).toBe(410);
+
+    const second = new BrowserSession(app);
+    expect((await second.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Second Person", email: "second@example.com", password: "password123" }),
+    })).status).toBe(200);
+    expect((await second.request(`/api/invitations/${token}/accept`, { method: "POST" })).status).toBe(410);
+
+    const replacement = await owner.json<{ invitation: { token: string } }>(`/api/spaces/${spaceId}/share-invitation`, {
+      method: "POST",
+      body: JSON.stringify({ regenerate: true }),
+    });
+    expect(replacement.response.status).toBe(201);
+    expect(replacement.body.invitation.token).not.toBe(token);
+    expect((await owner.request(`/api/spaces/${spaceId}/share-invitation`, { method: "DELETE" })).status).toBe(204);
+    expect((await app.request(`/public/invitations/${replacement.body.invitation.token}`)).status).toBe(410);
+  });
+
   test("uploads, lists, previews, and deletes a memory", async () => {
     const form = new FormData();
     form.set("file", new File(["moment"], "hello.txt", { type: "text/plain" }));

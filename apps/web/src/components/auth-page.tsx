@@ -2,9 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Heart, Images, LockKeyhole, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
+import type { ShareInvitationPreview } from "@zo-moments/types";
 import { Button, Field, Input, Spinner } from "./ui";
 
-export function AuthPage() {
+export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"register" | "login">("register");
   const [error, setError] = useState("");
@@ -70,12 +71,12 @@ export function AuthPage() {
             <span className="text-sm font-bold tracking-[0.18em] uppercase">Zo Moments</span>
           </div>
 
-          <p className="text-xs font-bold tracking-[0.2em] text-[#a8513f] uppercase">{mode === "register" ? "Start your story" : "Welcome back"}</p>
+          <p className="text-xs font-bold tracking-[0.2em] text-[#a8513f] uppercase">{invitation ? "You’re invited" : mode === "register" ? "Start your story" : "Welcome back"}</p>
           <h2 className="mt-3 font-display text-5xl leading-[1.02] tracking-[-.035em] sm:text-6xl">
-            {mode === "register" ? "Make space for what matters." : "Your moments are waiting."}
+            {invitation ? `Join ${invitation.spaceName}.` : mode === "register" ? "Make space for what matters." : "Your moments are waiting."}
           </h2>
           <p className="mt-5 leading-7 text-[#746d63]">
-            {mode === "register" ? "Create a home, invite someone important, and add your first memory." : "Sign in to return to your shared spaces."}
+            {invitation ? `${invitation.inviterName} invited you to a shared space. Create an account or sign in to continue.` : mode === "register" ? "Create a home, invite someone important, and add your first memory." : "Sign in to return to your shared spaces."}
           </p>
 
           <div className="mt-8 grid grid-cols-2 rounded-full bg-[#eee5d8] p-1">

@@ -10,7 +10,7 @@ Zo Moments is a private, mobile-first memory space for couples, families, friend
 - Private profile-picture upload and account settings
 - Application admin console for user roles and account suspension
 - Private shared spaces and role-based membership
-- Email-bound invitations that activate when the invited person signs in
+- Single-use invitation links for WhatsApp, Telegram, SMS, and native sharing
 - Photo, video, audio, PDF, and document uploads
 - Chronological timeline, albums, search, preview, and original downloads
 - Responsive desktop and mobile interface

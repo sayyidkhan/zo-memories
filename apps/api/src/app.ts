@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import {
   changePasswordSchema,
   createAlbumSchema,
+  createShareInvitationSchema,
   createSpaceSchema,
   inviteMemberSchema,
   updateAccountStatusSchema,
@@ -13,6 +14,7 @@ import {
   type Member,
   type MomentObject,
   type ObjectKind,
+  type ShareInvitation,
   type Space,
 } from "@zo-moments/types";
 import { Hono } from "hono";
@@ -53,6 +55,17 @@ function now(): string {
 
 function id(): string {
   return crypto.randomUUID();
+}
+
+function invitationToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+const SHARE_INVITATION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+
+function shareInvitationStatus(invitation: ShareInvitation): ShareInvitation["status"] | "expired" {
+  if (invitation.status === "active" && Date.parse(invitation.expiresAt) <= Date.now()) return "expired";
+  return invitation.status;
 }
 
 function adminEmails(): Set<string> {
@@ -225,6 +238,31 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   app.get("/health", async (c) => {
     await store.health();
     return c.json({ status: "ok", storage: process.env.STORAGE_DRIVER ?? (process.env.NODE_ENV === "production" ? "filesystem" : "memory") });
+  });
+
+  app.get("/public/invitations/:token", async (c) => {
+    const invitation = await repositories.shareInvitations.findOne(
+      (candidate) => candidate.token === c.req.param("token"),
+    );
+    if (!invitation) throw new HTTPException(404, { message: "Invitation not found" });
+    const status = shareInvitationStatus(invitation);
+    if (status !== "active") throw new HTTPException(410, { message: "This invitation is no longer available" });
+    const [space, inviter] = await Promise.all([
+      repositories.spaces.get(invitation.spaceId),
+      repositories.members.findOne(
+        (member) => member.spaceId === invitation.spaceId && member.userId === invitation.invitedBy,
+      ),
+    ]);
+    if (!space) throw new HTTPException(410, { message: "This shared space is no longer available" });
+    return c.json({
+      invitation: {
+        spaceId: space.id,
+        spaceName: space.name,
+        inviterName: inviter?.name ?? "Someone important",
+        status,
+        expiresAt: invitation.expiresAt,
+      },
+    });
   });
 
   app.post("/auth/register", (c) => forwardAuth(c.req.raw, "/auth/sign-up/email", auth));
@@ -469,6 +507,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       repositories.objects.deleteWhere((object) => object.spaceId === spaceId),
       repositories.albums.deleteWhere((album) => album.spaceId === spaceId),
       repositories.invitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
+      repositories.shareInvitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.members.deleteWhere((member) => member.spaceId === spaceId),
       repositories.spaces.delete(spaceId),
     ]);
@@ -500,6 +539,78 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     };
     await repositories.invitations.put(invitation);
     return c.json({ invitation }, 201);
+  });
+
+  app.post("/api/spaces/:spaceId/share-invitation", zValidator("json", createShareInvitationSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireOwner(repositories, spaceId, user.id);
+    const { regenerate } = c.req.valid("json");
+    const active = await repositories.shareInvitations.findOne(
+      (invitation) => invitation.spaceId === spaceId && shareInvitationStatus(invitation) === "active",
+    );
+    if (active && !regenerate) return c.json({ invitation: active });
+    if (active) await repositories.shareInvitations.put({ ...active, status: "revoked" });
+
+    const createdAt = now();
+    const invitation: ShareInvitation = {
+      id: id(),
+      spaceId,
+      token: invitationToken(),
+      invitedBy: user.id,
+      status: "active",
+      createdAt,
+      expiresAt: new Date(Date.now() + SHARE_INVITATION_LIFETIME_MS).toISOString(),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    await repositories.shareInvitations.put(invitation);
+    return c.json({ invitation }, 201);
+  });
+
+  app.delete("/api/spaces/:spaceId/share-invitation", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireOwner(repositories, spaceId, user.id);
+    const active = await repositories.shareInvitations.findOne(
+      (invitation) => invitation.spaceId === spaceId && shareInvitationStatus(invitation) === "active",
+    );
+    if (active) await repositories.shareInvitations.put({ ...active, status: "revoked" });
+    return c.body(null, 204);
+  });
+
+  app.post("/api/invitations/:token/accept", async (c) => {
+    const user = c.get("user")!;
+    const invitation = await repositories.shareInvitations.findOne(
+      (candidate) => candidate.token === c.req.param("token"),
+    );
+    if (!invitation) throw new HTTPException(404, { message: "Invitation not found" });
+    if (shareInvitationStatus(invitation) !== "active") {
+      throw new HTTPException(410, { message: "This invitation is no longer available" });
+    }
+    const space = await repositories.spaces.get(invitation.spaceId);
+    if (!space) throw new HTTPException(410, { message: "This shared space is no longer available" });
+    const existing = await repositories.members.findOne(
+      (member) => member.spaceId === invitation.spaceId && member.userId === user.id,
+    );
+    if (!existing) {
+      await repositories.members.put({
+        id: id(),
+        spaceId: invitation.spaceId,
+        userId: user.id,
+        email: user.email.toLowerCase(),
+        name: user.name,
+        role: "member",
+        joinedAt: now(),
+      });
+      await repositories.shareInvitations.put({
+        ...invitation,
+        status: "accepted",
+        acceptedAt: now(),
+        acceptedBy: user.id,
+      });
+    }
+    return c.json({ space });
   });
 
   app.get("/api/spaces/:spaceId/members", async (c) => {

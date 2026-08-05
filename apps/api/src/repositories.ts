@@ -4,6 +4,7 @@ import type {
   Invitation,
   Member,
   MomentObject,
+  ShareInvitation,
   Space,
 } from "@zo-moments/types";
 import type { BlobStore } from "./storage/blob-store";
@@ -13,6 +14,7 @@ export interface Repositories {
   spaces: JsonCollection<Space>;
   members: JsonCollection<Member>;
   invitations: JsonCollection<Invitation>;
+  shareInvitations: JsonCollection<ShareInvitation>;
   albums: JsonCollection<Album>;
   objects: JsonCollection<MomentObject>;
   avatars: JsonCollection<Avatar>;
@@ -23,6 +25,7 @@ export function createRepositories(store: BlobStore): Repositories {
     spaces: new JsonCollection(store, "spaces"),
     members: new JsonCollection(store, "members"),
     invitations: new JsonCollection(store, "invitations"),
+    shareInvitations: new JsonCollection(store, "share-invitations"),
     albums: new JsonCollection(store, "albums"),
     objects: new JsonCollection(store, "objects"),
     avatars: new JsonCollection(store, "avatars"),

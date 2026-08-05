@@ -3,6 +3,7 @@ import type {
   Album,
   ChangePasswordInput,
   CreateAlbumInput,
+  CreateShareInvitationInput,
   CreateSpaceInput,
   InviteMemberInput,
   Invitation,
@@ -10,6 +11,8 @@ import type {
   Member,
   MomentObject,
   RegisterInput,
+  ShareInvitation,
+  ShareInvitationPreview,
   SpaceDetail,
   SpaceSummary,
   UpdateProfileInput,
@@ -162,6 +165,30 @@ export class ZoMomentsClient {
       method: "POST",
       body: JSON.stringify(input),
     });
+  }
+
+  createShareInvitation(
+    spaceId: string,
+    input: CreateShareInvitationInput = { regenerate: false },
+  ): Promise<{ invitation: ShareInvitation }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/share-invitation`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  revokeShareInvitation(spaceId: string): Promise<void> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/share-invitation`, {
+      method: "DELETE",
+    });
+  }
+
+  getShareInvitation(token: string): Promise<{ invitation: ShareInvitationPreview }> {
+    return this.request(`/public/invitations/${encodeURIComponent(token)}`);
+  }
+
+  acceptShareInvitation(token: string): Promise<{ space: SpaceDetail["space"] }> {
+    return this.request(`/api/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" });
   }
 
   listMembers(spaceId: string): Promise<{ members: Member[]; invitations: Invitation[] }> {

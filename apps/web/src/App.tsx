@@ -8,6 +8,7 @@ import { AuthPage } from "./components/auth-page";
 import { AccountDialog } from "./components/account-dialog";
 import { AdminDialog } from "./components/admin-dialog";
 import { CreateSpaceDialog } from "./components/dialogs";
+import { InvitePage } from "./components/invite-page";
 import { ProfileAvatar } from "./components/profile-avatar";
 import { SpaceView } from "./components/space-view";
 import { Button, Spinner } from "./components/ui";
@@ -113,8 +114,17 @@ function AppShell({ user }: { user: User }) {
 }
 
 export default function App() {
+  const [inviteToken, setInviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
   const me = useQuery({ queryKey: ["me"], queryFn: () => api.me(), retry: false });
   if (me.isPending) return <main className="grid min-h-screen place-items-center bg-[#f4ede1] text-[#526359]"><Spinner /></main>;
+  if (inviteToken) {
+    return <InvitePage token={inviteToken} user={me.data?.user ?? null} onDone={() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("invite");
+      window.history.replaceState({}, "", url);
+      setInviteToken(null);
+    }} />;
+  }
   if (me.isError || !me.data?.user) return <AuthPage />;
   return <AppShell user={me.data.user} />;
 }
