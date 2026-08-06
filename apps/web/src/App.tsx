@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Heart, Plus, Settings2, ShieldCheck } from "lucide-react";
+import { ChevronDown, Plus, Settings2, ShieldCheck } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { User } from "@zo-moments/types";
@@ -7,6 +7,7 @@ import { useAppStore } from "@/lib/store";
 import { AuthPage } from "./components/auth-page";
 import { AccountDialog } from "./components/account-dialog";
 import { AdminDialog } from "./components/admin-dialog";
+import { BrandMark } from "./components/brand-mark";
 import { CreateSpaceDialog } from "./components/dialogs";
 import { InvitePage } from "./components/invite-page";
 import { ProfileAvatar } from "./components/profile-avatar";
@@ -41,7 +42,7 @@ function AppShell({ user }: { user: User }) {
     <main className="min-h-screen bg-[#f4ede1] text-[#26372f] lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="hidden h-screen border-r border-[#d8cdbd] bg-[#eee5d8] p-5 lg:sticky lg:top-0 lg:flex lg:flex-col">
         <div className="flex items-center gap-3 px-2 py-3 text-sm font-bold uppercase tracking-[.16em]">
-          <span className="grid size-10 place-items-center rounded-full bg-[#26372f] text-[#fffaf2]"><Heart className="size-4" fill="currentColor" /></span>
+          <BrandMark className="size-10" />
           Zo Moments
         </div>
         <div className="mt-9 flex items-center justify-between px-2">
@@ -78,7 +79,7 @@ function AppShell({ user }: { user: User }) {
 
       <div className="min-w-0">
         <header className="flex h-16 items-center justify-between gap-2 border-b border-[#d8cdbd] bg-[#eee5d8] px-3 sm:px-4 lg:hidden">
-          <div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.14em]"><span className="grid size-9 place-items-center rounded-full bg-[#26372f] text-white"><Heart className="size-3.5" fill="currentColor" /></span><span className="hidden min-[480px]:inline">Zo Moments</span></div>
+          <div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.14em]"><BrandMark className="size-9" /><span className="hidden min-[480px]:inline">Zo Moments</span></div>
           <div className="flex items-center gap-2">
             {spaces.data?.spaces.length ? (
               <label className="relative">
@@ -97,7 +98,7 @@ function AppShell({ user }: { user: User }) {
         {selectedSpaceId ? <SpaceView spaceId={selectedSpaceId} /> : (
           <section className="grid min-h-[calc(100vh-4rem)] place-items-center px-6 text-center">
             <div className="max-w-xl">
-              <span className="mx-auto grid size-20 place-items-center rounded-[30px] bg-[#e2d3bd] text-[#536359]"><Heart className="size-8" /></span>
+              <BrandMark className="mx-auto size-20" />
               <p className="mt-8 text-xs font-bold uppercase tracking-[.2em] text-[#9a5747]">Your first chapter</p>
               <h1 className="mt-3 font-display text-5xl leading-[.98] sm:text-7xl">Make a home for the moments that matter.</h1>
               <p className="mx-auto mt-6 max-w-md leading-7 text-[#746d63]">Create a private space, invite someone you care about, and add your first memory.</p>

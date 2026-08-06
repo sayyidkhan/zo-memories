@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Heart, Link2Off, UsersRound } from "lucide-react";
+import { ArrowRight, Link2Off, UsersRound } from "lucide-react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { User } from "@zo-moments/types";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
 import { AuthPage } from "./auth-page";
 import { Button, Spinner } from "./ui";
+import { BrandMark } from "./brand-mark";
 
 export function InvitePage({ token, user, onDone }: { token: string; user: User | null; onDone: () => void }) {
   const queryClient = useQueryClient();
@@ -48,7 +49,7 @@ export function InvitePage({ token, user, onDone }: { token: string; user: User 
     <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#f4ede1] px-5 py-10 text-[#26372f]">
       <div className="absolute left-[-8rem] top-[-10rem] size-96 rounded-full bg-[#dcbba1]/30 blur-3xl" />
       <section className="relative w-full max-w-lg rounded-[38px] border border-[#d8cdbc] bg-[#fffaf2] p-7 text-center shadow-[0_28px_80px_rgba(51,42,31,.12)] sm:p-11">
-        <span className="mx-auto grid size-16 place-items-center rounded-[24px] bg-[#26372f] text-[#fffaf2]"><Heart className="size-6" fill="currentColor" /></span>
+        <BrandMark className="mx-auto size-16" />
         <p className="mt-7 text-[11px] font-bold uppercase tracking-[.2em] text-[#9a5747]">You’re invited</p>
         <h1 className="mt-3 font-display text-5xl leading-none">{invitation.spaceName}</h1>
         <p className="mx-auto mt-5 max-w-sm leading-7 text-[#6f6a61]"><strong className="text-[#34443a]">{invitation.inviterName}</strong> invited you to share and revisit moments together.</p>

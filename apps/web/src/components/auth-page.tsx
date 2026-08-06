@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Heart, Images, LockKeyhole, Sparkles } from "lucide-react";
+import { ArrowRight, Images, LockKeyhole, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { ShareInvitationPreview } from "@zo-moments/types";
 import { Button, Field, Input, Spinner } from "./ui";
+import { BrandMark } from "./brand-mark";
 
 export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }) {
   const queryClient = useQueryClient();
@@ -34,7 +35,7 @@ export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }
       <section className="relative hidden min-h-screen overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
         <div className="absolute inset-0 paper-grid opacity-45" />
         <div className="relative flex items-center gap-3 text-sm font-bold tracking-[0.18em] uppercase">
-          <span className="grid size-10 place-items-center rounded-full bg-[#26372f] text-[#fffaf2]"><Heart className="size-4" fill="currentColor" /></span>
+          <BrandMark className="size-10" />
           Zo Moments
         </div>
 
@@ -67,7 +68,7 @@ export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }
       <section className="flex min-h-screen items-center justify-center bg-[#fffaf2] px-5 py-10 sm:px-10 lg:rounded-l-[42px] lg:shadow-[-24px_0_70px_rgba(48,39,28,.08)]">
         <div className="w-full max-w-md">
           <div className="mb-12 flex items-center gap-3 lg:hidden">
-            <span className="grid size-10 place-items-center rounded-full bg-[#26372f] text-[#fffaf2]"><Heart className="size-4" fill="currentColor" /></span>
+            <BrandMark className="size-10" />
             <span className="text-sm font-bold tracking-[0.18em] uppercase">Zo Moments</span>
           </div>
 
