@@ -6,9 +6,9 @@ import type { ShareInvitationPreview } from "@zo-moments/types";
 import { Button, Field, Input, Spinner } from "./ui";
 import { BrandMark } from "./brand-mark";
 
-export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }) {
+export function AuthPage({ invitation, initialMode = "register", onBack }: { invitation?: ShareInvitationPreview; initialMode?: "register" | "login"; onBack?: () => void }) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<"register" | "login">("register");
+  const [mode, setMode] = useState<"register" | "login">(initialMode);
   const [error, setError] = useState("");
   const mutation = useMutation({
     mutationFn: (form: { name: string; email: string; password: string }) =>
@@ -67,10 +67,14 @@ export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }
 
       <section className="flex min-h-screen items-center justify-center bg-[#fffaf2] px-5 py-10 sm:px-10 lg:rounded-l-[42px] lg:shadow-[-24px_0_70px_rgba(48,39,28,.08)]">
         <div className="w-full max-w-md">
-          <div className="mb-12 flex items-center gap-3 lg:hidden">
+          <div className="mb-12 flex items-center justify-between gap-3 lg:hidden">
+            <div className="flex items-center gap-3">
             <BrandMark className="size-10" />
             <span className="text-sm font-bold tracking-[0.18em] uppercase">Zo Moments</span>
+            </div>
+            {onBack ? <button onClick={onBack} className="rounded-full px-3 py-2 text-sm font-semibold text-[#59665d] hover:bg-[#eee5d8]">Back</button> : null}
           </div>
+          {onBack ? <button onClick={onBack} className="mb-8 hidden rounded-full px-3 py-2 text-sm font-semibold text-[#59665d] hover:bg-[#eee5d8] lg:inline-flex">Back to Zo Moments</button> : null}
 
           <p className="text-xs font-bold tracking-[0.2em] text-[#a8513f] uppercase">{invitation ? "You’re invited" : mode === "register" ? "Start your story" : "Welcome back"}</p>
           <h2 className="mt-3 font-display text-5xl leading-[1.02] tracking-[-.035em] sm:text-6xl">

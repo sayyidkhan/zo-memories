@@ -11,6 +11,7 @@ import { BrandMark } from "./components/brand-mark";
 import { CreateSpaceDialog } from "./components/dialogs";
 import { InvitePage } from "./components/invite-page";
 import { ProfileAvatar } from "./components/profile-avatar";
+import { SplashPage } from "./components/splash-page";
 import { SpaceView } from "./components/space-view";
 import { Button, Spinner } from "./components/ui";
 
@@ -116,6 +117,7 @@ function AppShell({ user }: { user: User }) {
 
 export default function App() {
   const [inviteToken, setInviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
+  const [authMode, setAuthMode] = useState<"register" | "login" | null>(null);
   const me = useQuery({ queryKey: ["me"], queryFn: () => api.me(), retry: false });
   if (me.isPending) return <main className="grid min-h-screen place-items-center bg-[#f4ede1] text-[#526359]"><Spinner /></main>;
   if (inviteToken) {
@@ -126,6 +128,9 @@ export default function App() {
       setInviteToken(null);
     }} />;
   }
-  if (me.isError || !me.data?.user) return <AuthPage />;
+  if (me.isError || !me.data?.user) {
+    if (!authMode) return <SplashPage onGetStarted={() => setAuthMode("register")} onSignIn={() => setAuthMode("login")} />;
+    return <AuthPage initialMode={authMode} onBack={() => setAuthMode(null)} />;
+  }
   return <AppShell user={me.data.user} />;
 }
