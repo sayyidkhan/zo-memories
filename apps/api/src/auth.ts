@@ -17,7 +17,7 @@ export function createAuth(store: BlobStore) {
     database: objectStoreAdapter(store),
     emailAndPassword: {
       enabled: true,
-      minPasswordLength: 8,
+      minPasswordLength: 6,
       maxPasswordLength: 128,
       autoSignIn: true,
     },

@@ -87,7 +87,7 @@ export function AuthPage({ invitation }: { invitation?: ShareInvitationPreview }
           <form className="mt-7 grid gap-5" onSubmit={submit}>
             {mode === "register" ? <Field label="Your name"><Input name="name" autoComplete="name" placeholder="How people know you" required minLength={2} /></Field> : <input type="hidden" name="name" value="Member" />}
             <Field label="Email"><Input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></Field>
-            <Field label="Password" hint={mode === "register" ? "Use at least eight characters." : undefined}><Input name="password" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} placeholder="At least 8 characters" required minLength={8} /></Field>
+            <Field label="Password" hint={mode === "register" ? "Use at least six characters." : undefined}><Input name="password" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} placeholder="At least 6 characters" required minLength={6} /></Field>
             {error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
             <Button className="mt-2 w-full" disabled={mutation.isPending}>
               {mutation.isPending ? <Spinner /> : <>{mode === "register" ? "Create my account" : "Sign in"}<ArrowRight className="size-4" /></>}

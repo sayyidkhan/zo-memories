@@ -168,7 +168,7 @@ describe("Zo Moments API", () => {
     const account = new BrowserSession(app);
     const register = await account.request("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name: "Old Name", email: "profile@example.com", password: "password123" }),
+      body: JSON.stringify({ name: "Old Name", email: "profile@example.com", password: "secret" }),
     });
     expect(register.status).toBe(200);
 
@@ -193,18 +193,18 @@ describe("Zo Moments API", () => {
 
     const password = await account.request("/api/account/password", {
       method: "POST",
-      body: JSON.stringify({ currentPassword: "password123", newPassword: "new-password-456" }),
+      body: JSON.stringify({ currentPassword: "secret", newPassword: "newest" }),
     });
     expect(password.status).toBe(200);
 
     expect((await account.request("/auth/logout", { method: "POST" })).status).toBe(200);
     expect((await account.request("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: "profile@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "profile@example.com", password: "secret" }),
     })).status).toBe(401);
     expect((await account.request("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: "profile@example.com", password: "new-password-456" }),
+      body: JSON.stringify({ email: "profile@example.com", password: "newest" }),
     })).status).toBe(200);
   });
 

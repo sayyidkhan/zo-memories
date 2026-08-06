@@ -145,12 +145,12 @@ export function AccountDialog({
           <h3 className="text-sm font-bold">Password</h3>
         </div>
         <form ref={passwordForm} className="grid gap-4" onSubmit={updatePassword}>
-          <Field label="Current password"><Input name="currentPassword" type="password" autoComplete="current-password" minLength={8} required /></Field>
+          <Field label="Current password"><Input name="currentPassword" type="password" autoComplete="current-password" minLength={6} required /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="New password"><Input name="newPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required /></Field>
-            <Field label="Confirm password"><Input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required /></Field>
+            <Field label="New password"><Input name="newPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
+            <Field label="Confirm password"><Input name="confirmPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
           </div>
-          <p className="flex items-center gap-2 text-xs leading-5 text-[#827b70]"><LockKeyhole className="size-3.5 shrink-0" />Use at least eight characters. Other signed-in devices will be logged out.</p>
+          <p className="flex items-center gap-2 text-xs leading-5 text-[#827b70]"><LockKeyhole className="size-3.5 shrink-0" />Use at least six characters. Other signed-in devices will be logged out.</p>
           <ErrorMessage message={passwordError} />
           <Button className="justify-self-start" variant="secondary" disabled={password.isPending}>
             {password.isPending ? <Spinner /> : "Change password"}

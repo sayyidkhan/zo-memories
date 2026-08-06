@@ -133,12 +133,12 @@ export const createAlbumSchema = z.object({
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(8).max(128),
+  password: z.string().min(6).max(128),
 });
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(8).max(128),
+  password: z.string().min(6).max(128),
 });
 
 export const updateProfileSchema = z.object({
@@ -146,8 +146,8 @@ export const updateProfileSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(8).max(128),
-  newPassword: z.string().min(8).max(128),
+  currentPassword: z.string().min(6).max(128),
+  newPassword: z.string().min(6).max(128),
 });
 
 export const updateAdminRoleSchema = z.object({
