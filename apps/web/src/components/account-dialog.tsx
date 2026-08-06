@@ -30,6 +30,7 @@ export function AccountDialog({
 }) {
   const queryClient = useQueryClient();
   const passwordForm = useRef<HTMLFormElement>(null);
+  const [section, setSection] = useState<"profile" | "password">("profile");
   const [profileError, setProfileError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [avatarError, setAvatarError] = useState("");
@@ -93,74 +94,103 @@ export function AccountDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Your account" description="Review your profile and keep your sign-in details secure.">
-      <div className="mb-7 flex items-center gap-4 rounded-[22px] bg-[#eee5d8] p-4">
-        <ProfileAvatar user={user} className="size-16" textClassName="text-sm" />
-        <div className="min-w-0 flex-1">
-          <strong className="block truncate text-base text-[#26372f]">{user.name}</strong>
-          <span className="block truncate text-sm text-[#766f65]">{user.email}</span>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#d2c5b3] bg-[#fffaf2] px-3 text-xs font-semibold text-[#34443a] transition hover:bg-[#f5ecdf]">
-              <Camera className="size-3.5" />{avatar.isPending ? "Uploading…" : user.image ? "Change photo" : "Add photo"}
-              <input
-                className="sr-only"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                disabled={avatar.isPending}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (!file) return;
-                  setAvatarError("");
-                  avatar.mutate(file);
-                }}
-              />
-            </label>
-            {user.image ? <Button className="h-9 px-3 text-xs" variant="ghost" onClick={() => removeAvatar.mutate()} disabled={removeAvatar.isPending}><Trash2 className="size-3.5" />Remove</Button> : null}
+    <Modal open={open} onClose={onClose} title="Account settings" description="Manage your profile, picture, and sign-in details." size="lg">
+      {section === "profile" ? (
+        <>
+          <div className="rounded-[26px] border border-[#ded2c2] bg-[#f2e9dc] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-5">
+            <div className="flex min-w-0 items-center gap-4">
+              <ProfileAvatar user={user} className="size-16 shrink-0" textClassName="text-sm" />
+              <div className="min-w-0">
+                <strong className="block truncate text-lg text-[#26372f]">{user.name}</strong>
+                <span className="mt-0.5 block truncate text-sm text-[#766f65]">{user.email}</span>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
+              <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#d2c5b3] bg-[#fffaf2] px-4 text-sm font-semibold text-[#34443a] transition hover:bg-[#f5ecdf]">
+                <Camera className="size-4" />{avatar.isPending ? "Uploading…" : user.image ? "Change photo" : "Add photo"}
+                <input
+                  className="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={avatar.isPending}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    setAvatarError("");
+                    avatar.mutate(file);
+                  }}
+                />
+              </label>
+              {user.image ? <Button className="h-10 px-4 text-sm" variant="ghost" onClick={() => removeAvatar.mutate()} disabled={removeAvatar.isPending}><Trash2 className="size-4" />Remove</Button> : null}
+            </div>
           </div>
-        </div>
+          <ErrorMessage message={avatarError} />
+        </>
+      ) : null}
+
+      <div className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-[#eee5d8] p-1" role="tablist" aria-label="Account settings sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === "profile"}
+          onClick={() => setSection("profile")}
+          className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${section === "profile" ? "bg-[#fffaf2] text-[#26372f] shadow-sm" : "text-[#766f65] hover:text-[#34443a]"}`}
+        >
+          <UserRound className="size-4" />Profile
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === "password"}
+          onClick={() => setSection("password")}
+          className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${section === "password" ? "bg-[#fffaf2] text-[#26372f] shadow-sm" : "text-[#766f65] hover:text-[#34443a]"}`}
+        >
+          <KeyRound className="size-4" />Password
+        </button>
       </div>
-      <ErrorMessage message={avatarError} />
 
-      <section className={avatarError ? "mt-5" : undefined}>
-        <div className="mb-4 flex items-center gap-2 text-[#34443a]">
-          <UserRound className="size-4" />
-          <h3 className="text-sm font-bold">Profile details</h3>
-        </div>
-        <form className="grid gap-4" onSubmit={updateProfile}>
-          <Field label="Display name"><Input name="name" defaultValue={user.name} autoComplete="name" minLength={2} maxLength={80} required /></Field>
-          <Field label="Email" hint="Your email identifies your account and controls shared-space invitations."><Input value={user.email} disabled readOnly /></Field>
-          <ErrorMessage message={profileError} />
-          <Button className="justify-self-start" variant="secondary" disabled={profile.isPending}>
-            {profile.isPending ? <Spinner /> : "Save profile"}
-          </Button>
-        </form>
-      </section>
-
-      <div className="my-7 h-px bg-[#dfd4c5]" />
-
-      <section>
-        <div className="mb-4 flex items-center gap-2 text-[#34443a]">
-          <KeyRound className="size-4" />
-          <h3 className="text-sm font-bold">Password</h3>
-        </div>
-        <form ref={passwordForm} className="grid gap-4" onSubmit={updatePassword}>
-          <Field label="Current password"><Input name="currentPassword" type="password" autoComplete="current-password" minLength={6} required /></Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="New password"><Input name="newPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
-            <Field label="Confirm password"><Input name="confirmPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
+      {section === "profile" ? (
+        <section className="mt-6 rounded-[24px] border border-[#e2d7c8] bg-[#fffdf8] p-5 sm:p-6">
+          <div className="mb-6">
+            <h3 className="text-base font-bold text-[#34443a]">Profile details</h3>
+            <p className="mt-1 text-sm text-[#827b70]">This is how you appear to people in your shared spaces.</p>
           </div>
-          <p className="flex items-center gap-2 text-xs leading-5 text-[#827b70]"><LockKeyhole className="size-3.5 shrink-0" />Use at least six characters. Other signed-in devices will be logged out.</p>
-          <ErrorMessage message={passwordError} />
-          <Button className="justify-self-start" variant="secondary" disabled={password.isPending}>
-            {password.isPending ? <Spinner /> : "Change password"}
-          </Button>
-        </form>
-      </section>
+          <form className="grid gap-5" onSubmit={updateProfile}>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Display name"><Input name="name" defaultValue={user.name} autoComplete="name" minLength={2} maxLength={80} required /></Field>
+              <Field label="Email"><Input value={user.email} disabled readOnly /></Field>
+            </div>
+            <p className="text-xs leading-5 text-[#827b70]">Your email is used for sign-in and invitations. It cannot be changed yet.</p>
+            <ErrorMessage message={profileError} />
+            <Button className="justify-self-start" disabled={profile.isPending}>
+              {profile.isPending ? <Spinner /> : "Save changes"}
+            </Button>
+          </form>
+        </section>
+      ) : (
+        <section className="mt-6 rounded-[24px] border border-[#e2d7c8] bg-[#fffdf8] p-5 sm:p-6">
+          <div className="mb-6">
+            <h3 className="text-base font-bold text-[#34443a]">Change password</h3>
+            <p className="mt-1 text-sm text-[#827b70]">Use at least six characters. Other signed-in devices will be logged out.</p>
+          </div>
+          <form ref={passwordForm} className="grid gap-5" onSubmit={updatePassword}>
+            <Field label="Current password"><Input name="currentPassword" type="password" autoComplete="current-password" minLength={6} required /></Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="New password"><Input name="newPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
+              <Field label="Confirm new password"><Input name="confirmPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
+            </div>
+            <ErrorMessage message={passwordError} />
+            <Button className="justify-self-start" disabled={password.isPending}>
+              {password.isPending ? <Spinner /> : "Update password"}
+            </Button>
+          </form>
+        </section>
+      )}
 
-      <div className="mt-8 flex items-center justify-between border-t border-[#dfd4c5] pt-5">
-        <p className="text-xs text-[#827b70]">Signed in as {user.email}</p>
-        <Button variant="ghost" onClick={onSignOut} disabled={signingOut}><LogOut className="size-4" />Sign out</Button>
+      <div className="mt-6 flex items-center justify-between border-t border-[#dfd4c5] pt-5">
+        <p className="hidden text-xs text-[#827b70] sm:block">Signed in as {user.email}</p>
+        <Button className="ml-auto" variant="ghost" onClick={onSignOut} disabled={signingOut}><LogOut className="size-4" />Sign out</Button>
       </div>
     </Modal>
   );
