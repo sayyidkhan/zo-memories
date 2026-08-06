@@ -87,15 +87,15 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
 
       <ExperienceGallery />
 
-      <section className="journey-section relative overflow-hidden bg-[#dca087] px-5 py-24 text-[#21352c] sm:px-8 sm:py-36 lg:px-12 lg:py-40">
-        <div className="journey-halo absolute inset-y-0 right-[-18rem] w-[48rem] rounded-full border border-[#9e4b3b]/25" />
+      <section className="journey-section relative overflow-hidden bg-[#c8d3c8] px-5 py-24 text-[#21352c] sm:px-8 sm:py-36 lg:px-12 lg:py-40">
+        <div className="journey-halo absolute inset-y-0 right-[-18rem] w-[48rem] rounded-full border border-[#73897a]/30" />
         <div className="relative mx-auto max-w-[90rem]">
-          <div className="story-reveal flex flex-col justify-between gap-8 border-b border-[#914c3e]/25 pb-10 lg:flex-row lg:items-end">
+          <div className="story-reveal flex flex-col justify-between gap-8 border-b border-[#6f8676]/35 pb-10 lg:flex-row lg:items-end">
             <div>
-              <p className="landing-kicker text-[#7f3f34]">Three small steps</p>
+              <p className="landing-kicker text-[#914d40]">Three small steps</p>
               <h2 className="mt-5 max-w-4xl font-display text-[clamp(3.6rem,7.6vw,8rem)] leading-[.82] tracking-[-.07em]">From “remember this?”<br /><span className="italic">to always remembered.</span></h2>
             </div>
-            <p className="max-w-sm text-base leading-7 text-[#654b42] lg:pb-2">No onboarding maze. Make a space, send one link, and start adding the life already happening around you.</p>
+            <p className="max-w-sm text-base leading-7 text-[#52655a] lg:pb-2">No onboarding maze. Make a space, send one link, and start adding the life already happening around you.</p>
           </div>
 
           <div className="journey-line relative mt-12 grid gap-5 lg:grid-cols-3 lg:gap-0">
@@ -239,10 +239,10 @@ function ExperiencePhoto({ className, image, location, detail }: { className: st
 
 function JourneyStep({ number, icon, title, body }: { number: string; icon: React.ReactNode; title: string; body: string }) {
   return (
-    <article className="journey-step story-reveal relative border-[#955545]/25 py-8 lg:border-r lg:px-10 lg:py-12 first:lg:pl-0 last:lg:border-r-0 last:lg:pr-0">
-      <div className="flex items-start justify-between"><span className="grid size-16 place-items-center rounded-[1.4rem] border border-[#8e4d40]/20 bg-[#efb9a2]/45">{icon}</span><span className="font-display text-5xl italic text-[#9c5949]/40">{number}</span></div>
+    <article className="journey-step story-reveal relative border-[#748a7b]/35 py-8 lg:border-r lg:px-10 lg:py-12 first:lg:pl-0 last:lg:border-r-0 last:lg:pr-0">
+      <div className="flex items-start justify-between"><span className="grid size-16 place-items-center rounded-[1.4rem] border border-[#718777]/25 bg-[#edf0e7]/65 shadow-[0_10px_30px_rgba(47,72,57,.08)]">{icon}</span><span className="font-display text-5xl italic text-[#a45140]/40">{number}</span></div>
       <h3 className="mt-14 font-display text-4xl leading-none tracking-[-.045em] sm:text-5xl">{title}</h3>
-      <p className="mt-5 max-w-sm leading-7 text-[#654c43]">{body}</p>
+      <p className="mt-5 max-w-sm leading-7 text-[#506358]">{body}</p>
     </article>
   );
 }
