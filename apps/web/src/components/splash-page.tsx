@@ -3,6 +3,13 @@ import type { PointerEvent } from "react";
 import { BrandMark } from "./brand-mark";
 import { Button } from "./ui";
 
+const momentImages = {
+  coast: `${import.meta.env.BASE_URL}images/moments/coastal-roadtrip.webp`,
+  city: `${import.meta.env.BASE_URL}images/moments/tokyo-evening.webp`,
+  mountain: `${import.meta.env.BASE_URL}images/moments/mountain-morning.webp`,
+  dinner: `${import.meta.env.BASE_URL}images/moments/terrace-dinner.webp`,
+};
+
 export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
   const moveSpotlight = (event: PointerEvent<HTMLElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -39,7 +46,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                 <span className="italic text-[#e8aa90]">the life</span> you share.
               </h1>
               <p className="landing-intro landing-intro--3 mx-auto mt-7 max-w-2xl text-base leading-7 text-[#d1dbd4] sm:mt-9 sm:text-xl sm:leading-8">
-                One private place where your people can keep the photos, voices and ordinary days that become a life together.
+                One private place where your people can keep every trip, celebration, voice note and ordinary day that becomes a life together.
               </p>
               <div className="landing-intro landing-intro--4 mt-8 flex flex-col items-center justify-center gap-3 sm:mt-9 sm:flex-row">
                 <Button className="h-14 w-full bg-[#e8aa90] px-7 text-base text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28)] hover:bg-[#f4c5b1] sm:w-auto" onClick={onGetStarted}>
@@ -77,6 +84,8 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
           </div>
         </div>
       </section>
+
+      <ExperienceGallery />
 
       <section className="journey-section relative overflow-hidden bg-[#dca087] px-5 py-24 text-[#21352c] sm:px-8 sm:py-36 lg:px-12 lg:py-40">
         <div className="journey-halo absolute inset-y-0 right-[-18rem] w-[48rem] rounded-full border border-[#9e4b3b]/25" />
@@ -136,20 +145,20 @@ function MemoryReel() {
   return (
     <div className="memory-reel landing-intro landing-intro--5 relative z-10 mx-[-12rem] mt-10 h-60 sm:mx-[-8rem] sm:mt-12 sm:h-72 lg:absolute lg:inset-x-[-10rem] lg:bottom-[3rem] lg:mt-0 lg:h-64" aria-label="A reel of shared memories">
       <div className="memory-reel__track">
-        <ReelCard className="reel-card--one" date="21 MAY" title="The first keys" scene="keys" />
-        <ReelCard className="reel-card--two" date="04 JUL" title="That little beach" scene="beach" />
+        <ReelCard className="reel-card--one" date="21 MAY" title="Pacific Coast" image={momentImages.coast} position="center" />
+        <ReelCard className="reel-card--two" date="04 JUL" title="Tokyo after rain" image={momentImages.city} position="center 42%" />
         <VoiceCard />
-        <ReelCard className="reel-card--four" date="18 OCT" title="Everyone was here" scene="table" />
-        <ReelCard className="reel-card--five" date="01 JAN" title="A new morning" scene="morning" />
+        <ReelCard className="reel-card--four" date="18 OCT" title="Above the clouds" image={momentImages.mountain} position="center 58%" />
+        <ReelCard className="reel-card--five" date="01 JAN" title="Dinner in Tuscany" image={momentImages.dinner} position="center" />
       </div>
     </div>
   );
 }
 
-function ReelCard({ className, date, title, scene }: { className: string; date: string; title: string; scene: "keys" | "beach" | "table" | "morning" }) {
+function ReelCard({ className, date, title, image, position }: { className: string; date: string; title: string; image: string; position: string }) {
   return (
     <article className={`reel-card ${className}`}>
-      <div className={`reel-scene reel-scene--${scene}`}><span /><i /></div>
+      <img className="reel-photo" src={image} alt="" loading="eager" decoding="async" style={{ objectPosition: position }} />
       <div className="flex items-end justify-between gap-3 px-1 pt-3"><div><p className="font-display text-lg leading-none text-[#26372f]">{title}</p><p className="mt-1.5 text-[8px] font-bold uppercase tracking-[.17em] text-[#9b5d4e]">{date}</p></div><BrandMark className="size-7 shrink-0 opacity-55" /></div>
     </article>
   );
@@ -174,11 +183,43 @@ function ChatToArchive() {
         </div>
         <div className="archive-drawer relative overflow-hidden rounded-[1.4rem] bg-[#fffaf2] p-5">
           <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-[.18em] text-[#8c5b4e]"><span>Inside your space</span><span>June 2026</span></div>
-          <div className="mt-7 grid grid-cols-3 gap-2"><div className="mini-memory mini-memory--one" /><div className="mini-memory mini-memory--two" /><div className="mini-memory mini-memory--three" /></div>
+          <div className="mt-7 grid grid-cols-3 gap-2"><img className="mini-memory" src={momentImages.city} alt="" /><img className="mini-memory -translate-y-2" src={momentImages.mountain} alt="" /><img className="mini-memory" src={momentImages.dinner} alt="" /></div>
           <p className="mt-5 font-display text-2xl">Tokyo, together</p><p className="mt-1 text-xs text-[#788078]">143 photos · 12 videos · 2 voice notes</p>
         </div>
       </div>
     </div>
+  );
+}
+
+function ExperienceGallery() {
+  return (
+    <section className="experience-section overflow-hidden bg-[#e7dccd] px-5 py-24 sm:px-8 sm:py-36 lg:px-12 lg:py-40">
+      <div className="mx-auto max-w-[90rem]">
+        <div className="story-reveal grid gap-8 border-b border-[#c9b9a5] pb-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
+          <div>
+            <p className="landing-kicker">Your shared travel journal</p>
+            <h2 className="mt-5 max-w-5xl font-display text-[clamp(3.8rem,8vw,8.2rem)] leading-[.8] tracking-[-.07em]">Every trip becomes<br /><span className="italic text-[#a9503f]">a chapter.</span></h2>
+          </div>
+          <p className="max-w-lg text-lg leading-8 text-[#667068] lg:justify-self-end lg:pb-2">The views, the people, the voice notes, the meals and the small details everyone remembers differently. Kept together by everyone who was there.</p>
+        </div>
+
+        <div className="experience-grid mt-10 sm:mt-14">
+          <ExperiencePhoto className="experience-photo--coast" image={momentImages.coast} location="Pacific Coast" detail="Road trip · 48 moments" />
+          <ExperiencePhoto className="experience-photo--city" image={momentImages.city} location="Tokyo" detail="Night walk · 83 moments" />
+          <ExperiencePhoto className="experience-photo--mountain" image={momentImages.mountain} location="The ridge" detail="Morning hike · 31 moments" />
+          <ExperiencePhoto className="experience-photo--dinner" image={momentImages.dinner} location="Tuscany" detail="Last-night dinner · 26 moments" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExperiencePhoto({ className, image, location, detail }: { className: string; image: string; location: string; detail: string }) {
+  return (
+    <figure className={`experience-photo story-reveal ${className}`}>
+      <img src={image} alt={`${location} travel memory`} loading="lazy" decoding="async" />
+      <figcaption><span className="font-display text-2xl sm:text-3xl">{location}</span><span className="text-[9px] font-bold uppercase tracking-[.17em]">{detail}</span></figcaption>
+    </figure>
   );
 }
 
