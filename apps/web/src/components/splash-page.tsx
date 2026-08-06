@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Check, LockKeyhole, MessageCircle, Play, Sparkles, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, LockKeyhole, MessageCircle, Play, Sparkles, Star, Users } from "lucide-react";
 import type { PointerEvent } from "react";
 import { BrandMark } from "./brand-mark";
 import { Button } from "./ui";
@@ -194,8 +194,9 @@ function ChatToArchive() {
 
 function ExperienceGallery() {
   return (
-    <section className="experience-section overflow-hidden bg-[#e7dccd] px-5 py-24 sm:px-8 sm:py-36 lg:px-12 lg:py-40">
-      <div className="mx-auto max-w-[90rem]">
+    <section className="experience-section relative overflow-hidden bg-[#e7dccd] px-5 py-24 sm:px-8 sm:py-36 lg:px-12 lg:py-40">
+      <GoldenShootingStar />
+      <div className="relative z-[1] mx-auto max-w-[90rem]">
         <div className="story-reveal grid gap-8 border-b border-[#c9b9a5] pb-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
           <div>
             <p className="landing-kicker">Your shared travel journal</p>
@@ -212,6 +213,18 @@ function ExperienceGallery() {
         </div>
       </div>
     </section>
+  );
+}
+
+function GoldenShootingStar() {
+  return (
+    <div className="golden-shooting-star" aria-hidden="true">
+      <span className="shooting-star__trail" />
+      <i className="shooting-star__spark shooting-star__spark--one" />
+      <i className="shooting-star__spark shooting-star__spark--two" />
+      <i className="shooting-star__spark shooting-star__spark--three" />
+      <span className="shooting-star__core"><Star className="size-6 fill-current" /></span>
+    </div>
   );
 }
 
