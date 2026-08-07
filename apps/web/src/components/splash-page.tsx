@@ -179,12 +179,19 @@ function ChatToArchive() {
       <div className="relative z-[1] grid gap-4 sm:grid-cols-[.88fr_1.12fr]">
         <div className="chat-panel rounded-[1.4rem] bg-[#d5cab9] p-5 text-[#5d615c]">
           <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.18em]"><MessageCircle className="size-3.5" /> Somewhere in the chat</div>
-          <div className="chat-stack mt-7 space-y-3"><span>IMG_4829.jpg</span><span>Listen to this 😂</span><span>Who has the birthday video?</span><span>Sent a photo</span></div>
+          <div className="chat-stack mt-7 space-y-3">
+            <span>IMG_4829.jpg</span>
+            <span>Listen to this 😂</span>
+            <span>Who has the birthday video?</span>
+            <span className="chat-photo"><img src={momentImages.city} alt="" /><b>Sent a photo</b></span>
+          </div>
         </div>
         <div className="archive-drawer relative overflow-hidden rounded-[1.4rem] bg-[#fffaf2] p-5">
-          <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-[.18em] text-[#8c5b4e]"><span>Inside your space</span><span>June 2026</span></div>
+          <div className="archive-meta flex items-center justify-between text-[9px] font-bold uppercase tracking-[.18em] text-[#8c5b4e]"><span>Inside your space</span><span>June 2026</span></div>
+          <div className="archive-waiting" aria-hidden="true"><span /><span /><span /></div>
           <div className="mt-7 grid grid-cols-3 gap-2"><img className="mini-memory archive-memory--one" src={momentImages.city} alt="" /><img className="mini-memory archive-memory--two" src={momentImages.mountain} alt="" /><img className="mini-memory archive-memory--three" src={momentImages.dinner} alt="" /></div>
           <div className="archive-caption"><p className="mt-5 font-display text-2xl">Tokyo, together</p><p className="mt-1 text-xs text-[#788078]">143 photos · 12 videos · 2 voice notes</p></div>
+          <div className="archive-saved" aria-hidden="true">Memory saved</div>
         </div>
       </div>
       <div className="archive-transfer" aria-hidden="true"><img src={momentImages.city} alt="" /><span><ArrowRight className="size-3" /></span></div>
