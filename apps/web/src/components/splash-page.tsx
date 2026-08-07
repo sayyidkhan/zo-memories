@@ -202,7 +202,7 @@ function ChatToArchive() {
 function ExperienceGallery() {
   return (
     <section className="experience-section relative overflow-hidden bg-[#e7dccd] px-5 py-24 sm:px-8 sm:py-36 lg:px-12 lg:py-40">
-      <GoldenShootingStar />
+      <GoldenMeteorShower />
       <div className="relative z-[1] mx-auto max-w-[90rem]">
         <div className="story-reveal grid gap-8 border-b border-[#c9b9a5] pb-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
           <div>
@@ -223,9 +223,21 @@ function ExperienceGallery() {
   );
 }
 
-function GoldenShootingStar() {
+function GoldenMeteorShower() {
   return (
-    <div className="golden-shooting-star" aria-hidden="true">
+    <div className="golden-meteor-shower" aria-hidden="true">
+      <GoldenShootingStar className="golden-shooting-star--one" />
+      <GoldenShootingStar className="golden-shooting-star--two" />
+      <GoldenShootingStar className="golden-shooting-star--three" />
+      <GoldenShootingStar className="golden-shooting-star--four" />
+      <GoldenShootingStar className="golden-shooting-star--five" />
+    </div>
+  );
+}
+
+function GoldenShootingStar({ className }: { className: string }) {
+  return (
+    <div className={`golden-shooting-star ${className}`}>
       <span className="shooting-star__trail" />
       <i className="shooting-star__spark shooting-star__spark--one" />
       <i className="shooting-star__spark shooting-star__spark--two" />
