@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Check, LockKeyhole, MessageCircle, Play, Sparkles, Star, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, CircleCheck, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Play, Send, Sparkles, Star, UserPlus } from "lucide-react";
 import type { PointerEvent } from "react";
 import { BrandMark } from "./brand-mark";
 import { Button } from "./ui";
@@ -98,11 +98,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
             <p className="max-w-sm text-base leading-7 text-[#52655a] lg:pb-2">No onboarding maze. Make a space, send one link, and start adding the life already happening around you.</p>
           </div>
 
-          <div className="journey-line relative mt-12 grid gap-5 lg:grid-cols-3 lg:gap-0">
-            <JourneyStep number="01" icon={<BrandMark className="size-12" />} title="Make your space" body="Name a private home for your family, friendship, relationship or favourite people." />
-            <JourneyStep number="02" icon={<Users className="size-9" />} title="Bring people in" body="Share one invitation through WhatsApp, Telegram, SMS or wherever you already talk." />
-            <JourneyStep number="03" icon={<Sparkles className="size-9" />} title="Let it grow" body="Everyone adds photos, video and voice notes. Zo Moments keeps the story in order." />
-          </div>
+          <JourneyWalkthrough />
         </div>
       </section>
 
@@ -256,12 +252,98 @@ function ExperiencePhoto({ className, image, location, detail }: { className: st
   );
 }
 
-function JourneyStep({ number, icon, title, body }: { number: string; icon: React.ReactNode; title: string; body: string }) {
+function JourneyWalkthrough() {
   return (
-    <article className="journey-step story-reveal relative border-[#748a7b]/35 py-8 lg:border-r lg:px-10 lg:py-12 first:lg:pl-0 last:lg:border-r-0 last:lg:pr-0">
-      <div className="flex items-start justify-between"><span className="grid size-16 place-items-center rounded-[1.4rem] border border-[#718777]/25 bg-[#edf0e7]/65 shadow-[0_10px_30px_rgba(47,72,57,.08)]">{icon}</span><span className="font-display text-5xl italic text-[#a45140]/40">{number}</span></div>
-      <h3 className="mt-14 font-display text-4xl leading-none tracking-[-.045em] sm:text-5xl">{title}</h3>
-      <p className="mt-5 max-w-sm leading-7 text-[#506358]">{body}</p>
+    <div className="journey-walkthrough story-reveal mt-12 grid gap-6 lg:grid-cols-[.72fr_1.28fr] lg:gap-8">
+      <div className="journey-chapters grid gap-3">
+        <JourneyChapter className="journey-chapter--one" number="01" icon={<FolderPlus className="size-5" />} title="Make your space" body="Give your trip or relationship a private name and home." />
+        <JourneyChapter className="journey-chapter--two" number="02" icon={<UserPlus className="size-5" />} title="Bring people in" body="Send one link through the apps where you already talk." />
+        <JourneyChapter className="journey-chapter--three" number="03" icon={<ImagePlus className="size-5" />} title="Let it grow" body="Everyone adds their view. The shared timeline builds itself." />
+      </div>
+
+      <div className="journey-demo overflow-hidden rounded-[2rem] border border-[#6f8676]/30 bg-[#20342b] text-[#fffaf2] shadow-[0_32px_80px_rgba(39,59,48,.22)]" aria-hidden="true">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-7">
+          <div className="flex items-center gap-2"><span className="size-2 rounded-full bg-[#e8aa90]" /><span className="size-2 rounded-full bg-[#d9bf78]" /><span className="size-2 rounded-full bg-[#87a38e]" /></div>
+          <span className="text-[9px] font-bold uppercase tracking-[.2em] text-[#aebdb4]">Live walkthrough</span>
+          <BrandMark className="size-7" />
+        </div>
+
+        <div className="journey-demo__viewport relative min-h-[32rem] sm:min-h-[34rem]">
+          <div className="journey-screen journey-screen--create">
+            <div className="journey-screen__number">01</div>
+            <p className="journey-demo__kicker">Create a shared space</p>
+            <h3 className="mt-3 font-display text-4xl tracking-[-.045em] sm:text-5xl">Where should this story live?</h3>
+            <div className="journey-form mt-8 rounded-[1.5rem] bg-[#fffaf2] p-5 text-[#26372f] sm:p-6">
+              <label className="text-[9px] font-bold uppercase tracking-[.18em] text-[#8b7468]">Space name</label>
+              <div className="mt-3 flex h-14 items-center rounded-xl border border-[#cfbfae] bg-white px-4 font-display text-xl">
+                <span className="journey-typed-name">Japan · Summer 2026</span><i className="journey-caret" />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-xs text-[#7a786f]">Private · Only invited people</span>
+                <span className="journey-create-button inline-flex items-center gap-2 rounded-full bg-[#a9503f] px-4 py-2.5 text-xs font-bold text-white"><CircleCheck className="size-4" /> Create space</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="journey-screen journey-screen--share">
+            <div className="journey-screen__number">02</div>
+            <p className="journey-demo__kicker">Invite your people</p>
+            <h3 className="mt-3 font-display text-4xl tracking-[-.045em] sm:text-5xl">One link. Everyone is in.</h3>
+            <div className="journey-share-card mt-8 rounded-[1.5rem] bg-[#fffaf2] p-5 text-[#26372f] sm:p-6">
+              <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-[#e5d6c1]"><Link2 className="size-5" /></span><div><p className="font-display text-xl">Japan · Summer 2026</p><p className="text-[10px] text-[#81796f]">Invitation ready · Expires in 30 days</p></div></div>
+              <div className="journey-link mt-5 flex items-center justify-between gap-3 rounded-xl border border-[#d6c6b6] bg-white px-4 py-3"><span className="min-w-0 truncate text-xs text-[#7d7469]">zomoments.com/join/tokyo-26</span><span className="rounded-full bg-[#dce8dc] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.12em] text-[#496151]">Copied</span></div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <ShareChoice label="WhatsApp" /><ShareChoice label="Telegram" /><ShareChoice label="SMS" />
+              </div>
+              <div className="journey-joined mt-5 flex items-center justify-between border-t border-[#ded1c2] pt-4"><div className="flex -space-x-2"><JourneyAvatar label="SK" tone="bg-[#a9503f]" /><JourneyAvatar label="S" tone="bg-[#708b79]" /></div><span className="inline-flex items-center gap-2 text-xs font-semibold text-[#496151]"><CircleCheck className="size-4" /> Sarah joined the space</span></div>
+            </div>
+          </div>
+
+          <div className="journey-screen journey-screen--grow">
+            <div className="journey-screen__number">03</div>
+            <p className="journey-demo__kicker">Build the story together</p>
+            <h3 className="mt-3 font-display text-4xl tracking-[-.045em] sm:text-5xl">Every angle becomes one trip.</h3>
+            <div className="journey-timeline mt-7 rounded-[1.5rem] bg-[#fffaf2] p-4 text-[#26372f] sm:p-5">
+              <div className="flex items-center justify-between"><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#a9503f]">June 2026</p><p className="mt-1 font-display text-2xl">Japan · Summer 2026</p></div><span className="journey-upload-count rounded-full bg-[#dce8dc] px-3 py-1.5 text-[9px] font-bold text-[#496151]">6 memories added</span></div>
+              <div className="journey-memory-grid mt-4 grid grid-cols-3 gap-2">
+                <JourneyMemory image={momentImages.city} label="Shibuya" />
+                <JourneyMemory image={momentImages.dinner} label="Dinner" />
+                <JourneyMemory image={momentImages.mountain} label="The climb" />
+              </div>
+              <div className="journey-contributors mt-4 flex items-center justify-between"><span className="text-xs text-[#7a786f]">Added by you and Sarah</span><span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a9503f]"><Sparkles className="size-3.5" /> Story in order</span></div>
+            </div>
+            <div className="journey-upload-flight journey-upload-flight--one"><img src={momentImages.city} alt="" /></div>
+            <div className="journey-upload-flight journey-upload-flight--two"><img src={momentImages.dinner} alt="" /></div>
+            <div className="journey-upload-flight journey-upload-flight--three"><img src={momentImages.mountain} alt="" /></div>
+          </div>
+        </div>
+
+        <div className="journey-progress border-t border-white/10 px-5 py-4 sm:px-7">
+          <span className="journey-progress__fill" />
+          <div className="relative flex justify-between text-[9px] font-bold uppercase tracking-[.16em] text-[#8fa197]"><span>Create</span><span>Invite</span><span>Remember</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JourneyChapter({ className, number, icon, title, body }: { className: string; number: string; icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <article className={`journey-chapter ${className} relative overflow-hidden rounded-[1.5rem] border border-[#718777]/25 bg-[#edf0e7]/50 p-5 sm:p-6`}>
+      <span className="journey-chapter__wash" />
+      <div className="relative flex items-start gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#fffaf2]/80">{icon}</span><div><span className="text-[9px] font-bold uppercase tracking-[.18em] text-[#a45140]">Step {number}</span><h3 className="mt-1 font-display text-2xl tracking-[-.035em] sm:text-3xl">{title}</h3><p className="mt-2 text-sm leading-6 text-[#56695e]">{body}</p></div></div>
     </article>
   );
+}
+
+function ShareChoice({ label }: { label: string }) {
+  return <span className="journey-share-choice flex items-center justify-center gap-1.5 rounded-xl bg-[#e9dfd1] px-2 py-3 text-[10px] font-semibold"><Send className="size-3" /> {label}</span>;
+}
+
+function JourneyAvatar({ label, tone }: { label: string; tone: string }) {
+  return <span className={`grid size-9 place-items-center rounded-full border-2 border-[#fffaf2] text-[10px] font-bold text-white ${tone}`}>{label}</span>;
+}
+
+function JourneyMemory({ image, label }: { image: string; label: string }) {
+  return <figure className="journey-memory overflow-hidden rounded-xl bg-[#e7dccd]"><img className="aspect-[.9] w-full object-cover" src={image} alt="" /><figcaption className="px-2 py-2 text-[9px] font-bold uppercase tracking-[.1em] text-[#6f6d65]">{label}</figcaption></figure>;
 }
