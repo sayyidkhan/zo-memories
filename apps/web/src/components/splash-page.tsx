@@ -93,7 +93,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
           <div className="story-reveal flex flex-col justify-between gap-8 border-b border-[#6f8676]/35 pb-10 lg:flex-row lg:items-end">
             <div>
               <p className="landing-kicker text-[#914d40]">Three small steps</p>
-              <h2 className="mt-5 max-w-4xl font-display text-[clamp(2.75rem,5.6vw,6rem)] leading-[.88] tracking-[-.055em]">From “remember this?”<br /><span className="italic">to always remembered.</span></h2>
+              <h2 className="mt-5 max-w-4xl font-display text-[clamp(2.4rem,4.9vw,5.2rem)] leading-[.9] tracking-[-.05em]">From “remember this?”<br /><span className="italic">to always remembered.</span></h2>
             </div>
             <p className="max-w-sm text-base leading-7 text-[#52655a] lg:pb-2">No onboarding maze. Make a space, send one link, and start adding the life already happening around you.</p>
           </div>
