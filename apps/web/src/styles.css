@@ -40,7 +40,7 @@ button { cursor: pointer; }
 
 @keyframes landing-rise { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes reel-enter { from { opacity: 0; transform: translate3d(0, 65px, 0) rotate(-3deg); } to { opacity: 1; transform: translate3d(0, 0, 0) rotate(-3deg); } }
-@keyframes reel-breathe { 0%, 100% { transform: translate3d(0, 0, 0) rotate(-3deg); } 50% { transform: translate3d(-1.3%, -8px, 0) rotate(-2deg); } }
+@keyframes reel-breathe { 0%, 100% { transform: translateX(var(--reel-offset,0%)) translate3d(0,0,0) rotate(-3deg); } 50% { transform: translateX(var(--reel-offset,0%)) translate3d(-1.3%,-8px,0) rotate(-2deg); } }
 @keyframes seal-breathe { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,170,144,.08); } 50% { transform: scale(1.035); box-shadow: 0 0 0 24px rgba(232,170,144,0); } }
 @keyframes orbit-turn { to { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes chat-bubble-one { 0%, 4%, 92%, 100% { opacity: 0; transform: translate3d(-14px,8px,0) scale(.94); } 9%, 87% { opacity: 1; transform: none; } }
@@ -98,7 +98,7 @@ button { cursor: pointer; }
 .landing-kicker { font-size: .68rem; font-weight: 700; letter-spacing: .21em; text-transform: uppercase; color: #a9503f; }
 
 .memory-reel { pointer-events: none; mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%); perspective: 1200px; }
-.memory-reel__track { position: absolute; left: 50%; top: 18%; display: flex; width: max-content; gap: 1rem; transform: translateX(-50%) rotate(-3deg); animation: reel-breathe 9s ease-in-out infinite 1.2s; }
+.memory-reel__track { --reel-offset: 0%; position: absolute; left: 50%; top: 18%; display: flex; width: max-content; gap: 1rem; transform: translateX(var(--reel-offset)) translate3d(0,0,0) rotate(-3deg); animation: reel-breathe 9s ease-in-out infinite 1.2s; }
 .reel-card { width: 15.5rem; flex: 0 0 auto; border: 7px solid #fff9ef; border-radius: 1.7rem; background: #f5ead9; padding: .75rem; box-shadow: 0 28px 60px rgba(7,18,13,.38); }
 .reel-card--one { transform: translateY(22px) rotate(-2deg); }.reel-card--two { transform: translateY(-8px) rotate(1deg); }.reel-card--four { transform: translateY(13px) rotate(2deg); }.reel-card--five { transform: translateY(-14px) rotate(-1deg); }
 .reel-card--voice { display: flex; width: 19rem; flex-direction: column; justify-content: center; transform: translateY(35px) rotate(1deg); padding: 1.2rem; }
@@ -196,7 +196,7 @@ button { cursor: pointer; }
 
 @media (max-width: 39.999rem) {
   .memory-reel { mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
-  .memory-reel__track { left: 54%; top: 8%; transform: translateX(-50%) rotate(-3deg); }
+  .memory-reel__track { --reel-offset: -50%; left: 54%; top: 8%; }
   .reel-card { width: 12rem; border-width: 5px; border-radius: 1.35rem; padding: .55rem; }
   .reel-card--voice { width: 15rem; padding: .9rem; }
   .reel-card--one, .reel-card--five { display: none; }
