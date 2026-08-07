@@ -57,7 +57,7 @@ button { cursor: pointer; }
 @keyframes archive-saved-pop { 0%, 74%, 92%, 100% { opacity: 0; transform: translateY(8px) scale(.9); } 80%, 87% { opacity: 1; transform: none; } }
 @keyframes archive-wait { 0%, 52% { opacity: 1; } 58%, 100% { opacity: 0; } }
 @keyframes archive-drawer-glow { 0%, 54%, 92%, 100% { box-shadow: inset 0 0 0 1px rgba(169,80,63,0); } 63%, 87% { box-shadow: inset 0 0 0 1px rgba(169,80,63,.24), 0 16px 38px rgba(95,69,48,.12); } }
-@keyframes shooting-star-flight { 0%, 7% { opacity: 0; transform: translate3d(-13rem,-1rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .78)); } 11% { opacity: var(--star-opacity,1); } 25% { opacity: var(--star-opacity,1); transform: translate3d(var(--star-travel,23rem),4.2rem,0) rotate(var(--star-angle,13deg)) scale(var(--star-scale,1)); } 31%, 100% { opacity: 0; transform: translate3d(calc(var(--star-travel,23rem) + 6rem),5.3rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .82)); } }
+@keyframes shooting-star-flight { 0%, 7% { opacity: 0; transform: translate3d(-13rem,-1rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .78)); } 11% { opacity: var(--star-opacity,1); } 25% { opacity: var(--star-opacity,1); transform: translate3d(var(--star-travel,23rem),4.2rem,0) rotate(var(--star-angle,13deg)) scale(var(--star-scale,1)); } 31%, 100% { opacity: 0; transform: translate3d(calc(var(--star-travel,23rem) + 2rem),4.8rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .82)); } }
 @keyframes shooting-star-glow { 0%, 100% { filter: drop-shadow(0 0 4px rgba(208,153,46,.55)); transform: translateY(-50%) scale(.9) rotate(-13deg); } 50% { filter: drop-shadow(0 0 12px rgba(224,175,72,.95)); transform: translateY(-50%) scale(1.14) rotate(-13deg); } }
 @keyframes shooting-spark-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 35%, 70% { opacity: 1; transform: scale(1); } }
 @keyframes journey-screen-create { 0%, 27%, 100% { opacity: 1; transform: translate3d(0,0,0); } 32%, 96% { opacity: 0; transform: translate3d(-2rem,0,0); } }
@@ -126,13 +126,13 @@ button { cursor: pointer; }
 .archive-caption { animation: archive-caption-rise var(--archive-cycle) cubic-bezier(.16,1,.3,1) infinite; }
 .archive-saved { position: absolute; right: 1.25rem; bottom: 1.25rem; border-radius: 999px; background: #dce8dc; padding: .35rem .65rem; color: #496151; font-size: .58rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; animation: archive-saved-pop var(--archive-cycle) cubic-bezier(.16,1,.3,1) infinite; }
 .experience-grid { display: grid; grid-template-columns: repeat(12,minmax(0,1fr)); grid-template-rows: repeat(2,24rem); gap: 1rem; }
-.golden-meteor-shower { position: absolute; z-index: 2; inset: 0 0 auto; height: 10rem; overflow: hidden; pointer-events: none; }
+.golden-meteor-shower { position: absolute; z-index: 2; inset: 0 0 auto; height: 16rem; overflow: visible; pointer-events: none; }
 .golden-shooting-star { position: absolute; width: 11rem; height: 2.5rem; color: #d4a13d; opacity: 0; transform-origin: right center; animation: shooting-star-flight var(--star-duration,10s) cubic-bezier(.2,.72,.28,1) var(--star-delay,0s) infinite; }
 .golden-shooting-star--one { --star-duration: 10.5s; --star-delay: .7s; left: 3%; top: 1.4rem; }
 .golden-shooting-star--two { --star-duration: 12s; --star-delay: 1.2s; --star-scale: .66; --star-opacity: .84; --star-travel: 18rem; left: 30%; top: 4.8rem; }
-.golden-shooting-star--three { --star-duration: 11.4s; --star-delay: 4.4s; --star-scale: .8; --star-opacity: .88; --star-travel: 20rem; left: 58%; top: 1rem; }
+.golden-shooting-star--three { --star-duration: 11.4s; --star-delay: 4.4s; --star-scale: .8; --star-opacity: .88; --star-travel: 10rem; left: 50%; top: 1rem; }
 .golden-shooting-star--four { --star-duration: 13.2s; --star-delay: 4.9s; --star-scale: .5; --star-opacity: .76; --star-travel: 17rem; left: 12%; top: 6.9rem; }
-.golden-shooting-star--five { --star-duration: 12.4s; --star-delay: 5.35s; --star-scale: .55; --star-opacity: .78; --star-travel: 16rem; left: 75%; top: 5.7rem; }
+.golden-shooting-star--five { --star-duration: 12.4s; --star-delay: 5.35s; --star-scale: .55; --star-opacity: .78; --star-travel: 8rem; left: 62%; top: 5.7rem; }
 .shooting-star__trail { position: absolute; right: 1.15rem; top: 50%; width: 9.5rem; height: 2px; border-radius: 999px; background: linear-gradient(90deg,transparent 0%,rgba(205,146,32,.12) 22%,rgba(218,163,53,.75) 78%,#f1c96f 100%); box-shadow: 0 0 8px rgba(211,157,44,.45); transform: translateY(-50%); }
 .shooting-star__trail::after { position: absolute; right: 0; top: 50%; width: 4rem; height: 9px; border-radius: 50%; background: linear-gradient(90deg,transparent,rgba(241,201,111,.25)); filter: blur(4px); content: ""; transform: translateY(-50%); }
 .shooting-star__core { position: absolute; right: 0; top: 50%; display: grid; place-items: center; color: #d6a13d; transform: translateY(-50%); animation: shooting-star-glow 1s ease-in-out infinite; }
@@ -204,7 +204,7 @@ button { cursor: pointer; }
   .experience-photo, .experience-photo--coast, .experience-photo--city, .experience-photo--mountain, .experience-photo--dinner { grid-column: 1; grid-row: auto; min-height: 25rem; }
   .experience-photo figcaption { align-items: flex-start; flex-direction: column; gap: .35rem; }
   .archive-transfer { left: 50%; top: 40%; animation-name: archive-flight-y; }
-  .golden-meteor-shower { height: 8rem; }
+  .golden-meteor-shower { height: 12rem; }
   .golden-shooting-star { left: 0; animation-name: shooting-star-flight-mobile; }
   .golden-shooting-star--one { top: .6rem; }
   .golden-shooting-star--two { top: 3.3rem; }
@@ -214,6 +214,12 @@ button { cursor: pointer; }
   .journey-screen__number { right: .7rem; font-size: 6rem; }
   .journey-upload-flight { right: .75rem; width: 3.5rem; }
   .journey-progress::before, .journey-progress__fill { right: 1.25rem; left: 1.25rem; }
+}
+
+@media (min-width: 40rem) and (max-width: 63.999rem) {
+  .golden-shooting-star--two { left: 20%; }
+  .golden-shooting-star--three { left: 46%; }
+  .golden-shooting-star--five { left: 52%; }
 }
 
 @keyframes shooting-star-flight-mobile { 0%, 7% { opacity: 0; transform: translate3d(-11rem,-.5rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .58)); } 11% { opacity: var(--star-opacity,1); } 25% { opacity: var(--star-opacity,1); transform: translate3d(10rem,3.4rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .76)); } 31%, 100% { opacity: 0; transform: translate3d(14rem,4.2rem,0) rotate(var(--star-angle,13deg)) scale(calc(var(--star-scale,1) * .62)); } }
