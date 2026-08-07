@@ -113,7 +113,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
             <LockKeyhole className="size-9 text-[#f0b69e]" />
           </div>
           <p className="mt-9 text-[10px] font-bold uppercase tracking-[.23em] text-[#efb69f]">A quieter corner of the internet</p>
-          <h2 className="mx-auto mt-5 max-w-6xl font-display text-[clamp(4rem,10vw,10rem)] leading-[.78] tracking-[-.075em]">No feed.<br />No followers.<br /><span className="italic text-[#e8aa90]">Just your people.</span></h2>
+          <h2 className="mx-auto mt-5 max-w-6xl font-display text-[clamp(3rem,7.2vw,7.2rem)] leading-[.82] tracking-[-.06em]">No feed.<br />No followers.<br /><span className="italic text-[#e8aa90]">Just your people.</span></h2>
           <p className="mx-auto mt-10 max-w-xl text-lg leading-8 text-[#cbd7cf]">Only members of a space can see what is inside. Admins manage accounts, not your private memories.</p>
           <div className="mt-10 flex flex-wrap justify-center gap-x-7 gap-y-3 text-sm text-[#d8e1db]">
             <span className="inline-flex items-center gap-2"><Check className="size-4 text-[#e8aa90]" /> Private spaces</span>
