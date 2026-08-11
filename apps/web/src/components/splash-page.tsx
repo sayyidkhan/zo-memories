@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowRight, Check, CircleCheck, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Play, Send, Sparkles, Star, UserPlus } from "lucide-react";
-import type { PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { BrandMark } from "./brand-mark";
 import { Button } from "./ui";
 
@@ -119,21 +119,85 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
         </div>
       </section>
 
-      <section className="relative overflow-hidden px-5 py-24 sm:px-8 sm:py-36 lg:px-12">
-        <div className="final-card story-reveal relative mx-auto max-w-[90rem] overflow-hidden rounded-[2rem] bg-[#e5d6c1] px-6 py-16 sm:rounded-[3rem] sm:px-12 sm:py-24 lg:px-20">
-          <div className="final-card__mark absolute -right-14 -top-16 opacity-[.08]"><BrandMark className="size-80 sm:size-[28rem]" /></div>
-          <div className="relative z-10 max-w-4xl">
-            <p className="landing-kicker">Your first chapter is one minute away</p>
-            <h2 className="mt-6 font-display text-[clamp(3.8rem,8vw,8rem)] leading-[.82] tracking-[-.07em]">Keep the good stuff.<br /><span className="italic text-[#a9503f]">Together.</span></h2>
-            <p className="mt-7 max-w-xl text-lg leading-8 text-[#657068]">Create a space now. Invite your favourite person when you are ready.</p>
-            <Button className="mt-9 h-14 bg-[#20342b] px-7 text-base" onClick={onGetStarted}>Begin your story <ArrowRight className="size-4" /></Button>
-          </div>
-        </div>
+      <section className="finale-section relative overflow-hidden px-5 pb-0 pt-24 sm:px-8 sm:pt-36 lg:px-12">
+        <FinalKeepsake onGetStarted={onGetStarted} />
         <footer className="mx-auto flex max-w-[90rem] items-center justify-between py-8 text-[10px] font-bold uppercase tracking-[.18em] text-[#746d63]">
           <span className="flex items-center gap-2"><BrandMark className="size-7" /> Zo Moments</span><span>Made on Zo</span>
         </footer>
       </section>
     </main>
+  );
+}
+
+function FinalKeepsake({ onGetStarted }: { onGetStarted: () => void }) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      setActive(true);
+      observer.disconnect();
+    }, { threshold: 0.28 });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={stageRef} className={`finale-stage relative mx-auto max-w-[90rem] overflow-hidden rounded-[2rem] bg-[#172b23] text-[#fffaf2] sm:rounded-[3rem] ${active ? "finale-stage--active" : ""}`}>
+      <div className="finale-grain absolute inset-0" />
+      <div className="finale-glow absolute inset-0" />
+      <div className="finale-orbit finale-orbit--one" />
+      <div className="finale-orbit finale-orbit--two" />
+
+      <div className="relative z-10 grid min-h-[48rem] items-center gap-6 px-6 py-14 sm:px-12 sm:py-20 lg:grid-cols-[.82fr_1.18fr] lg:px-16 lg:py-16 xl:px-20">
+        <div className="finale-copy relative z-20 max-w-[38rem]">
+          <p className="finale-kicker inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.23em] text-[#efb79f]"><Sparkles className="size-3.5" /> Your first chapter is one minute away</p>
+          <h2 className="mt-6 font-display text-[clamp(3.6rem,6.7vw,7rem)] leading-[.82] tracking-[-.065em]">The trip ends.<br /><span className="italic text-[#e8aa90]">The story stays.</span></h2>
+          <p className="mt-7 max-w-lg text-base leading-8 text-[#cad6cf] sm:text-lg">Bring every view, voice note and small detail into one private place with the people who were there.</p>
+          <Button className="finale-cta mt-9 h-14 w-full bg-[#e8aa90] px-7 text-base text-[#172b23] shadow-[0_18px_45px_rgba(0,0,0,.25)] hover:bg-[#f4c5b1] sm:w-auto" onClick={onGetStarted}>Create your first shared space <ArrowRight className="size-4" /></Button>
+          <p className="mt-4 text-[9px] font-bold uppercase tracking-[.18em] text-[#8fa197]">Free to start · Invite by link · Ready in one minute</p>
+        </div>
+
+        <div className="keepsake-scene relative min-h-[27rem] lg:min-h-[41rem]" aria-label="Travel photographs becoming a lasting shared journal">
+          <div className="keepsake-star keepsake-star--one" /><div className="keepsake-star keepsake-star--two" /><div className="keepsake-star keepsake-star--three" />
+          <div className="keepsake-year">2026</div>
+
+          <div className="keepsake-spread">
+            <div className="keepsake-page keepsake-page--left">
+              <div className="keepsake-tape keepsake-tape--left" />
+              <img className="keepsake-page-photo keepsake-page-photo--coast" src={momentImages.coast} alt="Coastal road trip" />
+              <p className="keepsake-handwriting">The road kept going.<br />So did we.</p>
+              <span className="keepsake-date">21 MAY · PACIFIC COAST</span>
+            </div>
+            <div className="keepsake-page keepsake-page--right">
+              <img className="keepsake-page-photo keepsake-page-photo--city" src={momentImages.city} alt="Tokyo after rain" />
+              <img className="keepsake-page-photo keepsake-page-photo--dinner" src={momentImages.dinner} alt="Dinner in Tuscany" />
+              <div className="keepsake-note"><span>12 videos</span><strong>83 moments</strong><span>2 voice notes</span></div>
+              <span className="keepsake-date keepsake-date--right">OUR SUMMER, TOGETHER</span>
+            </div>
+            <div className="keepsake-spine" />
+            <svg className="keepsake-route" viewBox="0 0 600 350" fill="none" aria-hidden="true">
+              <path d="M92 234C154 173 212 272 282 202C354 130 387 232 508 121" pathLength="1" />
+              <circle cx="92" cy="234" r="7" /><circle cx="508" cy="121" r="7" />
+            </svg>
+          </div>
+
+          <div className="keepsake-flight keepsake-flight--coast"><img src={momentImages.coast} alt="" /></div>
+          <div className="keepsake-flight keepsake-flight--city"><img src={momentImages.city} alt="" /></div>
+          <div className="keepsake-flight keepsake-flight--mountain"><img src={momentImages.mountain} alt="" /></div>
+          <div className="keepsake-flight keepsake-flight--dinner"><img src={momentImages.dinner} alt="" /></div>
+
+          <div className="keepsake-cover">
+            <span className="keepsake-cover__year">Our story · 2026</span>
+            <BrandMark className="keepsake-cover__mark" />
+            <div><p>Zo Moments</p><span>Trips · people · all the details</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -268,7 +332,7 @@ function JourneyWalkthrough() {
           <BrandMark className="size-7" />
         </div>
 
-        <div className="journey-demo__viewport relative min-h-[32rem] sm:min-h-[34rem]">
+        <div className="journey-demo__viewport relative min-h-[32rem] overflow-hidden sm:min-h-[34rem] lg:min-h-[38rem]">
           <div className="journey-screen journey-screen--create">
             <div className="journey-screen__number">01</div>
             <p className="journey-demo__kicker">Create a shared space</p>

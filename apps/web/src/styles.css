@@ -85,6 +85,21 @@ button { cursor: pointer; }
 @keyframes journey-upload-three { 0%, 72% { opacity: 0; transform: translate3d(3rem,7rem,0) rotate(6deg) scale(.7); } 76% { opacity: 1; } 82% { opacity: 1; transform: translate3d(-2rem,16rem,0) rotate(-2deg) scale(.82); } 84%, 100% { opacity: 0; } }
 @keyframes journey-result-ready { 0%, 81% { opacity: 0; transform: translateY(.5rem); } 86%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @keyframes journey-progress { 0% { transform: scaleX(0); } 96% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes finale-copy-arrive { from { opacity: 0; transform: translateY(2rem); } to { opacity: 1; transform: none; } }
+@keyframes finale-spread-story { 0% { opacity: 0; transform: translate(-50%,-46%) scale(.78) rotate(-4deg); } 12%, 68% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(-1deg); } 76% { opacity: 1; transform: translate(-50%,-50%) scale(.92) rotate(0); filter: blur(0); } 86%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.68) rotate(0); filter: blur(5px); } }
+@keyframes finale-cover-arrive { 0%, 73% { opacity: 0; transform: translate(-50%,-46%) rotate(8deg) scale(.62); filter: blur(5px); } 88%, 100% { opacity: 1; transform: translate(-50%,-50%) rotate(-2deg) scale(1); filter: blur(0); } }
+@keyframes finale-flight-coast { 0%, 4% { opacity: 0; transform: translate3d(-9rem,7rem,0) rotate(-18deg) scale(.68); } 10% { opacity: 1; } 29% { opacity: 1; transform: translate3d(8.7rem,-1rem,0) rotate(-4deg) scale(.9); } 36%, 100% { opacity: 0; transform: translate3d(8.7rem,-1rem,0) rotate(-4deg) scale(.86); } }
+@keyframes finale-flight-city { 0%, 10% { opacity: 0; transform: translate3d(11rem,-8rem,0) rotate(16deg) scale(.68); } 16% { opacity: 1; } 35% { opacity: 1; transform: translate3d(-7rem,-2.5rem,0) rotate(3deg) scale(.82); } 42%, 100% { opacity: 0; transform: translate3d(-7rem,-2.5rem,0) rotate(3deg) scale(.78); } }
+@keyframes finale-flight-mountain { 0%, 16% { opacity: 0; transform: translate3d(12rem,9rem,0) rotate(19deg) scale(.65); } 22% { opacity: 1; } 41% { opacity: 1; transform: translate3d(-1rem,1.6rem,0) rotate(-2deg) scale(.78); } 48%, 100% { opacity: 0; transform: translate3d(-1rem,1.6rem,0) rotate(-2deg) scale(.74); } }
+@keyframes finale-flight-dinner { 0%, 22% { opacity: 0; transform: translate3d(-12rem,-9rem,0) rotate(-16deg) scale(.65); } 28% { opacity: 1; } 47% { opacity: 1; transform: translate3d(6rem,4.2rem,0) rotate(4deg) scale(.76); } 54%, 100% { opacity: 0; transform: translate3d(6rem,4.2rem,0) rotate(4deg) scale(.72); } }
+@keyframes finale-flight-coast-mobile { 0%, 4% { opacity: 0; transform: translate3d(-7rem,6rem,0) rotate(-16deg) scale(.62); } 10% { opacity: 1; } 29% { opacity: 1; transform: translate3d(-4.8rem,-2.5rem,0) rotate(-4deg) scale(.76); } 36%, 100% { opacity: 0; transform: translate3d(-4.8rem,-2.5rem,0) rotate(-4deg) scale(.72); } }
+@keyframes finale-flight-city-mobile { 0%, 10% { opacity: 0; transform: translate3d(5.2rem,-7rem,0) rotate(15deg) scale(.62); } 16% { opacity: 1; } 35% { opacity: 1; transform: translate3d(1rem,-3.5rem,0) rotate(3deg) scale(.72); } 42%, 100% { opacity: 0; transform: translate3d(1rem,-3.5rem,0) rotate(3deg) scale(.68); } }
+@keyframes finale-flight-mountain-mobile { 0%, 16% { opacity: 0; transform: translate3d(5.5rem,6.5rem,0) rotate(17deg) scale(.6); } 22% { opacity: 1; } 41% { opacity: 1; transform: translate3d(-1.5rem,1rem,0) rotate(-2deg) scale(.7); } 48%, 100% { opacity: 0; transform: translate3d(-1.5rem,1rem,0) rotate(-2deg) scale(.66); } }
+@keyframes finale-flight-dinner-mobile { 0%, 22% { opacity: 0; transform: translate3d(-6.5rem,-6rem,0) rotate(-15deg) scale(.6); } 28% { opacity: 1; } 47% { opacity: 1; transform: translate3d(2rem,2rem,0) rotate(4deg) scale(.68); } 54%, 100% { opacity: 0; transform: translate3d(2rem,2rem,0) rotate(4deg) scale(.64); } }
+@keyframes finale-photo-reveal { 0%, 28% { opacity: 0; transform: translateY(1rem) scale(.9); filter: saturate(.5); } 40%, 70% { opacity: 1; transform: none; filter: saturate(.88); } 82%, 100% { opacity: 0; transform: scale(.94); filter: saturate(.75); } }
+@keyframes finale-route-draw { 0%, 39% { opacity: 0; stroke-dashoffset: 1; } 45% { opacity: 1; } 65% { opacity: 1; stroke-dashoffset: 0; } 78%, 100% { opacity: 0; stroke-dashoffset: 0; } }
+@keyframes finale-star-twinkle { 0%, 100% { opacity: .25; transform: scale(.65); } 50% { opacity: 1; transform: scale(1); box-shadow: 0 0 18px rgba(233,188,92,.9); } }
+@keyframes finale-cover-glow { 0%, 100% { box-shadow: 0 34px 90px rgba(2,12,7,.42), inset 0 0 0 1px rgba(245,217,173,.2); } 50% { box-shadow: 0 38px 110px rgba(2,12,7,.55), 0 0 42px rgba(232,170,144,.12), inset 0 0 0 1px rgba(245,217,173,.3); } }
 
 .archive-hero { --pointer-x: 70%; --pointer-y: 38%; }
 .archive-grain { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; opacity: .3; pointer-events: none; }
@@ -177,14 +192,71 @@ button { cursor: pointer; }
 .journey-upload-flight--two { animation-name: journey-upload-two; }
 .journey-upload-flight--three { animation-name: journey-upload-three; }
 .journey-upload-flight img { display: block; width: 100%; aspect-ratio: .9; border: 4px solid #fffaf2; border-radius: .85rem; object-fit: cover; box-shadow: 0 14px 30px rgba(0,0,0,.34); }
-.journey-progress { position: relative; }
+.journey-progress { position: relative; z-index: 5; background: #20342b; }
 .journey-progress::before { position: absolute; right: 1.75rem; bottom: 2.15rem; left: 1.75rem; height: 1px; background: rgba(255,255,255,.12); content: ""; }
 .journey-progress__fill { position: absolute; right: 1.75rem; bottom: 2.15rem; left: 1.75rem; height: 1px; background: #e8aa90; transform: scaleX(0); transform-origin: left; animation: journey-progress 16s linear infinite; }
 .privacy-stage::before { position: absolute; inset: 0; background-image: radial-gradient(rgba(244,237,225,.12) 1px, transparent 1px); background-size: 26px 26px; mask-image: radial-gradient(circle at center,#000,transparent 66%); content: ""; }
 .privacy-orbit { position: absolute; left: 50%; top: 50%; width: min(76vw,64rem); aspect-ratio: 1; border: 1px solid rgba(232,170,144,.16); border-radius: 50%; transform: translate(-50%,-50%); animation: orbit-turn 60s linear infinite; }
 .privacy-orbit::before, .privacy-orbit::after { position: absolute; border-radius: 50%; content: ""; }.privacy-orbit::before { left: 5%; top: 21%; width: .75rem; aspect-ratio: 1; background: #e8aa90; box-shadow: 0 0 30px rgba(232,170,144,.75); }.privacy-orbit::after { inset: 13%; border: 1px solid rgba(232,170,144,.1); }
 .privacy-seal { animation: seal-breathe 4s ease-in-out infinite; }
-.final-card { box-shadow: 0 25px 70px rgba(76,58,39,.12); }
+.finale-section { background: linear-gradient(#f3ecdf,#eee5d7); }
+.finale-stage { isolation: isolate; box-shadow: 0 36px 90px rgba(45,34,24,.22); }
+.finale-grain { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitchTiles'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; opacity: .32; pointer-events: none; }
+.finale-glow { background: radial-gradient(34rem circle at 76% 43%,rgba(224,157,127,.2),transparent 66%), radial-gradient(26rem circle at 5% 100%,rgba(111,145,120,.18),transparent 70%); pointer-events: none; }
+.finale-orbit { position: absolute; border: 1px solid rgba(240,190,165,.11); border-radius: 50%; pointer-events: none; }
+.finale-orbit--one { right: -13rem; top: -18rem; width: 44rem; aspect-ratio: 1; }
+.finale-orbit--two { right: 15%; bottom: -22rem; width: 38rem; aspect-ratio: 1; }
+.finale-copy { opacity: 1; }
+.finale-stage--active .finale-copy { animation: finale-copy-arrive 1s cubic-bezier(.16,1,.3,1) both; }
+.finale-cta { position: relative; overflow: hidden; }
+.finale-cta::after { position: absolute; top: -50%; left: -30%; width: 22%; height: 200%; background: linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent); content: ""; transform: rotate(18deg); transition: left .65s cubic-bezier(.16,1,.3,1); }
+.finale-cta:hover::after { left: 112%; }
+.keepsake-scene { perspective: 1400px; }
+.keepsake-year { position: absolute; right: 1rem; top: 1rem; color: rgba(255,250,242,.055); font-family: "Fraunces",Georgia,serif; font-size: clamp(7rem,13vw,13rem); font-style: italic; line-height: .7; letter-spacing: -.08em; }
+.keepsake-star { position: absolute; z-index: 8; width: .32rem; aspect-ratio: 1; border-radius: 50%; background: #e9bc5c; opacity: .25; }
+.keepsake-star--one { left: 12%; top: 13%; animation: finale-star-twinkle 3.2s ease-in-out infinite; }
+.keepsake-star--two { right: 8%; top: 28%; animation: finale-star-twinkle 4s ease-in-out -1.4s infinite; }
+.keepsake-star--three { left: 19%; bottom: 15%; animation: finale-star-twinkle 3.7s ease-in-out -.7s infinite; }
+.keepsake-spread { position: absolute; left: 51%; top: 52%; width: min(37rem,94%); aspect-ratio: 1.56; opacity: 0; transform: translate(-50%,-50%); filter: drop-shadow(0 34px 40px rgba(2,12,7,.4)); transform-style: preserve-3d; }
+.finale-stage--active .keepsake-spread { animation: finale-spread-story 7s cubic-bezier(.16,1,.3,1) both .15s; }
+.keepsake-page { position: absolute; top: 0; width: 50%; height: 100%; overflow: hidden; background: #f0e1ca; }
+.keepsake-page::after { position: absolute; inset: 0; background-image: linear-gradient(rgba(104,82,56,.045) 1px,transparent 1px); background-size: 100% 1.35rem; content: ""; pointer-events: none; }
+.keepsake-page--left { left: 0; border-radius: 1rem 0 0 1rem; box-shadow: inset -18px 0 24px rgba(74,50,24,.12); transform: rotateY(3deg); transform-origin: right; }
+.keepsake-page--right { right: 0; border-radius: 0 1rem 1rem 0; box-shadow: inset 18px 0 24px rgba(74,50,24,.11); transform: rotateY(-3deg); transform-origin: left; }
+.keepsake-spine { position: absolute; z-index: 6; left: 50%; top: 0; width: 1px; height: 100%; background: rgba(74,50,24,.3); box-shadow: 0 0 18px 5px rgba(74,50,24,.17); }
+.keepsake-page-photo { position: absolute; z-index: 2; display: block; object-fit: cover; box-shadow: 0 13px 24px rgba(71,48,26,.2); opacity: 0; }
+.keepsake-page-photo--coast { left: 8%; top: 9%; width: 75%; height: 48%; border: .45rem solid #fffaf2; transform: rotate(-3deg); }
+.keepsake-page-photo--city { left: 9%; top: 9%; width: 47%; height: 47%; border: .35rem solid #fffaf2; transform: rotate(2deg); }
+.keepsake-page-photo--dinner { right: 7%; bottom: 14%; width: 50%; height: 43%; border: .35rem solid #fffaf2; transform: rotate(-3deg); }
+.finale-stage--active .keepsake-page-photo { animation: finale-photo-reveal 7s cubic-bezier(.16,1,.3,1) both .15s; }
+.finale-stage--active .keepsake-page-photo--city { animation-delay: .48s; }
+.finale-stage--active .keepsake-page-photo--dinner { animation-delay: .8s; }
+.keepsake-tape { position: absolute; z-index: 4; left: 35%; top: 5%; width: 4rem; height: 1.1rem; background: rgba(215,189,141,.62); transform: rotate(2deg); }
+.keepsake-handwriting { position: absolute; z-index: 3; left: 10%; bottom: 16%; color: #7e5146; font-family: "Fraunces",Georgia,serif; font-size: 1.15rem; font-style: italic; line-height: 1.25; transform: rotate(-2deg); }
+.keepsake-date { position: absolute; z-index: 3; left: 10%; bottom: 7%; color: #8d7d69; font-size: .43rem; font-weight: 700; letter-spacing: .17em; }
+.keepsake-date--right { right: 8%; left: auto; bottom: 6%; }
+.keepsake-note { position: absolute; z-index: 3; right: 5%; top: 8%; display: grid; gap: .25rem; color: #806d5c; font-size: .43rem; font-weight: 700; letter-spacing: .08em; text-align: right; text-transform: uppercase; transform: rotate(3deg); }
+.keepsake-note strong { color: #a9503f; font-family: "Fraunces",Georgia,serif; font-size: .9rem; letter-spacing: -.02em; text-transform: none; }
+.keepsake-route { position: absolute; z-index: 7; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.keepsake-route path { stroke: #d8a548; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 4px rgba(216,165,72,.65)); }
+.keepsake-route circle { fill: #f6d98e; stroke: #a86a32; stroke-width: 3; opacity: 0; }
+.finale-stage--active .keepsake-route path { animation: finale-route-draw 7s ease-in-out both .15s; }
+.finale-stage--active .keepsake-route circle { animation: finale-photo-reveal 7s ease-in-out both .15s; }
+.keepsake-flight { position: absolute; z-index: 9; left: 50%; top: 50%; width: 7.5rem; opacity: 0; pointer-events: none; }
+.keepsake-flight img { display: block; width: 100%; aspect-ratio: .82; border: .45rem solid #fffaf2; border-bottom-width: 1.4rem; border-radius: .45rem; object-fit: cover; box-shadow: 0 20px 38px rgba(1,10,6,.48); }
+.finale-stage--active .keepsake-flight { animation: finale-flight-coast 7s cubic-bezier(.22,.7,.18,1) both .15s; }
+.finale-stage--active .keepsake-flight--city { animation-name: finale-flight-city; }
+.finale-stage--active .keepsake-flight--mountain { animation-name: finale-flight-mountain; }
+.finale-stage--active .keepsake-flight--dinner { animation-name: finale-flight-dinner; }
+.keepsake-cover { position: absolute; z-index: 10; left: 51%; top: 52%; display: flex; width: min(21rem,70%); aspect-ratio: .76; flex-direction: column; justify-content: space-between; overflow: hidden; border: 1px solid rgba(245,217,173,.28); border-radius: .65rem 1.25rem 1.25rem .65rem; background: linear-gradient(145deg,#a34f3f,#75372e); padding: 1.8rem; color: #f8e8cf; opacity: 1; transform: translate(-50%,-50%) rotate(-2deg); animation: finale-cover-glow 4.8s ease-in-out infinite; }
+.keepsake-cover::before { position: absolute; inset: 0; background-image: repeating-linear-gradient(90deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px); content: ""; }
+.keepsake-cover::after { position: absolute; inset: .8rem; border: 1px solid rgba(245,217,173,.22); border-radius: .25rem .75rem .75rem .25rem; content: ""; }
+.finale-stage--active .keepsake-cover { animation: finale-cover-arrive 7s cubic-bezier(.16,1,.3,1) both .15s, finale-cover-glow 4.8s ease-in-out 7.15s infinite; }
+.keepsake-cover__year { position: relative; z-index: 2; font-size: .5rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+.keepsake-cover__mark { position: relative; z-index: 2; width: 7rem; height: 7rem; align-self: center; filter: brightness(0) invert(91%) sepia(20%) saturate(650%); }
+.keepsake-cover div { position: relative; z-index: 2; border-top: 1px solid rgba(245,217,173,.25); padding-top: 1rem; }
+.keepsake-cover p { font-family: "Fraunces",Georgia,serif; font-size: 2.2rem; letter-spacing: -.045em; }
+.keepsake-cover div span { display: block; margin-top: .35rem; font-size: .46rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 
 @supports (animation-timeline: view()) {
   .story-reveal { animation: landing-rise both; animation-timeline: view(); animation-range: entry 10% cover 32%; }
@@ -214,6 +286,24 @@ button { cursor: pointer; }
   .journey-screen__number { right: .7rem; font-size: 6rem; }
   .journey-upload-flight { right: .75rem; width: 3.5rem; }
   .journey-progress::before, .journey-progress__fill { right: 1.25rem; left: 1.25rem; }
+  .finale-stage > .relative { min-height: auto; }
+  .finale-copy { text-align: center; }
+  .finale-kicker { justify-content: center; }
+  .keepsake-scene { min-height: 29rem; }
+  .keepsake-year { right: -.5rem; top: 3rem; font-size: 7.5rem; }
+  .keepsake-spread { left: 50%; top: 48%; width: 22rem; }
+  .keepsake-cover { left: 50%; top: 49%; width: 15.5rem; padding: 1.35rem; }
+  .keepsake-cover__mark { width: 5.4rem; height: 5.4rem; }
+  .keepsake-cover p { font-size: 1.7rem; }
+  .keepsake-handwriting { font-size: .78rem; }
+  .keepsake-flight { width: 5.2rem; }
+  .keepsake-flight img { border-width: .3rem; border-bottom-width: 1rem; }
+  .finale-stage--active .keepsake-flight--coast { animation-name: finale-flight-coast-mobile; }
+  .finale-stage--active .keepsake-flight--city { animation-name: finale-flight-city-mobile; }
+  .finale-stage--active .keepsake-flight--mountain { animation-name: finale-flight-mountain-mobile; }
+  .finale-stage--active .keepsake-flight--dinner { animation-name: finale-flight-dinner-mobile; }
+  .keepsake-star--one { left: 4%; top: 15%; }
+  .keepsake-star--two { right: 2%; top: 29%; }
 }
 
 @media (min-width: 40rem) and (max-width: 63.999rem) {
@@ -246,4 +336,7 @@ button { cursor: pointer; }
   .journey-memory, .journey-contributors, .journey-upload-count { opacity: 1 !important; transform: none !important; }
   .journey-upload-flight { display: none; }
   .journey-progress__fill { transform: scaleX(1) !important; }
+  .finale-copy { opacity: 1 !important; transform: none !important; }
+  .keepsake-spread, .keepsake-flight { display: none; }
+  .keepsake-cover { opacity: 1 !important; transform: translate(-50%,-50%) rotate(-2deg) !important; filter: none !important; }
 }
