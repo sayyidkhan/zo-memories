@@ -94,7 +94,13 @@ export function AccountDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Account settings" description="Manage your profile, picture, and sign-in details." size="lg">
+    <Modal open={open} onClose={onClose} title="Account settings" description={user.isDemo ? "You are exploring Zo Moments in the shared demo account." : "Manage your profile, picture, and sign-in details."} size="lg">
+      {user.isDemo ? (
+        <div className="mb-5 flex gap-3 rounded-[22px] border border-[#d8c6a1] bg-[#f6ead2] p-4 text-[#6f552f]">
+          <LockKeyhole className="mt-0.5 size-5 shrink-0" />
+          <p className="text-sm leading-6"><strong className="block text-[#4f3d25]">Shared demo profile</strong>Profile details and password changes are locked so the demo remains available to everyone.</p>
+        </div>
+      ) : null}
       {section === "profile" ? (
         <>
           <div className="rounded-[26px] border border-[#ded2c2] bg-[#f2e9dc] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-5">
@@ -106,13 +112,13 @@ export function AccountDialog({
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
-              <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#d2c5b3] bg-[#fffaf2] px-4 text-sm font-semibold text-[#34443a] transition hover:bg-[#f5ecdf]">
+              <label className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#d2c5b3] bg-[#fffaf2] px-4 text-sm font-semibold text-[#34443a] transition ${user.isDemo ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#f5ecdf]"}`}>
                 <Camera className="size-4" />{avatar.isPending ? "Uploading…" : user.image ? "Change photo" : "Add photo"}
                 <input
                   className="sr-only"
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/gif"
-                  disabled={avatar.isPending}
+                  disabled={avatar.isPending || user.isDemo}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
@@ -122,7 +128,7 @@ export function AccountDialog({
                   }}
                 />
               </label>
-              {user.image ? <Button className="h-10 px-4 text-sm" variant="ghost" onClick={() => removeAvatar.mutate()} disabled={removeAvatar.isPending}><Trash2 className="size-4" />Remove</Button> : null}
+              {user.image ? <Button className="h-10 px-4 text-sm" variant="ghost" onClick={() => removeAvatar.mutate()} disabled={removeAvatar.isPending || user.isDemo}><Trash2 className="size-4" />Remove</Button> : null}
             </div>
           </div>
           <ErrorMessage message={avatarError} />
@@ -144,6 +150,7 @@ export function AccountDialog({
           role="tab"
           aria-selected={section === "password"}
           onClick={() => setSection("password")}
+          disabled={user.isDemo}
           className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${section === "password" ? "bg-[#fffaf2] text-[#26372f] shadow-sm" : "text-[#766f65] hover:text-[#34443a]"}`}
         >
           <KeyRound className="size-4" />Password
@@ -158,12 +165,12 @@ export function AccountDialog({
           </div>
           <form className="grid gap-5" onSubmit={updateProfile}>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Display name"><Input name="name" defaultValue={user.name} autoComplete="name" minLength={2} maxLength={80} required /></Field>
+              <Field label="Display name"><Input name="name" defaultValue={user.name} autoComplete="name" minLength={2} maxLength={80} required disabled={user.isDemo} /></Field>
               <Field label="Email"><Input value={user.email} disabled readOnly /></Field>
             </div>
             <p className="text-xs leading-5 text-[#827b70]">Your email is used for sign-in and invitations. It cannot be changed yet.</p>
             <ErrorMessage message={profileError} />
-            <Button className="justify-self-start" disabled={profile.isPending}>
+            <Button className="justify-self-start" disabled={profile.isPending || user.isDemo}>
               {profile.isPending ? <Spinner /> : "Save changes"}
             </Button>
           </form>

@@ -9,6 +9,8 @@ export const userSchema = z.object({
   image: z.string().nullable().optional(),
   role: z.enum(["user", "admin"]).optional(),
   banned: z.boolean().nullable().optional(),
+  isSuperAdmin: z.boolean().optional(),
+  isDemo: z.boolean().optional(),
 });
 
 export const appRoleSchema = z.enum(["user", "admin"]);
@@ -159,6 +161,16 @@ export const updateAccountStatusSchema = z.object({
   reason: z.string().trim().max(240).optional(),
 });
 
+export const demoModeSchema = z.object({
+  enabled: z.boolean(),
+  updatedAt: isoDateSchema.nullable(),
+  updatedBy: z.string().nullable(),
+});
+
+export const updateDemoModeSchema = z.object({
+  enabled: z.boolean(),
+});
+
 export const spaceSummarySchema = spaceSchema.extend({
   role: memberRoleSchema,
   memberCount: z.number().int().nonnegative(),
@@ -205,3 +217,5 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type UpdateAdminRoleInput = z.infer<typeof updateAdminRoleSchema>;
 export type UpdateAccountStatusInput = z.infer<typeof updateAccountStatusSchema>;
+export type DemoMode = z.infer<typeof demoModeSchema>;
+export type UpdateDemoModeInput = z.infer<typeof updateDemoModeSchema>;

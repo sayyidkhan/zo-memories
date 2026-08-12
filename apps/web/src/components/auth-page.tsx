@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Images, LockKeyhole, Sparkles } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Images, LockKeyhole, Play, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { ShareInvitationPreview } from "@zo-moments/types";
@@ -10,6 +10,11 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"register" | "login">(initialMode);
   const [error, setError] = useState("");
+  const demoMode = useQuery({
+    queryKey: ["demo-mode"],
+    queryFn: () => api.getDemoMode(),
+    retry: false,
+  });
   const mutation = useMutation({
     mutationFn: (form: { name: string; email: string; password: string }) =>
       mode === "register" ? api.register(form) : api.login(form),
@@ -17,6 +22,13 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (cause) => setError(cause instanceof ZoMomentsApiError ? cause.message : "Could not sign you in"),
+  });
+  const demo = useMutation({
+    mutationFn: () => api.demoLogin(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+    onError: (cause) => setError(cause instanceof ZoMomentsApiError ? cause.message : "Could not start the demo"),
   });
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -98,6 +110,24 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
               {mutation.isPending ? <Spinner /> : <>{mode === "register" ? "Create my account" : "Sign in"}<ArrowRight className="size-4" /></>}
             </Button>
           </form>
+          {!invitation && mode === "login" && demoMode.data?.enabled ? (
+            <div className="mt-6">
+              <div className="mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.18em] text-[#9a9185] before:h-px before:flex-1 before:bg-[#ddd2c2] after:h-px after:flex-1 after:bg-[#ddd2c2]">or explore first</div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full border-[#c8b795] bg-[#f6ead2] text-[#6f4f20] shadow-[0_8px_24px_rgba(115,82,31,.12)] hover:bg-[#efdfbf]"
+                disabled={demo.isPending}
+                onClick={() => {
+                  setError("");
+                  demo.mutate();
+                }}
+              >
+                {demo.isPending ? <Spinner /> : <><Play className="size-4 fill-current" />Try the live demo</>}
+              </Button>
+              <p className="mt-3 text-center text-xs leading-5 text-[#8c857b]">No account or password needed. Demo content is shared.</p>
+            </div>
+          ) : null}
           <p className="mt-7 text-center text-xs leading-5 text-[#8c857b]">Private by design. Only members can see what lives inside a shared space.</p>
         </div>
       </section>

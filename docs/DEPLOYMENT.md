@@ -68,6 +68,7 @@ zo-moments/
     albums/<id>.json
     objects/<id>.json
     avatars/<user-id>.json
+    app-settings/demo-mode.json
     auth/user/<id>.json
       # Includes Better Auth role and suspension state
   media/<space-id>/<object-id>/<filename>
@@ -76,7 +77,9 @@ zo-moments/
 
 The data directory is not served by Zo Router. Media is streamed through authenticated API routes after membership checks.
 
-`ADMIN_EMAILS` is the recovery-safe source for initial administrators. Matching signed-in accounts are promoted automatically and cannot be demoted in the Admin Console. Other administrators may be promoted or demoted in the application. Administrators can manage account access but cannot open shared spaces unless they are members.
+`ADMIN_EMAILS` is the recovery-safe source for super administrators. Matching signed-in accounts are promoted automatically and cannot be demoted in the Admin Console. Other administrators may be promoted or demoted in the application. Administrators can manage account access but cannot open shared spaces unless they are members. Only configured super administrators can enable or disable passwordless public demo access.
+
+Demo mode is disabled by default. When enabled, the server creates or signs visitors into a protected shared demo identity without exposing its generated password. The demo identity is excluded from the user directory and cannot change its profile, avatar, or password.
 
 ## MVP Constraints
 

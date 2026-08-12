@@ -2,6 +2,7 @@ import type {
   AdminUser,
   Album,
   ChangePasswordInput,
+  DemoMode,
   CreateAlbumInput,
   CreateShareInvitationInput,
   CreateSpaceInput,
@@ -18,6 +19,7 @@ import type {
   UpdateProfileInput,
   UpdateAccountStatusInput,
   UpdateAdminRoleInput,
+  UpdateDemoModeInput,
   User,
 } from "@zo-moments/types";
 
@@ -94,6 +96,14 @@ export class ZoMomentsClient {
     return this.request("/auth/login", { method: "POST", body: JSON.stringify(input) });
   }
 
+  demoLogin(): Promise<{ user: User }> {
+    return this.request("/auth/demo", { method: "POST" });
+  }
+
+  getDemoMode(): Promise<DemoMode> {
+    return this.request("/public/demo-mode");
+  }
+
   logout(): Promise<void> {
     return this.request("/auth/logout", { method: "POST" });
   }
@@ -139,6 +149,17 @@ export class ZoMomentsClient {
 
   updateAccountStatus(userId: string, input: UpdateAccountStatusInput): Promise<{ user: User }> {
     return this.request(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  getAdminDemoMode(): Promise<DemoMode> {
+    return this.request("/api/admin/demo-mode");
+  }
+
+  updateDemoMode(input: UpdateDemoModeInput): Promise<DemoMode> {
+    return this.request("/api/admin/demo-mode", {
       method: "POST",
       body: JSON.stringify(input),
     });

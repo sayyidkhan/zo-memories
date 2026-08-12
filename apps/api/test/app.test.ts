@@ -290,4 +290,75 @@ describe("Zo Moments API", () => {
       body: JSON.stringify({ status: "suspended" }),
     })).status).toBe(400);
   });
+
+  test("lets only the super administrator control passwordless demo access", async () => {
+    const publicStatus = await app.request("/public/demo-mode");
+    expect(publicStatus.status).toBe(200);
+    expect((await publicStatus.json() as { enabled: boolean }).enabled).toBe(false);
+    expect((await app.request("/auth/demo", { method: "POST" })).status).toBe(403);
+
+    const superAdmin = new BrowserSession(app);
+    expect((await superAdmin.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "admin@example.com", password: "password123" }),
+    })).status).toBe(200);
+    const superAdminMe = await superAdmin.json<{ user: { isSuperAdmin: boolean } }>("/auth/me");
+    expect(superAdminMe.body.user.isSuperAdmin).toBe(true);
+
+    const promotedAdmin = new BrowserSession(app);
+    expect((await promotedAdmin.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "managed@example.com", password: "password123" }),
+    })).status).toBe(200);
+    expect((await promotedAdmin.request("/api/admin/demo-mode")).status).toBe(403);
+    expect((await promotedAdmin.request("/api/admin/demo-mode", {
+      method: "POST",
+      body: JSON.stringify({ enabled: true }),
+    })).status).toBe(403);
+
+    const enabled = await superAdmin.json<{ enabled: boolean }>("/api/admin/demo-mode", {
+      method: "POST",
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(enabled.response.status).toBe(200);
+    expect(enabled.body.enabled).toBe(true);
+    const enabledPublicStatus = await app.request("/public/demo-mode");
+    expect((await enabledPublicStatus.json() as { enabled: boolean }).enabled).toBe(true);
+
+    const visitor = new BrowserSession(app);
+    expect((await visitor.request("/auth/demo", { method: "POST" })).status).toBe(200);
+    const demoMe = await visitor.json<{ user: { email: string; isDemo: boolean; isSuperAdmin: boolean } }>("/auth/me");
+    expect(demoMe.body.user.email).toBe("demo@zo-moments.example");
+    expect(demoMe.body.user.isDemo).toBe(true);
+    expect(demoMe.body.user.isSuperAdmin).toBe(false);
+
+    const demoSpaces = await visitor.json<{ spaces: { id: string; name: string }[] }>("/api/spaces");
+    expect(demoSpaces.body.spaces.map(({ name }) => name)).toContain("Our year in motion");
+    const demoSpace = demoSpaces.body.spaces.find(({ name }) => name === "Our year in motion");
+    expect(demoSpace).toBeDefined();
+    const demoObjects = await visitor.json<{ objects: { caption: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
+    expect(demoObjects.body.objects).toHaveLength(4);
+    expect((await visitor.request("/api/account/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword: "secret", newPassword: "changed" }),
+    })).status).toBe(403);
+    expect((await visitor.request("/auth/update-user", {
+      method: "POST",
+      body: JSON.stringify({ name: "Changed Demo" }),
+    })).status).toBe(403);
+    expect((await visitor.request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword: "secret", newPassword: "changed" }),
+    })).status).toBe(403);
+
+    const directory = await superAdmin.json<{ users: { email: string }[] }>("/api/admin/users?search=zo-moments.example");
+    expect(directory.body.users).toEqual([]);
+
+    const disabled = await superAdmin.json<{ enabled: boolean }>("/api/admin/demo-mode", {
+      method: "POST",
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disabled.body.enabled).toBe(false);
+    expect((await app.request("/auth/demo", { method: "POST" })).status).toBe(403);
+  });
 });

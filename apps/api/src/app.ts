@@ -5,6 +5,7 @@ import {
   createShareInvitationSchema,
   createSpaceSchema,
   inviteMemberSchema,
+  updateDemoModeSchema,
   updateAccountStatusSchema,
   updateAdminRoleSchema,
   updateProfileSchema,
@@ -37,6 +38,13 @@ interface AuthUserRecord {
   createdAt: string | Date;
 }
 
+interface DemoModeRecord {
+  id: "demo-mode";
+  enabled: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 interface AppBindings {
   Variables: {
     user: AuthSession["user"] | null;
@@ -62,6 +70,10 @@ function invitationToken(): string {
 }
 
 const SHARE_INVITATION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+const DEMO_MODE_ID = "demo-mode";
+const DEMO_USER_EMAIL = "demo@zo-moments.example";
+const DEMO_SPACE_ID = "demo-space";
+const DEMO_ALBUM_ID = "demo-album-journeys";
 
 function shareInvitationStatus(invitation: ShareInvitation): ShareInvitation["status"] | "expired" {
   if (invitation.status === "active" && Date.parse(invitation.expiresAt) <= Date.now()) return "expired";
@@ -94,6 +106,82 @@ async function promoteBootstrapAdmin(
 
 function requireAdmin(user: AuthSession["user"]): void {
   if (user.role !== "admin") throw new HTTPException(403, { message: "Administrator access is required" });
+}
+
+function requireSuperAdmin(user: AuthSession["user"]): void {
+  if (!isBootstrapAdmin(user.email)) throw new HTTPException(403, { message: "Super administrator access is required" });
+}
+
+function isDemoUser(user: Pick<AuthUserRecord, "email">): boolean {
+  return user.email.toLowerCase() === DEMO_USER_EMAIL;
+}
+
+function requirePermanentAccount(user: AuthSession["user"]): void {
+  if (isDemoUser(user)) throw new HTTPException(403, { message: "Demo account details cannot be changed" });
+}
+
+async function demoPassword(): Promise<string> {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  if (!secret) throw new HTTPException(503, { message: "Demo access is not configured" });
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`zo-moments-demo:${secret}`));
+  return `Demo-${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function ensureDemoWorkspace(repositories: Repositories, store: BlobStore, user: AuthUserRecord): Promise<void> {
+  const timestamp = now();
+  await repositories.spaces.put({
+    id: DEMO_SPACE_ID,
+    name: "Our year in motion",
+    description: "Four journeys, one shared story.",
+    ownerId: user.id,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  await repositories.members.put({
+    id: "demo-member",
+    spaceId: DEMO_SPACE_ID,
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: "owner",
+    joinedAt: timestamp,
+  });
+  await repositories.albums.put({
+    id: DEMO_ALBUM_ID,
+    spaceId: DEMO_SPACE_ID,
+    name: "Journeys",
+    description: "Places we still talk about.",
+    createdBy: user.id,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+
+  const samples = [
+    { id: "demo-moment-coast", file: "coastal-roadtrip.webp", name: "pacific-coast.webp", caption: "Windows down on the Pacific Coast", occurredAt: "2026-02-14T08:30:00.000Z" },
+    { id: "demo-moment-tokyo", file: "tokyo-evening.webp", name: "tokyo-after-rain.webp", caption: "Tokyo glowing after the rain", occurredAt: "2026-04-09T12:15:00.000Z" },
+    { id: "demo-moment-mountain", file: "mountain-morning.webp", name: "first-light.webp", caption: "First light above the ridge", occurredAt: "2026-06-22T05:45:00.000Z" },
+    { id: "demo-moment-terrace", file: "terrace-dinner.webp", name: "tuscany-dinner.webp", caption: "Dinner that lasted until midnight", occurredAt: "2026-08-03T18:40:00.000Z" },
+  ];
+  for (const sample of samples) {
+    const file = Bun.file(`./apps/web/public/images/moments/${sample.file}`);
+    if (!(await file.exists())) continue;
+    const storageKey = `zo-moments/media/${DEMO_SPACE_ID}/${sample.id}/${sample.name}`;
+    await store.put(storageKey, file, { contentType: "image/webp" });
+    await repositories.objects.put({
+      id: sample.id,
+      spaceId: DEMO_SPACE_ID,
+      albumId: DEMO_ALBUM_ID,
+      storageKey,
+      name: sample.name,
+      mimeType: "image/webp",
+      size: file.size,
+      kind: "photo",
+      caption: sample.caption,
+      uploadedBy: user.id,
+      createdAt: sample.occurredAt,
+      occurredAt: sample.occurredAt,
+    });
+  }
 }
 
 function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {
@@ -231,6 +319,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   const repositories = createRepositories(store);
   const auth = createAuth(store);
   const authUsers = new JsonCollection<AuthUserRecord>(store, "auth/user");
+  const demoMode = new JsonCollection<DemoModeRecord>(store, "app-settings");
 
   if (log) app.use("*", logger());
   app.use("*", secureHeaders());
@@ -238,6 +327,15 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   app.get("/health", async (c) => {
     await store.health();
     return c.json({ status: "ok", storage: process.env.STORAGE_DRIVER ?? (process.env.NODE_ENV === "production" ? "filesystem" : "memory") });
+  });
+
+  app.get("/public/demo-mode", async (c) => {
+    const setting = await demoMode.get(DEMO_MODE_ID);
+    return c.json({
+      enabled: setting?.enabled ?? false,
+      updatedAt: setting?.updatedAt ?? null,
+      updatedBy: null,
+    });
   });
 
   app.get("/public/invitations/:token", async (c) => {
@@ -267,14 +365,54 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
 
   app.post("/auth/register", (c) => forwardAuth(c.req.raw, "/auth/sign-up/email", auth));
   app.post("/auth/login", (c) => forwardAuth(c.req.raw, "/auth/sign-in/email", auth));
+  app.post("/auth/demo", async (c) => {
+    const setting = await demoMode.get(DEMO_MODE_ID);
+    if (!setting?.enabled) throw new HTTPException(403, { message: "Demo access is currently unavailable" });
+
+    const password = await demoPassword();
+    let user = await authUsers.findOne((candidate) => isDemoUser(candidate));
+    let response = user
+      ? await forwardAuthJson(c.req.raw, "/auth/sign-in/email", auth, { email: DEMO_USER_EMAIL, password })
+      : await forwardAuthJson(c.req.raw, "/auth/sign-up/email", auth, { name: "Zo Moments Demo", email: DEMO_USER_EMAIL, password });
+
+    if (!response.ok && !user) {
+      response = await forwardAuthJson(c.req.raw, "/auth/sign-in/email", auth, { email: DEMO_USER_EMAIL, password });
+    }
+    if (!response.ok) return response;
+    user = await authUsers.findOne((candidate) => isDemoUser(candidate));
+    if (user) await ensureDemoWorkspace(repositories, store, user);
+    return response;
+  });
   app.post("/auth/logout", (c) => forwardAuth(c.req.raw, "/auth/sign-out", auth));
+  app.post("/auth/update-user", async (c) => {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session) requirePermanentAccount(session.user);
+    return auth.handler(c.req.raw);
+  });
+  app.post("/auth/change-password", async (c) => {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session) requirePermanentAccount(session.user);
+    return auth.handler(c.req.raw);
+  });
+  app.post("/auth/delete-user", async (c) => {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session) requirePermanentAccount(session.user);
+    return auth.handler(c.req.raw);
+  });
   app.get("/auth/me", async (c) => {
     let session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (session && await promoteBootstrapAdmin(authUsers, session.user)) {
       session = await auth.api.getSession({ headers: c.req.raw.headers });
     }
     if (!session) throw new HTTPException(401, { message: "Sign in to continue" });
-    return c.json(session);
+    return c.json({
+      ...session,
+      user: {
+        ...session.user,
+        isSuperAdmin: isBootstrapAdmin(session.user.email),
+        isDemo: isDemoUser(session.user),
+      },
+    });
   });
   app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
 
@@ -293,6 +431,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
 
   app.post("/api/account/profile", zValidator("json", updateProfileSchema), async (c) => {
     const user = c.get("user")!;
+    requirePermanentAccount(user);
     const input = c.req.valid("json");
     const response = await forwardAuthJson(c.req.raw, "/auth/update-user", auth, input);
     if (!response.ok) return response;
@@ -303,6 +442,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
   });
 
   app.post("/api/account/password", zValidator("json", changePasswordSchema), async (c) => {
+    requirePermanentAccount(c.get("user")!);
     const input = c.req.valid("json");
     return forwardAuthJson(c.req.raw, "/auth/change-password", auth, {
       ...input,
@@ -312,6 +452,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
 
   app.post("/api/account/avatar", async (c) => {
     const user = c.get("user")!;
+    requirePermanentAccount(user);
     const body = await c.req.parseBody();
     const file = body.file;
     if (!(file instanceof File)) throw new HTTPException(400, { message: "Choose an image to upload" });
@@ -345,6 +486,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
 
   app.delete("/api/account/avatar", async (c) => {
     const user = c.get("user")!;
+    requirePermanentAccount(user);
     const avatar = await repositories.avatars.get(user.id);
     const response = await forwardAuthJson(c.req.raw, "/auth/update-user", auth, { image: null });
     if (!response.ok) return response;
@@ -377,6 +519,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       spaceCounts.set(membership.userId, (spaceCounts.get(membership.userId) ?? 0) + 1);
     }
     const results = users
+      .filter((user) => !isDemoUser(user))
       .filter((user) => !search || `${user.name} ${user.email}`.toLowerCase().includes(search))
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
       .slice(0, 200)
@@ -426,6 +569,30 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       userId: targetId,
       banReason: input.reason || "Suspended by an administrator",
     });
+  });
+
+  app.get("/api/admin/demo-mode", async (c) => {
+    const currentUser = c.get("user")!;
+    requireSuperAdmin(currentUser);
+    const setting = await demoMode.get(DEMO_MODE_ID);
+    return c.json({
+      enabled: setting?.enabled ?? false,
+      updatedAt: setting?.updatedAt ?? null,
+      updatedBy: setting?.updatedBy ?? null,
+    });
+  });
+
+  app.post("/api/admin/demo-mode", zValidator("json", updateDemoModeSchema), async (c) => {
+    const currentUser = c.get("user")!;
+    requireSuperAdmin(currentUser);
+    const setting: DemoModeRecord = {
+      id: DEMO_MODE_ID,
+      enabled: c.req.valid("json").enabled,
+      updatedAt: now(),
+      updatedBy: currentUser.id,
+    };
+    await demoMode.put(setting);
+    return c.json({ enabled: setting.enabled, updatedAt: setting.updatedAt, updatedBy: setting.updatedBy });
   });
 
   app.get("/api/spaces", async (c) => {

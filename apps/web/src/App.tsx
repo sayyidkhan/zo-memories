@@ -24,9 +24,10 @@ function AppShell({ user }: { user: User }) {
   const spaces = useQuery({ queryKey: ["spaces"], queryFn: () => api.listSpaces() });
   const logout = useMutation({
     mutationFn: () => api.logout(),
-    onSuccess: () => {
+    onSuccess: async () => {
       setAccountOpen(false);
-      queryClient.clear();
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+      await queryClient.resetQueries({ queryKey: ["me"] });
     },
   });
 

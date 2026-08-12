@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, ShieldCheck, ShieldOff, UserCog, UserRoundCheck, UserRoundX } from "lucide-react";
+import { MonitorPlay, Power, Search, ShieldCheck, ShieldOff, UserCog, UserRoundCheck, UserRoundX } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { AdminUser, User } from "@zo-moments/types";
@@ -23,6 +23,11 @@ export function AdminDialog({ open, onClose, currentUser }: { open: boolean; onC
     queryKey: ["admin-users", deferredSearch],
     queryFn: () => api.listAdminUsers(deferredSearch),
     enabled: open,
+  });
+  const demoMode = useQuery({
+    queryKey: ["admin-demo-mode"],
+    queryFn: () => api.getAdminDemoMode(),
+    enabled: open && currentUser.isSuperAdmin === true,
   });
 
   const refresh = async () => {
@@ -49,6 +54,17 @@ export function AdminDialog({ open, onClose, currentUser }: { open: boolean; onC
     },
     onError: (error) => toast.error(messageFor(error)),
   });
+  const updateDemoMode = useMutation({
+    mutationFn: (enabled: boolean) => api.updateDemoMode({ enabled }),
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-demo-mode"] }),
+        queryClient.invalidateQueries({ queryKey: ["demo-mode"] }),
+      ]);
+      toast.success(result.enabled ? "Demo access enabled" : "Demo access disabled");
+    },
+    onError: (error) => toast.error(messageFor(error)),
+  });
 
   function toggleStatus(user: AdminUser) {
     const nextStatus = user.status === "active" ? "suspended" : "active";
@@ -58,6 +74,28 @@ export function AdminDialog({ open, onClose, currentUser }: { open: boolean; onC
 
   return (
     <Modal open={open} onClose={onClose} title="Admin console" description="Manage who can use Zo Moments. Admin access does not reveal private shared-space content." size="xl">
+      {currentUser.isSuperAdmin ? (
+        <section className="mb-5 grid gap-4 rounded-[24px] border border-[#d8c6a1] bg-[linear-gradient(135deg,#f8ecd2,#f1dfbc)] p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-[16px] bg-[#7b5a28] text-[#fff8e9]"><MonitorPlay className="size-5" /></span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-[#3e3527]">Public demo access</h3>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${demoMode.data?.enabled ? "bg-[#d9e5d9] text-[#375245]" : "bg-[#e7d7c1] text-[#775c38]"}`}>{demoMode.data?.enabled ? "On" : "Off"}</span>
+              </div>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-[#75664f]">When enabled, anyone can enter the shared demo account without a password. Only a super administrator can change this setting.</p>
+            </div>
+          </div>
+          <Button
+            variant={demoMode.data?.enabled ? "danger" : "primary"}
+            className="min-w-36"
+            disabled={demoMode.isPending || demoMode.isError || updateDemoMode.isPending}
+            onClick={() => updateDemoMode.mutate(!demoMode.data?.enabled)}
+          >
+            {updateDemoMode.isPending ? <Spinner /> : <><Power className="size-4" />{demoMode.data?.enabled ? "Disable demo" : "Enable demo"}</>}
+          </Button>
+        </section>
+      ) : null}
       <div className="mb-5 grid gap-4 rounded-[24px] bg-[#eee5d8] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <label className="relative block">
           <Search className="absolute left-4 top-4 size-4 text-[#827a70]" />
