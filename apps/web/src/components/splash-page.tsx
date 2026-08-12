@@ -48,11 +48,17 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
               <p className="landing-intro landing-intro--3 mx-auto mt-7 max-w-2xl text-base leading-7 text-[#d1dbd4] sm:mt-9 sm:text-xl sm:leading-8">
                 One private place where your people can keep every trip, celebration, voice note and ordinary day that becomes a life together.
               </p>
-              <div className="landing-intro landing-intro--4 mt-8 flex flex-col items-center justify-center gap-3 sm:mt-9 sm:flex-row">
+              <div className="landing-intro landing-intro--4 relative z-30 mt-8 flex flex-col items-center justify-center gap-3 sm:mt-9 sm:flex-row">
                 <Button className="h-14 w-full bg-[#e8aa90] px-7 text-base text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28)] hover:bg-[#f4c5b1] sm:w-auto" onClick={onGetStarted}>
                   Create your first space <ArrowRight className="size-4" />
                 </Button>
-                <button onClick={onSignIn} className="h-14 w-full rounded-full border border-white/10 bg-[#20342b]/75 px-7 text-sm font-semibold text-[#fffaf2] backdrop-blur-md transition hover:border-white/20 hover:bg-white/10 sm:w-auto">I already have one</button>
+                <button
+                  type="button"
+                  onClick={onSignIn}
+                  className="h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
+                >
+                  I already have one
+                </button>
               </div>
             </div>
 
