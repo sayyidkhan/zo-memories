@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowRight, Check, CircleCheck, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Play, Send, Sparkles, Star, UserPlus } from "lucide-react";
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { ArrowDown, ArrowRight, Check, CircleCheck, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Send, Sparkles, Star, UserPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 import { Button } from "./ui";
 
@@ -10,47 +10,49 @@ const momentImages = {
   dinner: `${import.meta.env.BASE_URL}images/moments/terrace-dinner.webp`,
 };
 
-export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
-  const moveSpotlight = (event: PointerEvent<HTMLElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty("--pointer-x", `${event.clientX - bounds.left}px`);
-    event.currentTarget.style.setProperty("--pointer-y", `${event.clientY - bounds.top}px`);
-  };
+const heroStories = [
+  { image: momentImages.coast, place: "Pacific Coast", date: "21 May", title: "We took the long way home.", detail: "48 moments · 2 people" },
+  { image: momentImages.city, place: "Tokyo", date: "04 July", title: "One umbrella. No plan.", detail: "83 moments · 4 people" },
+  { image: momentImages.mountain, place: "The ridge", date: "18 October", title: "Worth the early alarm.", detail: "31 moments · 3 people" },
+  { image: momentImages.dinner, place: "Tuscany", date: "01 January", title: "The last dinner ran late.", detail: "26 moments · 6 people" },
+] as const;
 
+export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
   return (
     <main className="landing-shell overflow-hidden bg-[#f3ecdf] text-[#26372f]">
-      <section className="archive-hero relative min-h-[100svh] overflow-hidden bg-[#20342b] text-[#fffaf2]" onPointerMove={moveSpotlight}>
-        <div className="archive-grain absolute inset-0" />
-        <div className="archive-spotlight absolute inset-0" />
-        <div className="archive-ring archive-ring--one" />
-        <div className="archive-ring archive-ring--two" />
+      <section className="folio-hero relative min-h-[100svh] overflow-hidden bg-[#14281f] text-[#fffaf2]">
+        <div className="folio-grain absolute inset-0" />
+        <div className="folio-aurora absolute inset-0" />
 
-        <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[90rem] flex-col px-5 sm:px-8 lg:px-12">
-          <header className="flex h-20 items-center justify-between border-b border-white/10 sm:h-24">
+        <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[96rem] flex-col px-5 sm:px-8 lg:px-12">
+          <header className="folio-header flex h-20 items-center justify-between border-b border-white/10 sm:h-24">
             <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.19em] sm:text-sm">
               <span className="grid size-11 place-items-center rounded-[15px] bg-[#fff8ed] p-1"><BrandMark className="size-9" /></span>
               <span>Zo Moments</span>
             </div>
-            <button onClick={onSignIn} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-5 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12]">
+            <div className="flex items-center gap-5">
+              <span className="hidden text-[9px] font-bold uppercase tracking-[.2em] text-[#91a499] md:inline">Private shared journals</span>
+              <button onClick={onSignIn} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-5 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12]">
               Sign in <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-            </button>
+              </button>
+            </div>
           </header>
 
-          <div className="relative flex flex-1 flex-col justify-center py-12 sm:py-16 lg:py-10">
-            <div className="archive-copy relative z-20 mx-auto w-full text-center">
-              <p className="landing-intro landing-intro--1 inline-flex items-center gap-2 rounded-full border border-[#edb59e]/25 bg-[#edb59e]/10 px-4 py-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#f2c2ae]">
-                <Sparkles className="size-3" /> A shared digital home
+          <div className="folio-layout grid flex-1 items-center gap-12 py-10 lg:grid-cols-[.76fr_1.24fr] lg:gap-10 lg:py-12 xl:gap-16">
+            <div className="folio-copy relative z-20 max-w-[40rem]">
+              <p className="landing-intro landing-intro--1 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.23em] text-[#efb49b]">
+                <span className="size-1.5 rounded-full bg-[#e8aa90] shadow-[0_0_16px_#e8aa90]" /> A private home for shared life
               </p>
-              <h1 className="landing-intro landing-intro--2 mx-auto mt-6 max-w-6xl font-display text-[clamp(4rem,10.3vw,9.8rem)] leading-[.78] tracking-[-.075em] text-balance">
-                Make a home for<br />
-                <span className="italic text-[#e8aa90]">the life</span> you share.
+              <h1 className="landing-intro landing-intro--2 mt-6 font-display text-[clamp(4rem,7vw,7.25rem)] leading-[.8] tracking-[-.07em] text-balance">
+                Keep the whole<br />
+                <span className="italic text-[#e8aa90]">story, together.</span>
               </h1>
-              <p className="landing-intro landing-intro--3 mx-auto mt-7 max-w-2xl text-base leading-7 text-[#d1dbd4] sm:mt-9 sm:text-xl sm:leading-8">
-                One private place where your people can keep every trip, celebration, voice note and ordinary day that becomes a life together.
+              <p className="landing-intro landing-intro--3 mt-7 max-w-xl text-base leading-7 text-[#c7d3cc] sm:text-lg sm:leading-8">
+                Everyone remembers a different part. Zo Moments brings every photo, video and voice note into one living journal with the people who were there.
               </p>
-              <div className="landing-intro landing-intro--4 relative z-30 mt-8 flex flex-col items-center justify-center gap-3 sm:mt-9 sm:flex-row">
+              <div className="landing-intro landing-intro--4 relative z-30 mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button className="h-14 w-full bg-[#e8aa90] px-7 text-base text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28)] hover:bg-[#f4c5b1] sm:w-auto" onClick={onGetStarted}>
-                  Create your first space <ArrowRight className="size-4" />
+                  Start your first story <ArrowRight className="size-4" />
                 </Button>
                 <button
                   type="button"
@@ -60,15 +62,20 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                   I already have one
                 </button>
               </div>
+              <div className="landing-intro landing-intro--5 mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-bold uppercase tracking-[.16em] text-[#91a499]">
+                <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Invite by link</span>
+                <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Everyone contributes</span>
+                <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Private by design</span>
+              </div>
             </div>
 
-            <MemoryReel />
+            <LivingFolio />
           </div>
 
-          <div className="relative z-20 flex items-center justify-between border-t border-white/10 py-4 text-[9px] font-bold uppercase tracking-[.2em] text-[#aebdb4] sm:py-5 sm:text-[10px]">
-            <span>Private by design</span>
+          <div className="relative z-20 flex items-center justify-between border-t border-white/10 py-4 text-[9px] font-bold uppercase tracking-[.2em] text-[#91a499] sm:py-5 sm:text-[10px]">
+            <span>Photos · video · voice</span>
             <a href="#why" className="group hidden items-center gap-2 transition hover:text-white sm:inline-flex">See the story <ArrowDown className="size-3.5 transition-transform group-hover:translate-y-1" /></a>
-            <span>Made for your people</span>
+            <span>Built together</span>
           </div>
         </div>
       </section>
@@ -207,35 +214,82 @@ function FinalKeepsake({ onGetStarted }: { onGetStarted: () => void }) {
   );
 }
 
-function MemoryReel() {
+function LivingFolio() {
+  const [activeStory, setActiveStory] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      setActiveStory((current) => (current + 1) % heroStories.length);
+    }, 5600);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const story = heroStories[activeStory] ?? heroStories[0];
+
   return (
-    <div className="memory-reel landing-intro landing-intro--5 relative z-10 mx-[-12rem] mt-10 h-60 sm:mx-[-8rem] sm:mt-12 sm:h-72 lg:absolute lg:inset-x-[-10rem] lg:bottom-[3rem] lg:mt-0 lg:h-64" aria-label="A reel of shared memories">
-      <div className="memory-reel__track">
-        <ReelCard className="reel-card--one" date="21 MAY" title="Pacific Coast" image={momentImages.coast} position="center" />
-        <ReelCard className="reel-card--two" date="04 JUL" title="Tokyo after rain" image={momentImages.city} position="center 42%" />
-        <VoiceCard />
-        <ReelCard className="reel-card--four" date="18 OCT" title="Above the clouds" image={momentImages.mountain} position="center 58%" />
-        <ReelCard className="reel-card--five" date="01 JAN" title="Dinner in Tuscany" image={momentImages.dinner} position="center" />
+    <div className="living-folio landing-intro landing-intro--5 relative min-h-[34rem] lg:min-h-[42rem]" aria-label="Shared travel memories">
+      <div className="folio-index" aria-hidden="true">0{activeStory + 1}</div>
+      <div className="folio-stack folio-stack--back" />
+      <div className="folio-stack folio-stack--middle" />
+
+      <div className="folio-frame">
+        <div className="folio-photo-stage">
+          {heroStories.map((item, index) => (
+            <img
+              key={item.place}
+              className={`folio-main-photo ${activeStory === index ? "folio-main-photo--active" : ""}`}
+              src={item.image}
+              alt={activeStory === index ? `${item.place} shared memory` : ""}
+              aria-hidden={activeStory !== index}
+              decoding="async"
+              fetchPriority={index === 0 ? "high" : "auto"}
+            />
+          ))}
+          <div className="folio-photo-wash" />
+          <div className="folio-map-label"><span /> 2026 shared journal</div>
+          <svg key={activeStory} className="folio-route" viewBox="0 0 720 520" fill="none" aria-hidden="true">
+            <path d="M76 398C142 331 174 377 233 310C294 241 348 286 401 221C459 149 520 207 646 102" pathLength="1" />
+            <circle cx="76" cy="398" r="7" /><circle cx="646" cy="102" r="9" />
+          </svg>
+          <span className="folio-route-star"><Sparkles className="size-5" /></span>
+
+          <div className="folio-caption" key={`${story.place}-caption`}>
+            <div className="flex items-center justify-between gap-4 text-[9px] font-bold uppercase tracking-[.2em] text-white/70">
+              <span>{story.place}</span><span>{story.date}</span>
+            </div>
+            <p className="mt-2 max-w-md font-display text-[clamp(2rem,3.5vw,3.7rem)] leading-[.92] tracking-[-.05em] text-white">{story.title}</p>
+          </div>
+        </div>
+
+        <div className="folio-footer">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#a9503f]">Inside this chapter</p>
+            <p className="mt-1 font-display text-lg tracking-[-.025em] text-[#26372f]">{story.detail}</p>
+          </div>
+          <div className="folio-people" aria-label="Shared by four contributors">
+            <span>SK</span><span>SL</span><span>+2</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="folio-chapters" role="tablist" aria-label="Choose a memory chapter">
+        {heroStories.map((item, index) => (
+          <button
+            key={item.place}
+            type="button"
+            role="tab"
+            aria-selected={activeStory === index}
+            className={`folio-chapter ${activeStory === index ? "folio-chapter--active" : ""}`}
+            onClick={() => setActiveStory(index)}
+          >
+            <span>0{index + 1}</span>
+            <strong>{item.place}</strong>
+            <i />
+          </button>
+        ))}
       </div>
     </div>
-  );
-}
-
-function ReelCard({ className, date, title, image, position }: { className: string; date: string; title: string; image: string; position: string }) {
-  return (
-    <article className={`reel-card ${className}`}>
-      <img className="reel-photo" src={image} alt="" loading="eager" decoding="async" style={{ objectPosition: position }} />
-      <div className="flex items-end justify-between gap-3 px-1 pt-3"><div><p className="font-display text-lg leading-none text-[#26372f]">{title}</p><p className="mt-1.5 text-[8px] font-bold uppercase tracking-[.17em] text-[#9b5d4e]">{date}</p></div><BrandMark className="size-7 shrink-0 opacity-55" /></div>
-    </article>
-  );
-}
-
-function VoiceCard() {
-  return (
-    <article className="reel-card reel-card--voice">
-      <div className="flex items-center gap-3"><span className="grid size-12 place-items-center rounded-full bg-[#a9503f] text-white"><Play className="ml-0.5 size-4 fill-current" /></span><div><p className="text-[8px] font-bold uppercase tracking-[.18em] text-[#a9503f]">Voice note · 0:24</p><p className="mt-1 font-display text-lg text-[#26372f]">You have to hear this</p></div></div>
-      <div className="voice-wave mt-7 flex h-12 items-center gap-1.5">{[30, 70, 42, 95, 50, 78, 35, 88, 55, 100, 44, 68, 28, 75, 40].map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}</div>
-    </article>
   );
 }
 
