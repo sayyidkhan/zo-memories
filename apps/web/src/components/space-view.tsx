@@ -110,7 +110,7 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
                 <span className="text-xs text-[#91897d]">{monthObjects.length} {monthObjects.length === 1 ? "moment" : "moments"}</span>
               </div>
               <div className="grid grid-cols-2 items-start gap-x-3 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                {monthObjects.map((object, index) => <MemoryCard key={object.id} object={object} index={index} onOpen={() => setPreview(object)} />)}
+                {monthObjects.map((object, index) => <MemoryCard key={object.id} object={object} uploader={members.find((member) => member.userId === object.uploadedBy)} index={index} onOpen={() => setPreview(object)} />)}
               </div>
             </section>
           ))}
@@ -120,7 +120,7 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
       <UploadDialog open={dialog === "upload"} onClose={() => setDialog(null)} spaceId={spaceId} albums={albums} />
       <InviteDialog open={dialog === "invite"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <AlbumDialog open={dialog === "album"} onClose={() => setDialog(null)} spaceId={spaceId} />
-      <MemoryPreview object={preview} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
+      <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
     </div>
   );
 }

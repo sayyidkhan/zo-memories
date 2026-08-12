@@ -323,12 +323,17 @@ describe("Zo Moments API", () => {
     expect(enabled.response.status).toBe(200);
     expect(enabled.body.enabled).toBe(true);
     const enabledPublicStatus = await app.request("/public/demo-mode");
-    expect((await enabledPublicStatus.json() as { enabled: boolean }).enabled).toBe(true);
+    const enabledPublicBody = await enabledPublicStatus.json() as { enabled: boolean; personas: { id: string }[] };
+    expect(enabledPublicBody.enabled).toBe(true);
+    expect(enabledPublicBody.personas.map(({ id }) => id)).toEqual(["maya", "leo", "sam"]);
 
     const visitor = new BrowserSession(app);
-    expect((await visitor.request("/auth/demo", { method: "POST" })).status).toBe(200);
+    expect((await visitor.request("/auth/demo", {
+      method: "POST",
+      body: JSON.stringify({ personaId: "maya" }),
+    })).status).toBe(200);
     const demoMe = await visitor.json<{ user: { email: string; isDemo: boolean; isSuperAdmin: boolean } }>("/auth/me");
-    expect(demoMe.body.user.email).toBe("demo@zo-moments.example");
+    expect(demoMe.body.user.email).toBe("demo-maya@zo-moments.example");
     expect(demoMe.body.user.isDemo).toBe(true);
     expect(demoMe.body.user.isSuperAdmin).toBe(false);
 
@@ -336,8 +341,23 @@ describe("Zo Moments API", () => {
     expect(demoSpaces.body.spaces.map(({ name }) => name)).toContain("Our year in motion");
     const demoSpace = demoSpaces.body.spaces.find(({ name }) => name === "Our year in motion");
     expect(demoSpace).toBeDefined();
-    const demoObjects = await visitor.json<{ objects: { caption: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
+    const demoDetail = await visitor.json<{ members: { name: string; role: string; userId: string }[] }>(`/api/spaces/${demoSpace!.id}`);
+    expect(demoDetail.body.members.map(({ name }) => name)).toEqual(["Maya Chen", "Leo Tan", "Sam Rivera"]);
+    expect(demoDetail.body.members.map(({ role }) => role)).toEqual(["owner", "member", "member"]);
+    const demoObjects = await visitor.json<{ objects: { caption: string; uploadedBy: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
     expect(demoObjects.body.objects).toHaveLength(4);
+    expect(new Set(demoObjects.body.objects.map(({ uploadedBy }) => uploadedBy)).size).toBe(3);
+
+    const secondVisitor = new BrowserSession(app);
+    expect((await secondVisitor.request("/auth/demo", {
+      method: "POST",
+      body: JSON.stringify({ personaId: "leo" }),
+    })).status).toBe(200);
+    const secondDemoMe = await secondVisitor.json<{ user: { email: string; isDemo: boolean } }>("/auth/me");
+    expect(secondDemoMe.body.user.email).toBe("demo-leo@zo-moments.example");
+    expect(secondDemoMe.body.user.isDemo).toBe(true);
+    const secondDemoSpaces = await secondVisitor.json<{ spaces: { id: string }[] }>("/api/spaces");
+    expect(secondDemoSpaces.body.spaces.map(({ id }) => id)).toContain(demoSpace!.id);
     expect((await visitor.request("/api/account/password", {
       method: "POST",
       body: JSON.stringify({ currentPassword: "secret", newPassword: "changed" }),

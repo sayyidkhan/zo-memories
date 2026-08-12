@@ -94,11 +94,11 @@ export function AccountDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Account settings" description={user.isDemo ? "You are exploring Zo Moments in the shared demo account." : "Manage your profile, picture, and sign-in details."} size="lg">
+    <Modal open={open} onClose={onClose} title="Account settings" description={user.isDemo ? "You are exploring Zo Moments as one of its demo members." : "Manage your profile, picture, and sign-in details."} size="lg">
       {user.isDemo ? (
         <div className="mb-5 flex gap-3 rounded-[22px] border border-[#d8c6a1] bg-[#f6ead2] p-4 text-[#6f552f]">
           <LockKeyhole className="mt-0.5 size-5 shrink-0" />
-          <p className="text-sm leading-6"><strong className="block text-[#4f3d25]">Shared demo profile</strong>Profile details and password changes are locked so the demo remains available to everyone.</p>
+          <p className="text-sm leading-6"><strong className="block text-[#4f3d25]">Demo profile</strong>Profile details and password changes are locked so every visitor can use this persona.</p>
         </div>
       ) : null}
       {section === "profile" ? (

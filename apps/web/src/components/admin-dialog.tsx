@@ -83,7 +83,7 @@ export function AdminDialog({ open, onClose, currentUser }: { open: boolean; onC
                 <h3 className="font-bold text-[#3e3527]">Public demo access</h3>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${demoMode.data?.enabled ? "bg-[#d9e5d9] text-[#375245]" : "bg-[#e7d7c1] text-[#775c38]"}`}>{demoMode.data?.enabled ? "On" : "Off"}</span>
               </div>
-              <p className="mt-1 max-w-xl text-xs leading-5 text-[#75664f]">When enabled, anyone can enter the shared demo account without a password. Only a super administrator can change this setting.</p>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-[#75664f]">When enabled, anyone can choose one of three demo personas sharing the same travel journal. Only a super administrator can change this setting.</p>
             </div>
           </div>
           <Button

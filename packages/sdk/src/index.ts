@@ -3,6 +3,7 @@ import type {
   Album,
   ChangePasswordInput,
   DemoMode,
+  DemoLoginInput,
   CreateAlbumInput,
   CreateShareInvitationInput,
   CreateSpaceInput,
@@ -96,8 +97,8 @@ export class ZoMomentsClient {
     return this.request("/auth/login", { method: "POST", body: JSON.stringify(input) });
   }
 
-  demoLogin(): Promise<{ user: User }> {
-    return this.request("/auth/demo", { method: "POST" });
+  demoLogin(input: DemoLoginInput): Promise<{ user: User }> {
+    return this.request("/auth/demo", { method: "POST", body: JSON.stringify(input) });
   }
 
   getDemoMode(): Promise<DemoMode> {

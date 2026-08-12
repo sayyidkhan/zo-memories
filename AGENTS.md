@@ -14,7 +14,7 @@
 - `packages/sdk` owns the transport client used by web and future clients.
 - Production persistence goes through `FileSystemBlobStore` into the sibling `zo-memories-data` directory on Zo's persistent server storage.
 - Better Auth's admin plugin owns application roles and suspension state. `ADMIN_EMAILS` promotes configured accounts; app admins never bypass shared-space membership.
-- `ADMIN_EMAILS` accounts are super administrators and exclusively control the persistent public demo-mode switch. The shared demo identity has locked account credentials and restored sample travel content.
+- `ADMIN_EMAILS` accounts are super administrators and exclusively control the persistent public demo-mode switch. Three locked demo personas share one restored sample travel space, with seeded memories attributed across them.
 - Profile images are private blobs under `zo-moments/profile-images` and are streamed only through authenticated API routes.
 - Development and tests may use `MemoryBlobStore`; production rejects it. S3 remains an optional `BlobStore` driver.
 

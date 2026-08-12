@@ -1,10 +1,10 @@
 import { Download, FileText, Headphones, Play, Trash2 } from "lucide-react";
-import type { MomentObject } from "@zo-moments/types";
+import type { Member, MomentObject } from "@zo-moments/types";
 import { api } from "@zo-moments/sdk";
 import { formatBytes, shortDate } from "@/lib/utils";
 import { Button, Modal } from "./ui";
 
-export function MemoryCard({ object, index, onOpen }: { object: MomentObject; index: number; onOpen: () => void }) {
+export function MemoryCard({ object, uploader, index, onOpen }: { object: MomentObject; uploader: Member | undefined; index: number; onOpen: () => void }) {
   const imageUrl = api.objectContentUrl(object.spaceId, object.id);
   const shape = index % 5 === 0 ? "aspect-[4/5]" : index % 7 === 0 ? "aspect-[5/4]" : "aspect-square";
   return (
@@ -26,7 +26,7 @@ export function MemoryCard({ object, index, onOpen }: { object: MomentObject; in
       <div className="mt-3 flex items-start justify-between gap-3 px-1">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[#34443a]">{object.caption || object.name}</p>
-          <p className="mt-0.5 text-xs text-[#888075]">{shortDate(object.occurredAt)}</p>
+          <p className="mt-0.5 text-xs text-[#888075]">{shortDate(object.occurredAt)}{uploader ? ` · Shared by ${uploader.name.split(" ")[0]}` : ""}</p>
         </div>
         <span className="mt-0.5 shrink-0 text-[11px] text-[#91897e]">{formatBytes(object.size)}</span>
       </div>
@@ -34,11 +34,11 @@ export function MemoryCard({ object, index, onOpen }: { object: MomentObject; in
   );
 }
 
-export function MemoryPreview({ object, onClose, onDelete }: { object: MomentObject | null; onClose: () => void; onDelete: (object: MomentObject) => void }) {
+export function MemoryPreview({ object, uploader, onClose, onDelete }: { object: MomentObject | null; uploader: Member | undefined; onClose: () => void; onDelete: (object: MomentObject) => void }) {
   if (!object) return null;
   const contentUrl = api.objectContentUrl(object.spaceId, object.id);
   return (
-    <Modal open onClose={onClose} title={object.caption || object.name} description={`${shortDate(object.occurredAt)} · ${formatBytes(object.size)}`} size="lg">
+    <Modal open onClose={onClose} title={object.caption || object.name} description={`${shortDate(object.occurredAt)} · ${formatBytes(object.size)}${uploader ? ` · Shared by ${uploader.name}` : ""}`} size="lg">
       <div className="overflow-hidden rounded-[24px] bg-[#171b18]">
         {object.kind === "photo" ? <img src={contentUrl} alt={object.caption || object.name} className="mx-auto max-h-[65vh] w-auto object-contain" /> : null}
         {object.kind === "video" ? <video src={contentUrl} controls className="max-h-[65vh] w-full" /> : null}

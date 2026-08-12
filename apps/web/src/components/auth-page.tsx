@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Images, LockKeyhole, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Images, LockKeyhole, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { ShareInvitationPreview } from "@zo-moments/types";
@@ -24,7 +24,7 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
     onError: (cause) => setError(cause instanceof ZoMomentsApiError ? cause.message : "Could not sign you in"),
   });
   const demo = useMutation({
-    mutationFn: () => api.demoLogin(),
+    mutationFn: (personaId: string) => api.demoLogin({ personaId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
@@ -113,19 +113,27 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
           {!invitation && mode === "login" && demoMode.data?.enabled ? (
             <div className="mt-6">
               <div className="mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.18em] text-[#9a9185] before:h-px before:flex-1 before:bg-[#ddd2c2] after:h-px after:flex-1 after:bg-[#ddd2c2]">or explore first</div>
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full border-[#c8b795] bg-[#f6ead2] text-[#6f4f20] shadow-[0_8px_24px_rgba(115,82,31,.12)] hover:bg-[#efdfbf]"
-                disabled={demo.isPending}
-                onClick={() => {
-                  setError("");
-                  demo.mutate();
-                }}
-              >
-                {demo.isPending ? <Spinner /> : <><Play className="size-4 fill-current" />Try the live demo</>}
-              </Button>
-              <p className="mt-3 text-center text-xs leading-5 text-[#8c857b]">No account or password needed. Demo content is shared.</p>
+              <p className="mb-3 text-center text-sm font-semibold text-[#5f574c]">Choose who you want to explore as</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {demoMode.data.personas.map((persona, index) => (
+                  <button
+                    key={persona.id}
+                    type="button"
+                    disabled={demo.isPending}
+                    onClick={() => {
+                      setError("");
+                      demo.mutate(persona.id);
+                    }}
+                    className="group rounded-[20px] border border-[#d2c3aa] bg-[#f8edda] p-3 text-left shadow-[0_8px_24px_rgba(115,82,31,.08)] transition hover:-translate-y-0.5 hover:border-[#aa8359] hover:bg-[#f1dfc2] disabled:pointer-events-none disabled:opacity-55"
+                  >
+                    <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${["bg-[#a95c47]", "bg-[#537267]", "bg-[#b08549]"][index % 3]}`}>{persona.name.split(" ").map((part) => part[0]).join("")}</span>
+                    <strong className="mt-3 block text-sm text-[#3f382f]">{persona.name.split(" ")[0]}</strong>
+                    <span className="mt-0.5 block text-[10px] leading-4 text-[#817564]">{persona.description}</span>
+                  </button>
+                ))}
+              </div>
+              {demo.isPending ? <div className="mt-3 flex items-center justify-center gap-2 text-xs text-[#756b5e]"><Spinner />Opening the shared story…</div> : null}
+              <p className="mt-3 text-center text-xs leading-5 text-[#8c857b]">Three people, one shared travel journal. No password needed.</p>
             </div>
           ) : null}
           <p className="mt-7 text-center text-xs leading-5 text-[#8c857b]">Private by design. Only members can see what lives inside a shared space.</p>

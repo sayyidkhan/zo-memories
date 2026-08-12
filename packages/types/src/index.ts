@@ -165,6 +165,16 @@ export const demoModeSchema = z.object({
   enabled: z.boolean(),
   updatedAt: isoDateSchema.nullable(),
   updatedBy: z.string().nullable(),
+  personas: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    role: memberRoleSchema,
+    description: z.string(),
+  })),
+});
+
+export const demoLoginSchema = z.object({
+  personaId: z.string(),
 });
 
 export const updateDemoModeSchema = z.object({
@@ -218,4 +228,5 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type UpdateAdminRoleInput = z.infer<typeof updateAdminRoleSchema>;
 export type UpdateAccountStatusInput = z.infer<typeof updateAccountStatusSchema>;
 export type DemoMode = z.infer<typeof demoModeSchema>;
+export type DemoLoginInput = z.infer<typeof demoLoginSchema>;
 export type UpdateDemoModeInput = z.infer<typeof updateDemoModeSchema>;
