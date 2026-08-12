@@ -345,7 +345,7 @@ describe("Zo Moments API", () => {
     expect(demoDetail.body.members.map(({ name }) => name)).toEqual(["Maya Chen", "Leo Tan", "Sam Rivera"]);
     expect(demoDetail.body.members.map(({ role }) => role)).toEqual(["owner", "member", "member"]);
     const demoObjects = await visitor.json<{ objects: { caption: string; uploadedBy: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
-    expect(demoObjects.body.objects).toHaveLength(4);
+    expect(demoObjects.body.objects).toHaveLength(12);
     expect(new Set(demoObjects.body.objects.map(({ uploadedBy }) => uploadedBy)).size).toBe(3);
 
     const secondVisitor = new BrowserSession(app);
