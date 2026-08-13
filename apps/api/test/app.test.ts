@@ -383,12 +383,16 @@ describe("Zo Moments API", () => {
     expect(demoDetail.body.members.map(({ name }) => name)).toEqual(["Maya Chen", "Leo Tan", "Sam Rivera"]);
     expect(demoDetail.body.members.map(({ role }) => role)).toEqual(["owner", "member", "member"]);
     const demoObjects = await visitor.json<{ objects: { caption: string; uploadedBy: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
-    expect(demoObjects.body.objects).toHaveLength(12);
-    expect(new Set(demoObjects.body.objects.map(({ uploadedBy }) => uploadedBy)).size).toBe(3);
+    expect(demoObjects.body.objects).toHaveLength(18);
+    const momentCounts = new Map<string, number>();
+    for (const object of demoObjects.body.objects) {
+      momentCounts.set(object.uploadedBy, (momentCounts.get(object.uploadedBy) ?? 0) + 1);
+    }
+    expect(demoDetail.body.members.map(({ userId }) => momentCounts.get(userId))).toEqual([6, 6, 6]);
     const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[] }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
     expect(demoStories.body.stories).toHaveLength(1);
     expect(demoStories.body.stories[0]?.title).toBe("The year we kept moving");
-    expect(demoStories.body.stories[0]?.momentIds).toHaveLength(12);
+    expect(demoStories.body.stories[0]?.momentIds).toHaveLength(18);
 
     const secondVisitor = new BrowserSession(app);
     expect((await secondVisitor.request("/auth/demo", {

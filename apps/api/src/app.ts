@@ -91,7 +91,7 @@ function demoStory(ownerId: string): Story {
     title: "The year we kept moving",
     location: "From Tokyo to the Pacific Coast",
     opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
-    momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-coast", "demo-moment-breakfast", "demo-moment-tokyo", "demo-moment-market", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace"],
+    momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"],
     createdBy: ownerId,
     createdAt: "2026-08-04T10:00:00.000Z",
     updatedAt: "2026-08-04T10:00:00.000Z",
@@ -198,16 +198,22 @@ async function ensureDemoWorkspace(
   const samples = [
     { id: "demo-moment-airport", personaId: "leo", file: "airport-dawn.webp", name: "airport-before-dawn.webp", caption: "The glamorous 5am departure", occurredAt: "2026-01-04T21:20:00.000Z" },
     { id: "demo-moment-train", personaId: "sam", file: "train-window.webp", name: "somewhere-between-stations.webp", caption: "Somewhere between stations", occurredAt: "2026-01-06T00:35:00.000Z" },
+    { id: "demo-moment-snow-cabin", personaId: "sam", file: "snow-cabin.webp", name: "snow-at-the-door.webp", caption: "We brought half the mountain inside", occurredAt: "2026-01-20T18:15:00.000Z" },
     { id: "demo-moment-coast", personaId: "maya", file: "coastal-roadtrip.webp", name: "pacific-coast.webp", caption: "Windows down on the Pacific Coast", occurredAt: "2026-02-14T08:30:00.000Z" },
+    { id: "demo-moment-lisbon", personaId: "maya", file: "lisbon-tram.webp", name: "last-tram-in-lisbon.webp", caption: "We nearly missed the last tram", occurredAt: "2026-02-20T17:25:00.000Z" },
     { id: "demo-moment-breakfast", personaId: "leo", file: "cabin-breakfast.webp", name: "pancake-incident.webp", caption: "The great pancake incident", occurredAt: "2026-03-01T08:05:00.000Z" },
+    { id: "demo-moment-waterfall", personaId: "sam", file: "iceland-waterfall.webp", name: "waterfall-picnic.webp", caption: "Lunch with the waterfall doing all the talking", occurredAt: "2026-03-19T12:10:00.000Z" },
     { id: "demo-moment-tokyo", personaId: "leo", file: "tokyo-evening.webp", name: "tokyo-after-rain.webp", caption: "Tokyo glowing after the rain", occurredAt: "2026-04-09T12:15:00.000Z" },
     { id: "demo-moment-market", personaId: "sam", file: "osaka-night-market.webp", name: "one-more-skewer.webp", caption: "One more skewer before we go", occurredAt: "2026-04-10T13:40:00.000Z" },
+    { id: "demo-moment-desert", personaId: "maya", file: "desert-roadtrip.webp", name: "the-map-was-upside-down.webp", caption: "The map was upside down the whole time", occurredAt: "2026-05-02T07:45:00.000Z" },
     { id: "demo-moment-ferry", personaId: "maya", file: "island-ferry.webp", name: "windy-ferry-selfie.webp", caption: "Wind: 1, our hair: 0", occurredAt: "2026-05-17T04:25:00.000Z" },
     { id: "demo-moment-mountain", personaId: "sam", file: "mountain-morning.webp", name: "first-light.webp", caption: "First light above the ridge", occurredAt: "2026-06-22T05:45:00.000Z" },
     { id: "demo-moment-lake", personaId: "leo", file: "alpine-lake.webp", name: "coldest-swim.webp", caption: "Colder than anyone admitted", occurredAt: "2026-06-23T11:10:00.000Z" },
+    { id: "demo-moment-marrakech", personaId: "maya", file: "marrakech-rooftop.webp", name: "sunset-on-the-roof.webp", caption: "We passed the last bowl as the city lit up", occurredAt: "2026-07-02T19:35:00.000Z" },
     { id: "demo-moment-pottery", personaId: "sam", file: "pottery-class.webp", name: "still-technically-a-vase.webp", caption: "Still technically a vase", occurredAt: "2026-07-12T07:50:00.000Z" },
     { id: "demo-moment-campfire", personaId: "leo", file: "beach-campfire.webp", name: "last-fire-before-home.webp", caption: "The last fire before home", occurredAt: "2026-07-29T19:15:00.000Z" },
     { id: "demo-moment-terrace", personaId: "maya", file: "terrace-dinner.webp", name: "tuscany-dinner.webp", caption: "Dinner that lasted until midnight", occurredAt: "2026-08-03T18:40:00.000Z" },
+    { id: "demo-moment-journal", personaId: "leo", file: "lakeside-journal.webp", name: "the-route-we-kept.webp", caption: "Every detour finally made it onto the page", occurredAt: "2026-08-04T06:30:00.000Z" },
   ];
   for (const sample of samples) {
     const file = Bun.file(`./apps/web/public/images/moments/${sample.file}`);
