@@ -271,7 +271,7 @@ export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean
         </div>
         {files.length ? <section className="rounded-[22px] border border-[#ded3c3] bg-[#f7f0e6] p-3 sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#a9503f]">Upload queue</p><p className="mt-1 text-xs text-[#756d62]">Add a different caption to each moment.</p></div><span className="rounded-full bg-[#e7ddcf] px-3 py-1.5 text-xs font-bold text-[#526158]">{files.length} / {maxMomentFilesPerBatch}</span></div>
-          <div className="grid max-h-72 gap-2 overflow-y-auto pr-1">
+          <div className="grid gap-2 sm:max-h-72 sm:overflow-y-auto sm:pr-1">
             {files.map((item) => <div key={item.id} className="relative grid min-w-0 gap-3 rounded-[16px] border border-[#e1d7c8] bg-[#fffdf8] p-3 sm:grid-cols-[auto_minmax(0,.8fr)_minmax(12rem,1.2fr)_auto] sm:items-center">
               <span className="grid size-10 place-items-center rounded-[12px] bg-[#e9dfd0] text-[#526158]">{item.status === "done" ? <Check className="size-5 text-[#52705e]" /> : <UploadFileIcon file={item.file} />}</span>
               <div className="min-w-0 pr-8 sm:pr-0"><strong className="block truncate text-xs text-[#34443a]">{item.file.name}</strong><span className="mt-0.5 block text-[10px] text-[#81796e]">{fileSize(item.file.size)}{item.status === "uploading" ? " · Uploading…" : item.status === "done" ? " · Added" : item.status === "error" ? ` · ${item.error}` : ""}</span></div>
