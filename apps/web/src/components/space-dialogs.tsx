@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, ImagePlus, Link2, LockKeyhole, MapPin, MessageCircle, MoreHorizontal, ShieldCheck, Sparkles, Trash2, UserPlus, UsersRound } from "lucide-react";
+import { ArrowRight, Check, Film, Image, ImagePlus, Link2, LockKeyhole, Maximize2, MessageCircle, MoreHorizontal, ShieldCheck, Sparkles, Trash2, UserPlus, UsersRound } from "lucide-react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Invitation, Member, MomentObject } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -42,9 +42,14 @@ function MomentsIllustration() {
 
 function StoryIllustration() {
   return (
-    <div className="relative h-32 overflow-hidden rounded-[22px] bg-[#26372f] text-[#fffaf2]">
-      <div className="absolute bottom-3 left-4 right-4 rounded-[18px] border border-white/10 bg-white/8 p-3"><div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-[#f0c681]"><MapPin className="size-3" />Our year in motion</div><p className="mt-2 font-display text-lg leading-none">The detours became the story.</p><div className="mt-3 h-1 rounded-full bg-white/10"><div className="h-full w-3/4 rounded-full bg-[#e8aa90]" /></div></div>
-      <Sparkles className="absolute right-4 top-3 size-5 text-[#f0c681]" />
+    <div className="relative h-32 overflow-hidden rounded-[22px] bg-[#26372f] p-3 text-[#fffaf2]">
+      <div className="flex items-center justify-between text-[8px] font-bold uppercase tracking-[.15em] text-[#f0c681]"><span>Choose the story style</span><span className="rounded-full bg-white/10 px-2 py-1">Auto</span></div>
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        <div className="rounded-[10px] bg-[#fff8ec] px-2 py-2 text-[#26372f]"><span className="font-display text-sm">Classic</span><span className="mt-1 block h-0.5 w-8 rounded bg-[#b1604c]" /></div>
+        <div className="relative overflow-hidden rounded-[10px] bg-[#e8dfcf] px-2 py-2 text-[#26372f]"><span className="font-display text-sm">Scrapbook</span><span className="absolute -bottom-1 right-2 size-4 rotate-6 bg-[#e8aa90]" /></div>
+        <div className="rounded-[10px] bg-[#102019] px-2 py-2 text-[#fff8ec]"><span className="font-display text-sm">Cinematic</span><span className="mt-1 block h-0.5 w-8 rounded bg-[#f0c681]" /></div>
+      </div>
+      <div className="mt-2 flex gap-1.5 text-[8px] font-bold"><span className="flex items-center gap-1 rounded-full bg-[#f0c681] px-2 py-1 text-[#26372f]"><Image className="size-2.5" />Image carousel</span><span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1"><Film className="size-2.5" />Social video</span></div>
     </div>
   );
 }
@@ -54,11 +59,11 @@ export function HowItWorksDialog({ open, onClose, members, momentCount, storyCou
     { number: "01", title: "Create a home", summary: "Start one space for one relationship, family, trip, or chapter.", detail: "Every space has its own people, moments, albums, and stories. Content never spills into another shared space.", done: true, action: null, actionLabel: null, illustration: <PeopleIllustration /> },
     { number: "02", title: "Bring in your people", summary: "Share a private link through WhatsApp, Telegram, SMS, or any messaging app.", detail: "The first person who accepts joins this space. Owners can see who belongs here and remove members later.", done: members.length > 1, action: canInvite ? "invite" as const : null, actionLabel: "Invite someone", illustration: <InviteIllustration /> },
     { number: "03", title: "Collect together", summary: "Everyone adds photos, videos, voice notes, PDFs, and the little details around them.", detail: "Add a date and caption so each memory keeps its context. Use albums when you want a simple collection.", done: momentCount >= 2, action: "upload" as const, actionLabel: "Add a moment", illustration: <MomentsIllustration /> },
-    { number: "04", title: "Turn moments into a story", summary: "Choose the moments that belong together, put them in order, and explain why they mattered.", detail: "Zo Moments turns scattered uploads into a cinematic chapter your people can read and revisit together.", done: storyCount > 0, action: momentCount >= 2 ? "story" as const : null, actionLabel: momentCount >= 2 ? "Craft a story" : "Add two moments first", illustration: <StoryIllustration /> },
+    { number: "04", title: "Choose the story and output", summary: "Pick Classic, Scrapbook, or Cinematic, then preview it as an image carousel or social video.", detail: "Choose the moments and opening, or let Auto select the style. Every export adapts its crop, safe area, dimensions, and pacing to the destination.", done: storyCount > 0, action: momentCount >= 2 ? "story" as const : null, actionLabel: momentCount >= 2 ? "Craft a story" : "Add two moments first", illustration: <StoryIllustration /> },
   ];
   const complete = steps.filter((step) => step.done).length;
   return (
-    <Modal open={open} onClose={onClose} title="How Zo Moments works" description="From a private shared space to a living story, built together." size="xl">
+    <Modal open={open} onClose={onClose} title="How Zo Moments works" description="From a private shared space to a story shaped for every destination." size="xl">
       <div className="mb-6 rounded-[24px] bg-[#20372d] px-5 py-4 text-[#fffaf2] sm:flex sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">Your space progress</p><p className="mt-1 text-sm text-[#d7dfda]">{complete} of 4 stages complete · {members.length} people · {momentCount} moments · {storyCount} {storyCount === 1 ? "story" : "stories"}</p></div><div className="mt-3 flex gap-1.5 sm:mt-0">{steps.map((step) => <span key={step.number} className={`h-2 w-10 rounded-full ${step.done ? "bg-[#f0c681]" : "bg-white/15"}`} />)}</div></div>
       <div className="grid gap-4 lg:grid-cols-2">
         {steps.map((step) => <article key={step.number} className="rounded-[26px] border border-[#ded2c2] bg-[#f8f1e7] p-4 sm:p-5">
@@ -66,6 +71,16 @@ export function HowItWorksDialog({ open, onClose, members, momentCount, storyCou
           <div className="mt-5 flex items-start gap-3"><span className={`grid size-9 shrink-0 place-items-center rounded-full text-[10px] font-bold ${step.done ? "bg-[#789083] text-white" : "bg-[#ead8bd] text-[#8f5547]"}`}>{step.done ? <Check className="size-4" /> : step.number}</span><div><h3 className="font-display text-2xl leading-none text-[#26372f]">{step.title}</h3><p className="mt-2 text-sm font-semibold leading-5 text-[#526158]">{step.summary}</p><p className="mt-2 text-xs leading-5 text-[#7a7267]">{step.detail}</p>{step.actionLabel ? <button type="button" disabled={!step.action} onClick={() => step.action && onAction(step.action)} className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-[#9a5747] disabled:text-[#9c958a]">{step.actionLabel}<ArrowRight className="size-3" /></button> : null}</div></div>
         </article>)}
       </div>
+      <section className="mt-5 overflow-hidden rounded-[24px] bg-[#20372d] p-5 text-[#fffaf2] sm:p-6">
+        <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr] lg:items-center">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">One story · Different outputs</p><h3 className="mt-2 font-display text-3xl leading-none">Make it fit where you share it.</h3><p className="mt-3 max-w-lg text-xs leading-5 text-[#cbd6d0]">Choose the format first, select what appears, then preview the destination-specific result at 50–200% before sharing or downloading.</p></div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-[18px] bg-[#fff8ec] p-4 text-[#26372f]"><span className="grid size-9 place-items-center rounded-[12px] bg-[#b1604c] text-white"><Image className="size-4" /></span><strong className="mt-3 block text-sm">Image carousel</strong><span className="mt-1 block text-[10px] leading-4 text-[#756d63]">Numbered PNG slides · one moment at a time</span></div>
+            <div className="rounded-[18px] border border-white/10 bg-white/8 p-4"><span className="grid size-9 place-items-center rounded-[12px] bg-[#f0c681] text-[#26372f]"><Film className="size-4" /></span><strong className="mt-3 block text-sm">Social video</strong><span className="mt-1 block text-[10px] leading-4 text-[#cbd6d0]">MP4 story · platform-safe pacing and crops</span></div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[9px] font-bold uppercase tracking-[.1em]"><span className="flex items-center gap-1.5 text-[#f0c681]"><Maximize2 className="size-3" />Preview first</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">Instagram · 4:5</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">TikTok · 9:16</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">LinkedIn · 1:1</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">Pinterest · 2:3</span></div>
+      </section>
       <div className="mt-5 flex items-start gap-3 rounded-[20px] border border-[#d6dfd6] bg-[#edf3ed] p-4 text-xs leading-5 text-[#526158]"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#496151]" /><p><strong className="text-[#34443a]">Private by design.</strong> Only members of this shared space can see its moments and stories. Application administrators do not gain access to the space.</p></div>
     </Modal>
   );
