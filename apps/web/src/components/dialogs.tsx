@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Copy, FileUp, FolderPlus, MessageCircle, MessagesSquare, Phone, RefreshCw, Share2, Trash2, UsersRound } from "lucide-react";
+import { Copy, FileUp, FolderPlus, MessageCircle, MessagesSquare, Phone, RefreshCw, Share2, Trash2, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Album } from "@zo-moments/types";
@@ -189,7 +189,7 @@ export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean
               {albums.map((album) => <option key={album.id} value={album.id}>{album.name}</option>)}
             </select>
           </Field>
-          <Field label="When it happened"><div className="relative min-w-0"><CalendarDays className="pointer-events-none absolute left-4 top-3.5 size-4 text-[#81796f]" /><Input className="min-w-0 pl-11" name="occurredAt" type="datetime-local" /></div></Field>
+          <Field label="When it happened"><Input className="block min-w-0 max-w-full [min-inline-size:0]" name="occurredAt" type="datetime-local" /></Field>
         </div>
         <Field label="Caption"><Input name="caption" placeholder="The story behind this moment" maxLength={500} /></Field>
         <ErrorMessage error={mutation.error} />
