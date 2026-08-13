@@ -24,11 +24,12 @@ function storyDateRange(objects: MomentObject[]) {
 
 const storyStyleNames: Record<StoryStyle, string> = { classic: "Classic", flipbook: "Flipbook", comic: "Comic", scrapbook: "Scrapbook", cinematic: "Cinematic" };
 
-function StoryCover({ story, objects, onOpen }: { story: Story; objects: MomentObject[]; onOpen: () => void }) {
+function StoryCover({ story, objects, onOpen, compact = false }: { story: Story; objects: MomentObject[]; onOpen: () => void; compact?: boolean }) {
   const moments = storyMoments(story, objects);
   const photos = moments.filter((object) => object.kind === "photo").slice(0, 3);
+  const formatLabel = story.styleSource === "auto" ? `Auto · ${storyStyleNames[story.style]}` : storyStyleNames[story.style];
   return (
-    <button onClick={onOpen} className="story-cover group relative min-h-[28rem] overflow-hidden rounded-[32px] bg-[#183128] text-left text-[#fff9ee] shadow-[0_30px_75px_rgba(37,47,39,.18)]">
+    <button onClick={onOpen} className={cn("story-cover group relative overflow-hidden rounded-[32px] bg-[#183128] text-left text-[#fff9ee] shadow-[0_30px_75px_rgba(37,47,39,.18)]", compact ? "min-h-[25rem]" : "min-h-[28rem]")}>
       <div className="absolute inset-0 grid grid-cols-[1.45fr_.75fr] gap-1 bg-[#344b40]">
         {photos[0] ? <img src={api.objectContentUrl(photos[0].spaceId, photos[0].id)} alt="" className="size-full object-cover transition duration-1000 group-hover:scale-[1.025]" /> : <div className="bg-[#415a4c]" />}
         <div className="grid grid-rows-2 gap-1">
@@ -36,11 +37,11 @@ function StoryCover({ story, objects, onOpen }: { story: Story; objects: MomentO
         </div>
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,27,20,.9)_0%,rgba(10,27,20,.48)_48%,rgba(10,27,20,.12)_100%),linear-gradient(0deg,rgba(10,27,20,.72),transparent_60%)]" />
-      <div className="relative flex min-h-[28rem] max-w-2xl flex-col justify-between p-7 sm:p-10 lg:p-12">
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#f0c681]"><Sparkles className="size-4" />{storyStyleNames[story.style]} story · {moments.length} moments</div>
+      <div className={cn("relative flex max-w-2xl flex-col justify-between p-7 sm:p-10", compact ? "min-h-[25rem]" : "min-h-[28rem] lg:p-12")}>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#f0c681]"><Sparkles className="size-4" />{formatLabel} · {moments.length} moments</div>
         <div>
           {story.location ? <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#e9ddc7]"><MapPin className="size-4" />{story.location}</p> : null}
-          <h2 className="max-w-xl font-display text-[clamp(3rem,6vw,6.3rem)] leading-[.88] tracking-[-.055em]">{story.title}</h2>
+          <h2 className={cn("max-w-xl font-display leading-[.88] tracking-[-.055em]", compact ? "text-[clamp(2.7rem,4vw,4.7rem)]" : "text-[clamp(3rem,6vw,6.3rem)]")}>{story.title}</h2>
           <p className="mt-5 max-w-lg line-clamp-2 text-sm leading-6 text-[#e7dfd2] sm:text-base">{story.opening}</p>
           <span className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#fff8ec] px-5 py-3 text-sm font-bold text-[#26372f] shadow-lg transition group-hover:translate-x-1">Read the story <ArrowRight className="size-4" /></span>
         </div>
@@ -67,7 +68,7 @@ function StoryMoments({ story, moments, members }: { story: Story; moments: Mome
   return <div className="mx-auto max-w-[86rem] px-5 py-20 sm:px-8 lg:py-28"><div className="mb-20 flex items-center gap-5"><span className="font-display text-6xl italic text-[#b1604c]">01</span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#9a5747]">The moments, in order</p><p className="mt-1 text-sm text-[#756e64]">Told by {new Set(moments.map((moment) => moment.uploadedBy)).size} people across {moments.length} memories</p></div></div><div className="grid gap-24 lg:gap-36">{moments.map((moment, index) => { const uploader = members.find((member) => member.userId === moment.uploadedBy); const reverse = index % 2 === 1; return <section key={moment.id} className={cn("story-reader-chapter grid items-center gap-8 lg:grid-cols-[1.25fr_.75fr] lg:gap-16", reverse && "lg:grid-cols-[.75fr_1.25fr]")}><div className={cn("overflow-hidden rounded-[28px] bg-[#d8cbbb] shadow-[0_30px_80px_rgba(55,45,32,.16)]", reverse && "lg:order-2")}><StoryMomentMedia moment={moment} className="max-h-[78vh]" /></div><div className={cn(reverse && "lg:order-1 lg:text-right")}><p className="font-display text-6xl italic text-[#cfb99b]">{String(index + 1).padStart(2, "0")}</p><h2 className="mt-4 font-display text-4xl leading-[1.02] tracking-[-.035em] sm:text-5xl">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={uploader} /></div></section>; })}</div></div>;
 }
 
-export function StoryShelf({ stories, objects, onOpen, onCreate, onAddMoments }: { stories: Story[]; objects: MomentObject[]; onOpen: (story: Story) => void; onCreate: () => void; onAddMoments: () => void }) {
+export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMoments }: { stories: Story[]; objects: MomentObject[]; isDemo: boolean; onOpen: (story: Story) => void; onCreate: () => void; onAddMoments: () => void }) {
   if (!stories.length) {
     return (
       <div className="mx-auto max-w-3xl rounded-[34px] border border-[#d9cdbc] bg-[#fff9ef] px-6 py-14 text-center shadow-[0_22px_65px_rgba(70,55,37,.08)] sm:px-12">
@@ -76,6 +77,25 @@ export function StoryShelf({ stories, objects, onOpen, onCreate, onAddMoments }:
         <h2 className="mx-auto mt-3 max-w-xl font-display text-4xl leading-[.98] tracking-[-.035em] text-[#26372f] sm:text-6xl">Turn the moments into something worth retelling.</h2>
         <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-[#71695f]">Choose the photos that belong together, add the context only your people know, and shape them into a story with a beginning, a journey, and a reason to return.</p>
         <Button className="mt-8" onClick={objects.length >= 2 ? onCreate : onAddMoments}>{objects.length >= 2 ? <><Sparkles className="size-4" />Craft your first story</> : <><ImagePlus className="size-4" />Add moments first</>}</Button>
+      </div>
+    );
+  }
+  if (isDemo) {
+    return (
+      <div>
+        <div className="mb-7 rounded-[30px] border border-[#d8cbb8] bg-[#fff8ec] px-6 py-7 sm:px-8 sm:py-8">
+          <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#a9503f]">Demo story gallery</p>
+          <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div className="max-w-3xl">
+              <h2 className="font-display text-4xl leading-[.95] tracking-[-.04em] text-[#26372f] sm:text-5xl">See every story format in action.</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#71695f]">The same shared collection becomes six different reading experiences. Open each example to compare its pace, layout, and feeling.</p>
+            </div>
+            <div className="flex max-w-xl flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#526158]">
+              {["Auto", "Classic", "Flipbook", "Comic", "Scrapbook", "Cinematic"].map((format) => <span key={format} className="rounded-full border border-[#d7c9b6] bg-[#f4eadc] px-3 py-2">{format}</span>)}
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-6 xl:grid-cols-2">{stories.map((story) => <StoryCover key={story.id} story={story} objects={objects} compact onOpen={() => onOpen(story)} />)}</div>
       </div>
     );
   }

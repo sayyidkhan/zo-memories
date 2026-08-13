@@ -12,7 +12,7 @@ import { StoryDialog, StoryReader, StoryShelf } from "./story-experience";
 import { HowItWorksDialog, MembersDialog } from "./space-dialogs";
 import { Button, EmptyState, Spinner } from "./ui";
 
-export function SpaceView({ spaceId }: { spaceId: string }) {
+export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolean }) {
   const queryClient = useQueryClient();
   const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | "guide" | "members" | null>(null);
   const [preview, setPreview] = useState<MomentObject | null>(null);
@@ -109,7 +109,7 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
 
         {view === "stories" ? (
           <>
-            {stories.isPending || allObjects.isPending ? <div className="grid min-h-80 place-items-center text-[#607066]"><Spinner /></div> : <StoryShelf stories={storyList} objects={objectList} onOpen={setOpenStory} onCreate={() => setDialog("story")} onAddMoments={() => setDialog("upload")} />}
+            {stories.isPending || allObjects.isPending ? <div className="grid min-h-80 place-items-center text-[#607066]"><Spinner /></div> : <StoryShelf stories={storyList} objects={objectList} isDemo={isDemo} onOpen={setOpenStory} onCreate={() => setDialog("story")} onAddMoments={() => setDialog("upload")} />}
           </>
         ) : (
           <>

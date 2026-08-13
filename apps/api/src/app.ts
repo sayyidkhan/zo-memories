@@ -78,7 +78,6 @@ const SHARE_INVITATION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const DEMO_MODE_ID = "demo-mode";
 const DEMO_SPACE_ID = "demo-space";
 const DEMO_ALBUM_ID = "demo-album-journeys";
-const DEMO_STORY_ID = "demo-story-year-in-motion";
 const DEMO_PERSONAS = [
   { id: "maya", name: "Maya Chen", email: "demo-maya@zo-moments.example", role: "owner", description: "Plans the journeys" },
   { id: "leo", name: "Leo Tan", email: "demo-leo@zo-moments.example", role: "member", description: "Captures the details" },
@@ -86,21 +85,88 @@ const DEMO_PERSONAS = [
 ] as const;
 const LEGACY_DEMO_USER_EMAIL = "demo@zo-moments.example";
 
-function demoStory(ownerId: string): Story {
-  return {
-    id: DEMO_STORY_ID,
-    spaceId: DEMO_SPACE_ID,
-    title: "The year we kept moving",
-    location: "From Tokyo to the Pacific Coast",
-    opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
-    momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"],
-    style: "cinematic",
-    styleSource: "auto",
-    styleRationale: "A long, photo-led journey across several places and seasons.",
-    createdBy: ownerId,
-    createdAt: "2026-08-04T10:00:00.000Z",
-    updatedAt: "2026-08-04T10:00:00.000Z",
-  };
+function demoStories(ownerId: string): Story[] {
+  const common = { spaceId: DEMO_SPACE_ID, createdBy: ownerId };
+  return [
+    {
+      ...common,
+      id: "demo-story-year-in-motion",
+      title: "The year we kept moving",
+      location: "From Tokyo to the Pacific Coast",
+      opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
+      momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"],
+      style: "cinematic",
+      styleSource: "auto",
+      styleRationale: "Auto chose Cinematic for a long, photo-led journey across several places and seasons.",
+      createdAt: "2026-08-09T10:00:00.000Z",
+      updatedAt: "2026-08-09T10:00:00.000Z",
+    },
+    {
+      ...common,
+      id: "demo-story-postcards-rainy-cities",
+      title: "Postcards from rainy cities",
+      location: "Lisbon · Tokyo · Osaka",
+      opening: "Three cities, three kinds of rain, and the same ritual every evening: find the warmest light, order one more plate, and walk until the streets belonged to us.",
+      momentIds: ["demo-moment-train", "demo-moment-lisbon", "demo-moment-tokyo", "demo-moment-market", "demo-moment-terrace", "demo-moment-journal"],
+      style: "classic",
+      styleSource: "manual",
+      styleRationale: "Classic gives a reflective city sequence the pace of an editorial travel journal.",
+      createdAt: "2026-08-08T10:00:00.000Z",
+      updatedAt: "2026-08-08T10:00:00.000Z",
+    },
+    {
+      ...common,
+      id: "demo-story-six-stops-above-clouds",
+      title: "Six stops above the clouds",
+      location: "Cabins · Waterfalls · Alpine lakes",
+      opening: "Each page is one breath of cold air: boots by the cabin door, spray from the falls, first light on the ridge, and the swim none of us was brave enough to admit was freezing.",
+      momentIds: ["demo-moment-snow-cabin", "demo-moment-waterfall", "demo-moment-mountain", "demo-moment-lake", "demo-moment-campfire", "demo-moment-journal"],
+      style: "flipbook",
+      styleSource: "manual",
+      styleRationale: "Flipbook lets each landscape land as its own page in a tightly paced sequence.",
+      createdAt: "2026-08-07T10:00:00.000Z",
+      updatedAt: "2026-08-07T10:00:00.000Z",
+    },
+    {
+      ...common,
+      id: "demo-story-plans-followed",
+      title: "Plans we absolutely followed",
+      location: "Mostly off route",
+      opening: "The alarm was too early, the pancakes fought back, the map was upside down, and the ferry wind won. Somehow, every mistake became the part we still quote.",
+      momentIds: ["demo-moment-airport", "demo-moment-breakfast", "demo-moment-desert", "demo-moment-ferry", "demo-moment-pottery", "demo-moment-campfire"],
+      style: "comic",
+      styleSource: "manual",
+      styleRationale: "Comic turns a caption-rich chain of mishaps into bold visual punchlines.",
+      createdAt: "2026-08-06T10:00:00.000Z",
+      updatedAt: "2026-08-06T10:00:00.000Z",
+    },
+    {
+      ...common,
+      id: "demo-story-little-things-home",
+      title: "The little things we brought home",
+      location: "Notes from everywhere",
+      opening: "Not souvenirs exactly. A train-window reflection, a recipe we never wrote down, a lopsided vase, and a page where every detour finally found its place.",
+      momentIds: ["demo-moment-train", "demo-moment-breakfast", "demo-moment-market", "demo-moment-pottery", "demo-moment-terrace", "demo-moment-journal"],
+      style: "scrapbook",
+      styleSource: "manual",
+      styleRationale: "Scrapbook makes small personal details feel collected, tactile, and kept by hand.",
+      createdAt: "2026-08-05T10:00:00.000Z",
+      updatedAt: "2026-08-05T10:00:00.000Z",
+    },
+    {
+      ...common,
+      id: "demo-story-roads-water-first-light",
+      title: "Roads, water, and first light",
+      location: "Pacific Coast · Iceland · Atlas Mountains",
+      opening: "The biggest views arrived quietly: an empty coast before breakfast, water louder than conversation, a road with no next turn, and sunrise reaching the ridge before we did.",
+      momentIds: ["demo-moment-coast", "demo-moment-waterfall", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-campfire"],
+      style: "cinematic",
+      styleSource: "manual",
+      styleRationale: "Cinematic gives wide landscapes and a long journey an immersive full-bleed treatment.",
+      createdAt: "2026-08-04T10:00:00.000Z",
+      updatedAt: "2026-08-04T10:00:00.000Z",
+    },
+  ];
 }
 
 function normaliseStory(story: Story): Story {
@@ -304,7 +370,7 @@ async function ensureDemoWorkspace(
       occurredAt: sample.occurredAt,
     });
   }
-  await repositories.stories.put(demoStory(owner.id));
+  await Promise.all(demoStories(owner.id).map((story) => repositories.stories.put(story)));
 }
 
 function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {
@@ -994,9 +1060,9 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (spaceId === DEMO_SPACE_ID && stories.length === 0) {
       const space = await repositories.spaces.get(spaceId);
       if (space) {
-        const seeded = demoStory(space.ownerId);
-        await repositories.stories.put(seeded);
-        stories = [seeded];
+        const seeded = demoStories(space.ownerId);
+        await Promise.all(seeded.map((story) => repositories.stories.put(story)));
+        stories = seeded;
       }
     }
     return c.json({ stories: stories.map(normaliseStory).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });

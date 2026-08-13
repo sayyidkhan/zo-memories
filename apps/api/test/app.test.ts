@@ -428,9 +428,18 @@ describe("Zo Moments API", () => {
       momentCounts.set(object.uploadedBy, (momentCounts.get(object.uploadedBy) ?? 0) + 1);
     }
     expect(demoDetail.body.members.map(({ userId }) => momentCounts.get(userId))).toEqual([6, 6, 6]);
-    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[] }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
-    expect(demoStories.body.stories).toHaveLength(1);
-    expect(demoStories.body.stories[0]?.title).toBe("The year we kept moving");
+    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
+    expect(demoStories.body.stories).toHaveLength(6);
+    expect(demoStories.body.stories.map(({ title }) => title)).toEqual([
+      "The year we kept moving",
+      "Postcards from rainy cities",
+      "Six stops above the clouds",
+      "Plans we absolutely followed",
+      "The little things we brought home",
+      "Roads, water, and first light",
+    ]);
+    expect(demoStories.body.stories.map(({ style }) => style)).toEqual(["cinematic", "classic", "flipbook", "comic", "scrapbook", "cinematic"]);
+    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["auto", "manual", "manual", "manual", "manual", "manual"]);
     expect(demoStories.body.stories[0]?.momentIds).toHaveLength(18);
 
     const secondVisitor = new BrowserSession(app);
