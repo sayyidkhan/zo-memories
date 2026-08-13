@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, ImagePlus, MapPin, Sparkles, Trash2, UserPlus, UsersRound, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, ImagePlus, MapPin, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story } from "@zo-moments/types";
@@ -167,28 +167,5 @@ export function StoryReader({ story, objects, members, canDelete, onClose, onDel
         <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
       </div>
     </article>
-  );
-}
-
-export function OnboardingGuide({ expanded, onToggle, members, momentCount, storyCount, canInvite, onInvite, onUpload, onStory }: { expanded: boolean; onToggle: () => void; members: Member[]; momentCount: number; storyCount: number; canInvite: boolean; onInvite: () => void; onUpload: () => void; onStory: () => void }) {
-  const steps = [
-    { number: "01", title: "Make a shared space", body: "A private home for one relationship or chapter.", done: true, icon: UsersRound, action: null },
-    { number: "02", title: "Bring in your people", body: "Send one link through WhatsApp, Telegram or SMS.", done: members.length > 1, icon: UserPlus, action: canInvite ? onInvite : null },
-    { number: "03", title: "Collect the moments", body: "Add the photos, voices and details while they are fresh.", done: momentCount >= 2, icon: ImagePlus, action: onUpload },
-    { number: "04", title: "Shape the story", body: "Choose what belongs together and tell why it mattered.", done: storyCount > 0, icon: Sparkles, action: momentCount >= 2 ? onStory : null },
-  ];
-  const complete = steps.filter((step) => step.done).length;
-  if (!expanded) return <button onClick={onToggle} className="mb-8 flex w-full items-center justify-between rounded-[22px] border border-[#d8cbbb] bg-[#eee3d4] px-5 py-4 text-left transition hover:bg-[#e8dccb]"><span><strong className="block text-sm text-[#2d4036]">How Zo Moments works</strong><span className="mt-0.5 block text-xs text-[#776f64]">From a shared space to a story worth revisiting</span></span><span className="rounded-full bg-[#26372f] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-[#fff9ee]">{complete}/4</span></button>;
-  return (
-    <section className="onboarding-guide relative mb-10 overflow-hidden rounded-[30px] bg-[#20372d] p-6 text-[#fff9ee] shadow-[0_25px_65px_rgba(33,52,42,.16)] sm:p-8">
-      <div className="absolute -right-20 -top-24 size-72 rounded-full bg-[#d69476]/20 blur-3xl" />
-      <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#f0c681]">Your path to a living story</p><h2 className="mt-3 max-w-2xl font-display text-4xl leading-[.96] tracking-[-.035em] sm:text-5xl">Don’t just upload. Build the story together.</h2></div><button onClick={onToggle} className="w-fit text-xs font-semibold text-[#d9e0dc] hover:text-white">Hide guide</button></div>
-      <div className="relative mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {steps.map((step) => <button key={step.number} type="button" onClick={step.action ?? undefined} disabled={!step.action} className={cn("group rounded-[22px] border p-4 text-left transition", step.done ? "border-white/10 bg-white/8" : step.action ? "border-[#f0c681]/40 bg-[#f0c681]/10 hover:-translate-y-1 hover:bg-[#f0c681]/15" : "border-white/10 bg-white/5 opacity-60")}>
-          <div className="flex items-center justify-between"><span className="text-[10px] font-bold tracking-[.18em] text-[#f0c681]">{step.number}</span><span className={cn("grid size-8 place-items-center rounded-full", step.done ? "bg-[#789083]" : "bg-white/10")}>{step.done ? <Check className="size-4" /> : <step.icon className="size-4" />}</span></div>
-          <strong className="mt-5 block text-sm">{step.title}</strong><span className="mt-2 block text-xs leading-5 text-[#c9d2cc]">{step.body}</span>{!step.done && step.action ? <span className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.13em] text-[#f0c681]">Start this step <ArrowRight className="size-3" /></span> : null}
-        </button>)}
-      </div>
-    </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Album as AlbumIcon, BookOpen, ImagePlus, Images, Search, Sparkles, UserPlus, UsersRound } from "lucide-react";
+import { Album as AlbumIcon, BookOpen, CircleHelp, ImagePlus, Images, Search, Sparkles, UsersRound } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { MomentObject, Story } from "@zo-moments/types";
@@ -8,16 +8,16 @@ import { useAppStore } from "@/lib/store";
 import { initials, monthLabel } from "@/lib/utils";
 import { AlbumDialog, InviteDialog, UploadDialog } from "./dialogs";
 import { MemoryCard, MemoryPreview } from "./memory-card";
-import { OnboardingGuide, StoryDialog, StoryReader, StoryShelf } from "./story-experience";
+import { StoryDialog, StoryReader, StoryShelf } from "./story-experience";
+import { HowItWorksDialog, MembersDialog } from "./space-dialogs";
 import { Button, EmptyState, Spinner } from "./ui";
 
 export function SpaceView({ spaceId }: { spaceId: string }) {
   const queryClient = useQueryClient();
-  const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | null>(null);
+  const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | "guide" | "members" | null>(null);
   const [preview, setPreview] = useState<MomentObject | null>(null);
   const [openStory, setOpenStory] = useState<Story | null>(null);
   const [view, setView] = useState<"stories" | "moments">("stories");
-  const [guideExpanded, setGuideExpanded] = useState<boolean | null>(null);
   const { selectedAlbumId, setSelectedAlbumId, search, setSearch } = useAppStore();
   const deferredSearch = useDeferredValue(search);
   const detail = useQuery({ queryKey: ["space", spaceId], queryFn: () => api.getSpace(spaceId) });
@@ -61,7 +61,6 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
     (groups[month] ??= []).push(object);
     return groups;
   }, {});
-  const showGuide = guideExpanded ?? (!stories.isPending && storyList.length === 0);
 
   return (
     <div className="min-w-0">
@@ -73,11 +72,12 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
             <h1 className="font-display text-5xl leading-none tracking-[-.045em] text-[#26372f] sm:text-6xl">{space.name}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[#746d63]">
               {space.description ? <p>{space.description}</p> : null}
-              <span className="flex items-center gap-2"><UsersRound className="size-4" />{members.length} {members.length === 1 ? "member" : "members"}</span>
+              <button type="button" onClick={() => setDialog("members")} className="flex flex-wrap items-center gap-2 rounded-full text-left transition hover:text-[#34443a]" aria-label="View and manage space members"><span className="flex -space-x-1.5">{members.slice(0, 3).map((member, index) => <span key={member.id} className={`grid size-7 place-items-center rounded-full border-2 border-[#f4ede1] text-[8px] font-bold ${["bg-[#789083] text-white", "bg-[#b1604c] text-white", "bg-[#d7bd96] text-[#34443a]"][index % 3]}`}>{initials(member.name)}</span>)}</span><span className="font-semibold">{members.map((member) => member.name.split(" ")[0]).join(", ")}</span><span className="text-xs underline decoration-[#b9aa97] underline-offset-4">Manage</span></button>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {membership.role === "owner" ? <Button variant="secondary" onClick={() => setDialog("invite")}><UserPlus className="size-4" />Invite</Button> : null}
+            <Button variant="secondary" onClick={() => setDialog("guide")}><CircleHelp className="size-4" />How it works</Button>
+            <Button variant="secondary" onClick={() => setDialog("members")}><UsersRound className="size-4" />People</Button>
             <Button variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
             <Button onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
           </div>
@@ -90,12 +90,12 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
             <button onClick={() => setView("stories")} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${view === "stories" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><BookOpen className="size-4" />Stories{storyList.length ? <span className="opacity-65">{storyList.length}</span> : null}</button>
             <button onClick={() => setView("moments")} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${view === "moments" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><Images className="size-4" />Moments <span className="opacity-65">{objectList.length}</span></button>
           </div>
-          {view === "stories" ? <button onClick={() => setGuideExpanded(!showGuide)} className="text-left text-xs font-bold uppercase tracking-[.14em] text-[#9a5747] hover:text-[#733f34]">{showGuide ? "Hide how it works" : "How it works"}</button> : (
+          {view === "moments" ? (
             <label className="relative block md:w-64">
               <Search className="absolute left-4 top-3 size-4 text-[#827a70]" />
               <input aria-label="Search moments" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search moments" className="h-10 w-full rounded-full border border-[#d5c9b8] bg-[#fffaf2]/80 pl-10 pr-4 text-sm outline-none focus:border-[#718277]" />
             </label>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -109,7 +109,6 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
 
         {view === "stories" ? (
           <>
-            <OnboardingGuide expanded={showGuide} onToggle={() => setGuideExpanded(!showGuide)} members={members} momentCount={objectList.length} storyCount={storyList.length} canInvite={membership.role === "owner"} onInvite={() => setDialog("invite")} onUpload={() => setDialog("upload")} onStory={() => setDialog("story")} />
             {stories.isPending || allObjects.isPending ? <div className="grid min-h-80 place-items-center text-[#607066]"><Spinner /></div> : <StoryShelf stories={storyList} objects={objectList} onOpen={setOpenStory} onCreate={() => setDialog("story")} onAddMoments={() => setDialog("upload")} />}
           </>
         ) : (
@@ -134,6 +133,8 @@ export function SpaceView({ spaceId }: { spaceId: string }) {
       <InviteDialog open={dialog === "invite"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <AlbumDialog open={dialog === "album"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <StoryDialog open={dialog === "story"} onClose={() => setDialog(null)} spaceId={spaceId} objects={objectList} onCreated={(story) => { setOpenStory(story); setView("stories"); }} />
+      <HowItWorksDialog open={dialog === "guide"} onClose={() => setDialog(null)} members={members} momentCount={objectList.length} storyCount={storyList.length} canInvite={membership.role === "owner"} onAction={(action) => setDialog(action)} />
+      <MembersDialog open={dialog === "members"} onClose={() => setDialog(null)} spaceId={spaceId} spaceName={space.name} membership={membership} members={members} invitations={invitations} objects={objectList} onInvite={() => setDialog("invite")} />
       <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
       <StoryReader story={openStory} objects={objectList} members={members} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
     </div>

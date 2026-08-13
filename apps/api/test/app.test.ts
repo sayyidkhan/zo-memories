@@ -131,6 +131,31 @@ describe("Zo Moments API", () => {
     expect((await app.request(`/public/invitations/${replacement.body.invitation.token}`)).status).toBe(410);
   });
 
+  test("lets only the space owner manage its member list", async () => {
+    const invite = await owner.request(`/api/spaces/${spaceId}/invite`, {
+      method: "POST",
+      body: JSON.stringify({ email: "removable@example.com" }),
+    });
+    expect(invite.status).toBe(201);
+
+    const removable = new BrowserSession(app);
+    const registered = await removable.json<{ user: { id: string } }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Removable Member", email: "removable@example.com", password: "password123" }),
+    });
+    expect(registered.response.status).toBe(200);
+    expect((await removable.request("/api/spaces")).status).toBe(200);
+
+    const directory = await owner.json<{ members: { userId: string; name: string }[] }>(`/api/spaces/${spaceId}/members`);
+    expect(directory.body.members.map(({ name }) => name)).toContain("Removable Member");
+    expect((await member.request(`/api/spaces/${spaceId}/members/${registered.body.user.id}`, { method: "DELETE" })).status).toBe(403);
+    expect((await owner.request(`/api/spaces/${spaceId}/members/${registered.body.user.id}`, { method: "DELETE" })).status).toBe(204);
+
+    const updated = await owner.json<{ members: { userId: string }[] }>(`/api/spaces/${spaceId}/members`);
+    expect(updated.body.members.map(({ userId }) => userId)).not.toContain(registered.body.user.id);
+    expect((await removable.request(`/api/spaces/${spaceId}`)).status).toBe(403);
+  });
+
   test("uploads, lists, previews, and deletes a memory", async () => {
     const form = new FormData();
     form.set("file", new File(["moment"], "hello.txt", { type: "text/plain" }));
