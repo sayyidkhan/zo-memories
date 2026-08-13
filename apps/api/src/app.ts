@@ -1072,10 +1072,17 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const spaceId = c.req.param("spaceId");
     await requireMember(repositories, spaceId, user.id);
     let stories = await repositories.stories.find((story) => story.spaceId === spaceId);
-    if (spaceId === DEMO_SPACE_ID && stories.length === 0) {
+    if (spaceId === DEMO_SPACE_ID) {
       const space = await repositories.spaces.get(spaceId);
       if (space) {
         const seeded = demoStories(space.ownerId);
+        const retainedStoryIds = new Set(seeded.map((story) => story.id));
+        const obsoleteStories = stories.filter((story) => !retainedStoryIds.has(story.id));
+        await Promise.all(obsoleteStories.map(async (story) => {
+          const exportKeys = await store.list(`zo-moments/social-exports/${DEMO_SPACE_ID}/${story.id}/`);
+          await Promise.all(exportKeys.map((key) => store.delete(key)));
+          await repositories.stories.delete(story.id);
+        }));
         await Promise.all(seeded.map((story) => repositories.stories.put(story)));
         stories = seeded;
       }
