@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Album as AlbumIcon, BookOpen, CircleHelp, ImagePlus, Images, Search, Sparkles, UsersRound } from "lucide-react";
+import { Album as AlbumIcon, BookOpen, CircleHelp, ImagePlus, Images, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { MomentObject, Story } from "@zo-moments/types";
@@ -70,16 +70,16 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
           <div>
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[.2em] text-[#9a5747]">Shared space</p>
             <h1 className="font-display text-5xl leading-none tracking-[-.045em] text-[#26372f] sm:text-6xl">{space.name}</h1>
-            <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[#746d63]">
-              {space.description ? <p>{space.description}</p> : null}
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 text-sm text-[#746d63]">
+              {space.description ? <p className="basis-full">{space.description}</p> : null}
               <button type="button" onClick={() => setDialog("members")} className="flex flex-wrap items-center gap-2 rounded-full text-left transition hover:text-[#34443a]" aria-label="View and manage space members"><span className="flex -space-x-1.5">{members.slice(0, 3).map((member, index) => <span key={member.id} className={`grid size-7 place-items-center rounded-full border-2 border-[#f4ede1] text-[8px] font-bold ${["bg-[#789083] text-white", "bg-[#b1604c] text-white", "bg-[#d7bd96] text-[#34443a]"][index % 3]}`}>{initials(member.name)}</span>)}</span><span className="font-semibold">{members.map((member) => member.name.split(" ")[0]).join(", ")}</span><span className="text-xs underline decoration-[#b9aa97] underline-offset-4">Manage</span></button>
+              <span className="h-4 w-px bg-[#cfc2b0]" aria-hidden="true" />
+              <button type="button" onClick={() => setDialog("guide")} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#677168] transition hover:text-[#26372f]"><CircleHelp className="size-3.5" />How it works</button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => setDialog("guide")}><CircleHelp className="size-4" />How it works</Button>
-            <Button variant="secondary" onClick={() => setDialog("members")}><UsersRound className="size-4" />People</Button>
-            <Button variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
-            <Button onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap">
+            <Button className="whitespace-nowrap" variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
+            <Button className="whitespace-nowrap" onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
           </div>
         </div>
       </header>
