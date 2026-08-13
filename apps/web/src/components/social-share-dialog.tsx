@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Download, Eye, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -71,6 +71,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [phase, setPhase] = useState<"idle" | "rendering" | "saving" | "loading">("idle");
   const [asset, setAsset] = useState<ExportAsset | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [error, setError] = useState("");
   const previewRef = useRef<HTMLElement>(null);
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
@@ -92,10 +94,14 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
   useEffect(() => {
     if (!open) return;
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && !isBusy) onClose(); };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || isBusy) return;
+      if (previewExpanded) setPreviewExpanded(false);
+      else onClose();
+    };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isBusy, onClose, open]);
+  }, [isBusy, onClose, open, previewExpanded]);
 
   useEffect(() => () => { asset?.urls.forEach((url) => URL.revokeObjectURL(url)); }, [asset]);
 
@@ -113,6 +119,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
   function replaceAsset(next: ExportAsset | null) {
     setPreviewIndex(0);
+    setPreviewExpanded(false);
+    setPreviewZoom(1);
     setAsset((current) => {
       current?.urls.forEach((url) => URL.revokeObjectURL(url));
       return next;
@@ -240,6 +248,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const styleLabel = story.styleSource === "auto" ? `Auto · ${styleNames[story.style]}` : styleNames[story.style];
   const aspectRatio = `${target.width} / ${target.height}`;
   const activePreviewUrl = asset?.urls[Math.min(previewIndex, asset.urls.length - 1)];
+  const expandedPreviewWidth = `min(${previewZoom * 92}vw, ${previewZoom * 78 * (target.width / target.height)}dvh)`;
+  const zoomBy = (amount: number) => setPreviewZoom((current) => Math.min(2, Math.max(.5, Math.round((current + amount) * 4) / 4)));
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="h-[100dvh] max-h-[100dvh] w-full overflow-y-auto bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-auto sm:max-h-[94dvh] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
@@ -297,6 +307,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
           </div>
 
           <aside ref={previewRef} className="relative flex min-h-[22rem] scroll-mt-24 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] bg-[#1d3027] p-4 sm:min-h-[34rem] sm:rounded-[28px] sm:p-5">
+            {asset && activePreviewUrl && !isBusy ? <button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="absolute right-3 top-3 z-10 inline-flex h-10 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" />Expand</button> : null}
             {asset && activePreviewUrl ? asset.format === "image"
               ? <div className="relative grid place-items-center">
                 <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[32rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
@@ -324,6 +335,30 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
           </aside>
         </div>
       </section>
+      {previewExpanded && asset && activePreviewUrl ? <section role="dialog" aria-modal="true" aria-label="Expanded export preview" className="fixed inset-0 z-[100] flex w-screen max-w-[100vw] flex-col overflow-hidden bg-[#102019] text-[#fff8ec]" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="relative z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-[#102019]/95 px-3 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-xl sm:px-5 sm:py-3">
+          <div className="min-w-0"><strong className="block truncate text-sm">{target.platform} preview</strong><span className="block text-[10px] uppercase tracking-[.14em] text-white/55">{asset.format === "image" ? `Slide ${previewIndex + 1} of ${asset.urls.length}` : target.placement}</span></div>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
+              <button type="button" onClick={() => zoomBy(-.25)} disabled={previewZoom <= .5} className="grid size-10 place-items-center rounded-full transition hover:bg-white/10 disabled:opacity-30" aria-label="Shrink preview"><ZoomOut className="size-4" /></button>
+              <button type="button" onClick={() => setPreviewZoom(1)} className="min-w-14 rounded-full px-2 py-2 text-xs font-bold transition hover:bg-white/10" aria-label="Reset preview zoom">{Math.round(previewZoom * 100)}%</button>
+              <button type="button" onClick={() => zoomBy(.25)} disabled={previewZoom >= 2} className="grid size-10 place-items-center rounded-full transition hover:bg-white/10 disabled:opacity-30" aria-label="Enlarge preview"><ZoomIn className="size-4" /></button>
+            </div>
+            <button type="button" onClick={() => setPreviewExpanded(false)} className="grid size-10 place-items-center rounded-full bg-[#f0c681] text-[#26372f] transition hover:bg-[#f6d795]" aria-label="Collapse export preview"><Minimize2 className="size-4" /></button>
+          </div>
+        </header>
+        <div className="relative min-h-0 w-full max-w-full flex-1 overflow-auto p-4 sm:p-6">
+          <div className="flex min-h-full min-w-full items-center justify-center">
+            {asset.format === "image"
+              ? <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="h-auto max-w-none shrink-0 rounded-[18px] shadow-[0_28px_90px_rgba(0,0,0,.5)] transition-[width] duration-200" style={{ width: expandedPreviewWidth }} />
+              : <video src={activePreviewUrl} controls autoPlay loop muted playsInline className="h-auto max-w-none shrink-0 rounded-[18px] shadow-[0_28px_90px_rgba(0,0,0,.5)] transition-[width] duration-200" style={{ width: expandedPreviewWidth }} />}
+          </div>
+          {asset.format === "image" && asset.urls.length > 1 ? <>
+            <button type="button" onClick={() => setPreviewIndex((index) => (index - 1 + asset.urls.length) % asset.urls.length)} className="fixed left-3 top-1/2 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-[#fff8ec]/95 text-[#26372f] shadow-xl transition hover:bg-white sm:left-5" aria-label="Previous carousel slide"><ChevronLeft className="size-6" /></button>
+            <button type="button" onClick={() => setPreviewIndex((index) => (index + 1) % asset.urls.length)} className="fixed right-3 top-1/2 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-[#fff8ec]/95 text-[#26372f] shadow-xl transition hover:bg-white sm:right-5" aria-label="Next carousel slide"><ChevronRight className="size-6" /></button>
+          </> : null}
+        </div>
+      </section> : null}
     </div>
   );
 }
