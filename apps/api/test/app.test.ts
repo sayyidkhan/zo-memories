@@ -228,7 +228,8 @@ describe("Zo Moments API", () => {
 
     const socialImage = new FormData();
     socialImage.set("preset", "instagram-feed");
-    socialImage.set("file", new File(["social-image"], "story.png", { type: "image/png" }));
+    socialImage.set("file-0", new File(["social-cover"], "story-01.png", { type: "image/png" }));
+    socialImage.set("file-1", new File(["social-moment"], "story-02.png", { type: "image/png" }));
     const socialUpload = await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`, {
       method: "POST",
       body: socialImage,
@@ -236,18 +237,21 @@ describe("Zo Moments API", () => {
     expect(socialUpload.status).toBe(201);
     const socialVideo = new FormData();
     socialVideo.set("preset", "tiktok");
-    socialVideo.set("file", new File(["social-video"], "story.mp4", { type: "video/mp4" }));
+    socialVideo.set("file-0", new File(["social-video"], "story.mp4", { type: "video/mp4" }));
     expect((await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`, {
       method: "POST",
       body: socialVideo,
     })).status).toBe(201);
-    const socialStatus = await member.json<Record<string, boolean>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`);
-    expect(socialStatus.body["instagram-feed"]).toBe(true);
-    expect(socialStatus.body["facebook-feed"]).toBe(false);
-    expect(socialStatus.body.tiktok).toBe(true);
+    const socialStatus = await member.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`);
+    expect(socialStatus.body["instagram-feed"]).toBe(2);
+    expect(socialStatus.body["facebook-feed"]).toBe(0);
+    expect(socialStatus.body.tiktok).toBe(1);
     const socialContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/instagram-feed`);
     expect(socialContent.headers.get("content-type")).toBe("image/png");
-    expect(await socialContent.text()).toBe("social-image");
+    expect(await socialContent.text()).toBe("social-cover");
+    const socialSlide = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/instagram-feed/slides/1`);
+    expect(socialSlide.headers.get("content-type")).toBe("image/png");
+    expect(await socialSlide.text()).toBe("social-moment");
     const socialVideoContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/tiktok`);
     expect(socialVideoContent.headers.get("content-type")).toBe("video/mp4");
     expect(await socialVideoContent.text()).toBe("social-video");
@@ -261,7 +265,8 @@ describe("Zo Moments API", () => {
     expect((await outsider.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/instagram-feed`)).status).toBe(403);
     expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, { method: "DELETE" })).status).toBe(403);
     expect((await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, { method: "DELETE" })).status).toBe(204);
-    expect(await store.get(`zo-moments/social-exports/${spaceId}/${created.body.story.id}/instagram-feed.png`)).toBeNull();
+    expect(await store.get(`zo-moments/social-exports/${spaceId}/${created.body.story.id}/instagram-feed-01.png`)).toBeNull();
+    expect(await store.get(`zo-moments/social-exports/${spaceId}/${created.body.story.id}/instagram-feed-02.png`)).toBeNull();
     expect(await store.get(`zo-moments/social-exports/${spaceId}/${created.body.story.id}/tiktok.mp4`)).toBeNull();
   });
 

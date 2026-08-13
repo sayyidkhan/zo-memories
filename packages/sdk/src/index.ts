@@ -67,7 +67,7 @@ export type SocialExportPreset =
   | "x-vertical"
   | "snapchat";
 
-export type SocialExportStatus = Record<SocialExportPreset, boolean>;
+export type SocialExportStatus = Record<SocialExportPreset, number>;
 
 export interface ZoMomentsClientOptions {
   baseUrl?: string;
@@ -292,16 +292,17 @@ export class ZoMomentsClient {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`);
   }
 
-  uploadSocialExport(spaceId: string, storyId: string, preset: SocialExportPreset, file: File): Promise<{ preset: SocialExportPreset; format: "image" | "video"; contentType: string; url: string }> {
+  uploadSocialExport(spaceId: string, storyId: string, preset: SocialExportPreset, files: File[]): Promise<{ preset: SocialExportPreset; format: "image" | "video"; contentType: string; count: number; url: string }> {
     const body = new FormData();
     body.set("preset", preset);
-    body.set("file", file);
+    files.forEach((file, index) => body.set(`file-${index}`, file));
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`, { method: "POST", body });
   }
 
-  socialExportUrl(spaceId: string, storyId: string, preset: SocialExportPreset, download = false): string {
+  socialExportUrl(spaceId: string, storyId: string, preset: SocialExportPreset, download = false, slideIndex?: number): string {
     const query = download ? "?download=1" : "";
-    return `${this.baseUrl}/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}${query}`;
+    const slide = slideIndex === undefined ? "" : `/slides/${slideIndex}`;
+    return `${this.baseUrl}/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}${slide}${query}`;
   }
 
   listObjects(spaceId: string, input: ListObjectsInput = {}): Promise<{ objects: MomentObject[] }> {

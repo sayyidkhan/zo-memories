@@ -295,6 +295,47 @@ function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptio
   renderers[options.story.style](context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
 }
 
+function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialExportOptions, photo: LoadedPhoto | undefined, index: number, total: number, closing: boolean) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const side = Math.max(42, safe.left);
+  fillRounded(context, "rgba(255,248,236,.9)", width - Math.max(104, safe.right + 78), Math.max(30, safe.top * 0.55), 74, 38, 19);
+  context.save();
+  context.fillStyle = palette.ink;
+  context.font = "700 15px sans-serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(`${index + 1} / ${total}`, width - Math.max(67, safe.right + 41), Math.max(49, safe.top * 0.55 + 19));
+  context.restore();
+
+  if (photo && !closing) {
+    const caption = photo.moment.caption?.trim() || photo.moment.name.replace(/\.[^.]+$/, "");
+    fillRounded(context, "rgba(20,36,29,.82)", side, Math.max(34, safe.top * 0.55), Math.min(width * 0.58, width - side - safe.right - 116), 44, 22);
+    context.save();
+    context.fillStyle = palette.cream;
+    context.font = "600 15px sans-serif";
+    context.textBaseline = "middle";
+    context.fillText(caption.slice(0, 52), side + 18, Math.max(56, safe.top * 0.55 + 22));
+    context.restore();
+  }
+
+  if (closing) {
+    const cardWidth = width - side - Math.max(side, safe.right);
+    const cardHeight = Math.min(260, height * 0.22);
+    const cardY = Math.max(safe.top + 80, (height - cardHeight) / 2);
+    fillRounded(context, "rgba(255,248,236,.94)", side, cardY, cardWidth, cardHeight, 28);
+    context.save();
+    context.fillStyle = palette.coral;
+    context.font = "700 16px sans-serif";
+    context.fillText("THE STORY CONTINUES", side + 28, cardY + 38);
+    title(context, "Keep the moments moving.", side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(42, width * 0.05), 2);
+    context.fillStyle = "#625f58";
+    context.font = "500 16px sans-serif";
+    wrapText(context, options.story.opening, side + 28, cardY + 150, cardWidth - 56, 23, 3);
+    context.restore();
+  }
+}
+
 async function loadPhotos(moments: MomentObject[], maxPhotos: number, onProgress?: (progress: number) => void): Promise<LoadedPhoto[]> {
   const sources = moments.filter((moment) => moment.kind === "photo").slice(0, maxPhotos);
   const loaded: LoadedPhoto[] = [];
@@ -361,7 +402,7 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
   return result;
 }
 
-export async function generateSocialExport(options: SocialExportOptions): Promise<Blob> {
+export async function generateSocialExport(options: SocialExportOptions): Promise<Blob[]> {
   await document.fonts.ready;
   options.onProgress?.(0.04);
   const photos = await loadPhotos(options.moments, options.profile.maxPhotos, options.onProgress);
@@ -376,12 +417,22 @@ export async function generateSocialExport(options: SocialExportOptions): Promis
   if (!renderContext || !outputContext) throw new Error("Your browser could not start the story renderer");
   try {
     if (options.format === "image") {
-      drawFrame(renderContext, options, photos, 0.38);
-      paintOutput(renderCanvas, outputCanvas, outputContext);
-      options.onProgress?.(0.9);
-      return await canvasBlob(outputCanvas);
+      const slides = [
+        { progress: 0.02, photo: undefined, closing: false },
+        ...photos.map((photo, index) => ({ progress: (index + 0.5) / Math.max(photos.length, 1), photo, closing: false })),
+        { progress: 0.98, photo: undefined, closing: true },
+      ];
+      const blobs: Blob[] = [];
+      for (const [index, slide] of slides.entries()) {
+        drawFrame(renderContext, options, photos, slide.progress);
+        drawCarouselOverlay(renderContext, options, slide.photo, index, slides.length, slide.closing);
+        paintOutput(renderCanvas, outputCanvas, outputContext);
+        blobs.push(await canvasBlob(outputCanvas));
+        options.onProgress?.(0.3 + ((index + 1) / slides.length) * 0.6);
+      }
+      return blobs;
     }
-    return await recordVideo(renderCanvas, renderContext, outputCanvas, outputContext, options, photos);
+    return [await recordVideo(renderCanvas, renderContext, outputCanvas, outputContext, options, photos)];
   } finally {
     photos.forEach((photo) => photo.release());
   }

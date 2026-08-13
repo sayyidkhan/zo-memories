@@ -421,14 +421,15 @@ function isSocialExportPreset(value: unknown): value is SocialExportPreset {
   return typeof value === "string" && socialExportPresets.includes(value as SocialExportPreset);
 }
 
-function socialExportKey(spaceId: string, storyId: string, preset: SocialExportPreset): string {
-  const filename = `${preset}.${socialVideoPresets.has(preset) ? "mp4" : "png"}`;
+function socialExportKey(spaceId: string, storyId: string, preset: SocialExportPreset, slideIndex = 0): string {
+  const filename = socialVideoPresets.has(preset) ? `${preset}.mp4` : `${preset}-${String(slideIndex + 1).padStart(2, "0")}.png`;
   return `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/${filename}`;
 }
 
-function legacySocialExportKeys(spaceId: string, storyId: string): string[] {
-  const prefix = `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}`;
-  return [`${prefix}/story.png`, `${prefix}/story-pin.png`, `${prefix}/story.mp4`];
+function socialExportCount(keys: string[], spaceId: string, storyId: string, preset: SocialExportPreset): number {
+  if (socialVideoPresets.has(preset)) return keys.includes(socialExportKey(spaceId, storyId, preset)) ? 1 : 0;
+  const prefix = socialExportKey(spaceId, storyId, preset).replace(/01\.png$/, "");
+  return keys.filter((key) => key.startsWith(prefix) && key.endsWith(".png")).length;
 }
 
 async function transcodeSocialVideo(file: File): Promise<Uint8Array> {
@@ -1168,7 +1169,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
     const keys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/`);
-    return c.json(Object.fromEntries(socialExportPresets.map((preset) => [preset, keys.includes(socialExportKey(spaceId, storyId, preset))])));
+    return c.json(Object.fromEntries(socialExportPresets.map((preset) => [preset, socialExportCount(keys, spaceId, storyId, preset)])));
   });
 
   app.post("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
@@ -1179,18 +1180,32 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
     const body = await c.req.parseBody();
-    const file = body.file;
     const preset = body.preset;
-    if (!(file instanceof File) || !isSocialExportPreset(preset)) throw new HTTPException(400, { message: "Choose a supported social preset" });
+    if (!isSocialExportPreset(preset)) throw new HTTPException(400, { message: "Choose a supported social preset" });
+    const files = Object.entries(body)
+      .filter(([key, value]) => /^file-\d+$/.test(key) && value instanceof File)
+      .sort(([left], [right]) => Number(left.slice(5)) - Number(right.slice(5)))
+      .map(([, value]) => value as File);
+    if (!files.length) throw new HTTPException(400, { message: "Choose at least one generated export file" });
     const format = socialVideoPresets.has(preset) ? "video" : "image";
-    if (file.size <= 0) throw new HTTPException(400, { message: "The generated export is empty" });
-    if (file.size > 100 * 1024 * 1024) throw new HTTPException(413, { message: "Social exports are limited to 100 MB" });
-    if (format === "image" && file.type !== "image/png") throw new HTTPException(415, { message: "Image exports must be PNG files" });
-    if (format === "video" && !file.type.startsWith("video/")) throw new HTTPException(415, { message: "Video exports must contain video" });
+    if (format === "video" && files.length !== 1) throw new HTTPException(400, { message: "Video exports must contain one file" });
+    if (files.some((file) => file.size <= 0)) throw new HTTPException(400, { message: "The generated export is empty" });
+    if (files.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) throw new HTTPException(413, { message: "Social exports are limited to 100 MB" });
+    if (format === "image" && files.some((file) => file.type !== "image/png")) throw new HTTPException(415, { message: "Image exports must be PNG files" });
+    if (format === "video" && !files[0]!.type.startsWith("video/")) throw new HTTPException(415, { message: "Video exports must contain video" });
     const contentType = format === "image" ? "image/png" : "video/mp4";
-    const value = format === "video" && file.type !== "video/mp4" ? await transcodeSocialVideo(file) : file;
-    await store.put(socialExportKey(spaceId, storyId, preset), value, { contentType });
-    return c.json({ preset, format, contentType, url: `/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}` }, 201);
+    const prefix = `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/`;
+    const existing = await store.list(prefix);
+    const presetPrefix = `${prefix}${preset}`;
+    await Promise.all(existing.filter((key) => key === `${presetPrefix}.mp4` || (key.startsWith(`${presetPrefix}-`) && key.endsWith(".png"))).map((key) => store.delete(key)));
+    if (format === "video") {
+      const file = files[0]!;
+      const value = file.type !== "video/mp4" ? await transcodeSocialVideo(file) : file;
+      await store.put(socialExportKey(spaceId, storyId, preset), value, { contentType });
+    } else {
+      await Promise.all(files.map((file, index) => store.put(socialExportKey(spaceId, storyId, preset, index), file, { contentType })));
+    }
+    return c.json({ preset, format, contentType, count: files.length, url: `/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}` }, 201);
   });
 
   app.get("/api/spaces/:spaceId/stories/:storyId/social-exports/:preset", async (c) => {
@@ -1214,6 +1229,26 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     } });
   });
 
+  app.get("/api/spaces/:spaceId/stories/:storyId/social-exports/:preset/slides/:index", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const storyId = c.req.param("storyId");
+    const preset = c.req.param("preset");
+    const slideIndex = Number(c.req.param("index"));
+    await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(storyId);
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (!isSocialExportPreset(preset) || socialVideoPresets.has(preset) || !Number.isInteger(slideIndex) || slideIndex < 0 || slideIndex > 19) throw new HTTPException(404, { message: "Social export slide not found" });
+    const blob = await store.get(socialExportKey(spaceId, storyId, preset, slideIndex));
+    if (!blob) throw new HTTPException(404, { message: "Social export slide not found" });
+    return new Response(blob, { headers: {
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": contentDisposition(`${story.title}-social-${String(slideIndex + 1).padStart(2, "0")}.png`, c.req.query("download") === "1"),
+      "Content-Length": String(blob.size),
+      "Content-Type": "image/png",
+    } });
+  });
+
   app.delete("/api/spaces/:spaceId/stories/:storyId", async (c) => {
     const user = c.get("user")!;
     const spaceId = c.req.param("spaceId");
@@ -1223,10 +1258,10 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (membership.role !== "owner" && story.createdBy !== user.id) {
       throw new HTTPException(403, { message: "Only the story creator or space owner can delete it" });
     }
+    const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
     await Promise.all([
       repositories.stories.delete(story.id),
-      ...socialExportPresets.map((preset) => store.delete(socialExportKey(spaceId, story.id, preset))),
-      ...legacySocialExportKeys(spaceId, story.id).map((key) => store.delete(key)),
+      ...exportKeys.map((key) => store.delete(key)),
     ]);
     return c.body(null, 204);
   });

@@ -17,7 +17,7 @@ Zo Moments is a private, mobile-first memory space for couples, families, friend
 - Guided onboarding from shared space to collaborative story
 - Persistent stories that turn selected moments into an editorial reading experience
 - User-controlled Classic, Flipbook, Comic, Scrapbook, and Cinematic story formats, with private Auto selection and optional AI recommendations
-- Private destination-specific social exports whose dimensions, safe areas and pacing adapt to Instagram, Facebook, TikTok, YouTube Shorts, LinkedIn, X, Threads, Pinterest, WhatsApp, and Snapchat, with preview-before-download and native device sharing
+- Private destination-specific social exports: numbered PNG story carousels for image posts and H.264 MP4 stories for video placements, with preview-before-download and multi-file native device sharing
 - Responsive desktop and mobile interface
 - Persistent Zo storage for both metadata and media
 

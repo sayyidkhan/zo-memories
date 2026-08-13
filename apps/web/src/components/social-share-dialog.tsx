@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Download, Eye, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Download, Eye, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -28,12 +28,12 @@ interface SocialTarget {
 }
 
 const socialTargets: SocialTarget[] = [
-  { id: "instagram-feed", platform: "Instagram", placement: "4:5 feed post", format: "image", preset: "instagram-feed", width: 1080, height: 1350, profile: { id: "instagram-feed", safeTop: .05, safeRight: .05, safeBottom: .06, safeLeft: .05, durationMs: 0, maxPhotos: 5, videoBitrate: 0, cropScale: 1.04 } },
-  { id: "facebook-feed", platform: "Facebook", placement: "4:5 feed post", format: "image", preset: "facebook-feed", width: 1200, height: 1500, profile: { id: "facebook-feed", safeTop: .04, safeRight: .04, safeBottom: .09, safeLeft: .04, durationMs: 0, maxPhotos: 6, videoBitrate: 0, cropScale: 1.03 } },
-  { id: "linkedin-feed", platform: "LinkedIn", placement: "Square post", format: "image", preset: "linkedin-feed", width: 1200, height: 1200, profile: { id: "linkedin-feed", safeTop: .06, safeRight: .07, safeBottom: .1, safeLeft: .07, durationMs: 0, maxPhotos: 4, videoBitrate: 0, cropScale: 1.02 } },
-  { id: "x-post", platform: "X", placement: "Square post", format: "image", preset: "x-post", width: 1200, height: 1200, profile: { id: "x-post", safeTop: .05, safeRight: .06, safeBottom: .12, safeLeft: .06, durationMs: 0, maxPhotos: 4, videoBitrate: 0, cropScale: 1.05 } },
-  { id: "threads-post", platform: "Threads", placement: "4:5 feed post", format: "image", preset: "threads-post", width: 1080, height: 1350, profile: { id: "threads-post", safeTop: .07, safeRight: .06, safeBottom: .1, safeLeft: .06, durationMs: 0, maxPhotos: 5, videoBitrate: 0, cropScale: 1.03 } },
-  { id: "pinterest-pin", platform: "Pinterest", placement: "2:3 standard Pin", format: "image", preset: "pinterest-pin", width: 1000, height: 1500, profile: { id: "pinterest-pin", safeTop: .08, safeRight: .08, safeBottom: .12, safeLeft: .07, durationMs: 0, maxPhotos: 6, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "instagram-feed", platform: "Instagram", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "instagram-feed", width: 1080, height: 1350, profile: { id: "instagram-feed", safeTop: .05, safeRight: .05, safeBottom: .06, safeLeft: .05, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.04 } },
+  { id: "facebook-feed", platform: "Facebook", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "facebook-feed", width: 1200, height: 1500, profile: { id: "facebook-feed", safeTop: .04, safeRight: .04, safeBottom: .09, safeLeft: .04, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "linkedin-feed", platform: "LinkedIn", placement: "Square set · up to 20 images", format: "image", preset: "linkedin-feed", width: 1200, height: 1200, profile: { id: "linkedin-feed", safeTop: .06, safeRight: .07, safeBottom: .1, safeLeft: .07, durationMs: 0, maxPhotos: 18, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "x-post", platform: "X", placement: "Square set · 4 images", format: "image", preset: "x-post", width: 1200, height: 1200, profile: { id: "x-post", safeTop: .05, safeRight: .06, safeBottom: .12, safeLeft: .06, durationMs: 0, maxPhotos: 2, videoBitrate: 0, cropScale: 1.05 } },
+  { id: "threads-post", platform: "Threads", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "threads-post", width: 1080, height: 1350, profile: { id: "threads-post", safeTop: .07, safeRight: .06, safeBottom: .1, safeLeft: .06, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "pinterest-pin", platform: "Pinterest", placement: "2:3 story Pin set", format: "image", preset: "pinterest-pin", width: 1000, height: 1500, profile: { id: "pinterest-pin", safeTop: .08, safeRight: .08, safeBottom: .12, safeLeft: .07, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.02 } },
   { id: "instagram-reels", platform: "Instagram", placement: "9:16 Story or Reel · 9s", format: "video", preset: "instagram-reels", width: 1080, height: 1920, profile: { id: "instagram-reels", safeTop: .14, safeRight: .12, safeBottom: .19, safeLeft: .07, durationMs: 9_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.04 } },
   { id: "facebook-reels", platform: "Facebook", placement: "9:16 Story or Reel · 12s", format: "video", preset: "facebook-reels", width: 1080, height: 1920, profile: { id: "facebook-reels", safeTop: .1, safeRight: .09, safeBottom: .15, safeLeft: .07, durationMs: 12_000, maxPhotos: 9, videoBitrate: 6_000_000, cropScale: 1.03 } },
   { id: "tiktok", platform: "TikTok", placement: "9:16 UI-safe video · 15s", format: "video", preset: "tiktok", width: 1080, height: 1920, profile: { id: "tiktok", safeTop: .13, safeRight: .2, safeBottom: .25, safeLeft: .07, durationMs: 15_000, maxPhotos: 10, videoBitrate: 6_000_000, cropScale: 1.07 } },
@@ -44,10 +44,10 @@ const socialTargets: SocialTarget[] = [
 ];
 
 interface ExportAsset {
-  blob: Blob;
+  blobs: Blob[];
   format: SocialExportFormat;
   preset: SocialExportPreset;
-  url: string;
+  urls: string[];
 }
 
 function safeName(value: string) {
@@ -55,8 +55,9 @@ function safeName(value: string) {
   return slug || "zo-moments-story";
 }
 
-function filename(story: Story, target: SocialTarget) {
-  return `${safeName(story.title)}-${target.id}.${target.format === "image" ? "png" : "mp4"}`;
+function filename(story: Story, target: SocialTarget, index = 0, total = 1) {
+  const slide = total > 1 ? `-${String(index + 1).padStart(2, "0")}` : "";
+  return `${safeName(story.title)}-${target.id}${slide}.${target.format === "image" ? "png" : "mp4"}`;
 }
 
 export function SocialShareDialog({ story, objects, open, onClose }: { story: Story; objects: MomentObject[]; open: boolean; onClose: () => void }) {
@@ -69,6 +70,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"idle" | "rendering" | "saving" | "loading">("idle");
   const [asset, setAsset] = useState<ExportAsset | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [error, setError] = useState("");
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
   const availableTargets = socialTargets.filter((item) => item.format === format);
@@ -94,7 +96,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [isBusy, onClose, open]);
 
-  useEffect(() => () => { if (asset) URL.revokeObjectURL(asset.url); }, [asset]);
+  useEffect(() => () => { asset?.urls.forEach((url) => URL.revokeObjectURL(url)); }, [asset]);
 
   useEffect(() => {
     setIncludeLocation(Boolean(story.location));
@@ -104,8 +106,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   }, [story.id, story.location]);
 
   function replaceAsset(next: ExportAsset | null) {
+    setPreviewIndex(0);
     setAsset((current) => {
-      if (current) URL.revokeObjectURL(current.url);
+      current?.urls.forEach((url) => URL.revokeObjectURL(url));
       return next;
     });
   }
@@ -121,12 +124,14 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   }
 
   function downloadForTarget(next: SocialTarget, source: ExportAsset) {
-    const link = document.createElement("a");
-    link.href = source.url;
-    link.download = filename(story, next);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    source.urls.forEach((url, index) => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename(story, next, index, source.urls.length);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    });
   }
 
   async function fetchSaved(next: SocialTarget) {
@@ -134,10 +139,14 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setPhase("loading");
     setProgress(0.35);
     try {
-      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, next.preset), { credentials: "include" });
-      if (!response.ok) throw new Error("The saved export could not be opened");
-      const blob = await response.blob();
-      const nextAsset = { blob, format: next.format, preset: next.preset, url: URL.createObjectURL(blob) } satisfies ExportAsset;
+      const count = Math.max(1, status.data?.[next.preset] ?? 1);
+      const responses = await Promise.all(Array.from({ length: count }, (_, index) => fetch(
+        api.socialExportUrl(story.spaceId, story.id, next.preset, false, next.format === "image" ? index : undefined),
+        { credentials: "include" },
+      )));
+      if (responses.some((response) => !response.ok)) throw new Error("The saved export could not be opened");
+      const blobs = await Promise.all(responses.map((response) => response.blob()));
+      const nextAsset = { blobs, format: next.format, preset: next.preset, urls: blobs.map((blob) => URL.createObjectURL(blob)) } satisfies ExportAsset;
       replaceAsset(nextAsset);
       setProgress(1);
     } catch (cause) {
@@ -166,13 +175,18 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       });
       setPhase("saving");
       setProgress(0.92);
-      const sourceExtension = rendered.type.includes("mp4") ? "mp4" : next.format === "video" ? "webm" : "png";
-      const upload = new File([rendered], `story.${sourceExtension}`, { type: rendered.type });
-      await api.uploadSocialExport(story.spaceId, story.id, next.preset, upload);
-      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, next.preset), { credentials: "include" });
-      if (!response.ok) throw new Error("The export was saved but could not be previewed");
-      const stored = await response.blob();
-      const nextAsset = { blob: stored, format: next.format, preset: next.preset, url: URL.createObjectURL(stored) } satisfies ExportAsset;
+      const uploads = rendered.map((blob, index) => {
+        const sourceExtension = blob.type.includes("mp4") ? "mp4" : next.format === "video" ? "webm" : "png";
+        return new File([blob], `story-${String(index + 1).padStart(2, "0")}.${sourceExtension}`, { type: blob.type });
+      });
+      await api.uploadSocialExport(story.spaceId, story.id, next.preset, uploads);
+      const responses = await Promise.all(rendered.map((_, index) => fetch(
+        api.socialExportUrl(story.spaceId, story.id, next.preset, false, next.format === "image" ? index : undefined),
+        { credentials: "include" },
+      )));
+      if (responses.some((response) => !response.ok)) throw new Error("The export was saved but could not be previewed");
+      const blobs = await Promise.all(responses.map((response) => response.blob()));
+      const nextAsset = { blobs, format: next.format, preset: next.preset, urls: blobs.map((blob) => URL.createObjectURL(blob)) } satisfies ExportAsset;
       replaceAsset(nextAsset);
       setProgress(1);
       await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
@@ -202,13 +216,13 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
   async function shareToApps() {
     if (!asset) return;
-    const file = new File([asset.blob], filename(story, target), { type: asset.blob.type });
-    if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [file] }))) {
+    const files = asset.blobs.map((blob, index) => new File([blob], filename(story, target, index, asset.blobs.length), { type: blob.type }));
+    if (!navigator.share || (navigator.canShare && !navigator.canShare({ files }))) {
       toast.error("This browser cannot send files directly. Select the destination again to download.");
       return;
     }
     try {
-      await navigator.share({ files: [file], title: story.title, text: `${story.title} · shared from Zo Moments` });
+      await navigator.share({ files, title: story.title, text: `${story.title} · shared from Zo Moments` });
       toast.success("Shared from Zo Moments");
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") return;
@@ -219,6 +233,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   if (!open) return null;
   const styleLabel = story.styleSource === "auto" ? `Auto · ${styleNames[story.style]}` : styleNames[story.style];
   const aspectRatio = `${target.width} / ${target.height}`;
+  const activePreviewUrl = asset?.urls[Math.min(previewIndex, asset.urls.length - 1)];
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="max-h-[94dvh] w-full overflow-y-auto rounded-t-[32px] bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
@@ -238,8 +253,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <button type="button" onClick={() => chooseFormat("image")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "image" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
                   {imageHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
                   <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Image className="size-5" /></span>
-                  <strong className="mt-4 block text-sm text-[#26372f]">Social image</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">PNG · Adapted per platform</span>
+                  <strong className="mt-4 block text-sm text-[#26372f]">Image carousel</strong>
+                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">PNG · One slide per moment</span>
                 </button>
                 <button type="button" onClick={() => chooseFormat("video")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "video" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
                   {videoHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
@@ -265,21 +280,28 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
                   {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
                   <strong className="block pr-5 text-xs text-[#26372f]">{item.platform}</strong>
-                  <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{item.placement}</span>
+                  <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{asset?.preset === item.preset && asset.format === "image" ? `${asset.urls.length} slides ready · tap to download` : item.placement}</span>
                 </button>)}
               </div>
-              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? "PNG" : "H.264 MP4"} · destination-safe composition</p>
+              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? asset?.format === "image" ? `${asset.urls.length}-slide PNG carousel` : "PNG carousel" : "H.264 MP4"} · destination-safe composition</p>
             </section>
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
-            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
+            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />{asset.format === "image" ? `Share ${asset.urls.length}-slide carousel` : "Share to apps"}</Button><Button variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
           <aside className="relative grid min-h-[25rem] place-items-center overflow-hidden rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
-            {asset ? asset.format === "image"
-              ? <img src={asset.url} alt={`${target.platform} preview of ${story.title}`} className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
-              : <video src={asset.url} controls autoPlay loop muted playsInline className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
+            {asset && activePreviewUrl ? asset.format === "image"
+              ? <div className="relative grid place-items-center">
+                <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[32rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
+                {asset.urls.length > 1 ? <>
+                  <button type="button" onClick={() => setPreviewIndex((index) => (index - 1 + asset.urls.length) % asset.urls.length)} className="absolute left-2 grid size-10 place-items-center rounded-full bg-[#fff8ec]/90 text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Previous carousel slide"><ChevronLeft className="size-5" /></button>
+                  <button type="button" onClick={() => setPreviewIndex((index) => (index + 1) % asset.urls.length)} className="absolute right-2 grid size-10 place-items-center rounded-full bg-[#fff8ec]/90 text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Next carousel slide"><ChevronRight className="size-5" /></button>
+                  <div className="absolute bottom-3 rounded-full bg-[#14271f]/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-[#fff8ec]">Slide {previewIndex + 1} of {asset.urls.length}</div>
+                </> : null}
+              </div>
+              : <video src={activePreviewUrl} controls autoPlay loop muted playsInline className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
               : <div className="relative grid max-h-[32rem] w-[72%] max-w-[19rem] overflow-hidden rounded-[18px] border border-white/15 bg-[#304a3e] text-center shadow-[0_22px_60px_rgba(0,0,0,.28)]" style={{ aspectRatio }}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_22%,rgba(239,196,111,.28),transparent_28%),linear-gradient(160deg,transparent,rgba(9,25,18,.8))]" />
                 <div className="relative flex flex-col items-center justify-center p-7 text-[#fff8ec]"><span className="grid size-14 place-items-center rounded-full bg-[#fff8ec]/10">{target.format === "image" ? <Image className="size-6" /> : <Film className="size-6" />}</span><strong className="mt-5 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.platform} · {target.placement}</span><p className="mt-5 max-w-52 text-xs leading-5 text-white/65">{styleLabel} composition at {target.width} × {target.height}px.</p></div>
