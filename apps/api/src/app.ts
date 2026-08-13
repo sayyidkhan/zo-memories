@@ -7,6 +7,7 @@ import {
   createStorySchema,
   demoLoginSchema,
   inviteMemberSchema,
+  suggestStoryStyleSchema,
   updateDemoModeSchema,
   updateAccountStatusSchema,
   updateAdminRoleSchema,
@@ -20,6 +21,7 @@ import {
   type ShareInvitation,
   type Space,
   type Story,
+  type StoryStyle,
 } from "@zo-moments/types";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -92,10 +94,68 @@ function demoStory(ownerId: string): Story {
     location: "From Tokyo to the Pacific Coast",
     opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
     momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"],
+    style: "cinematic",
+    styleSource: "auto",
+    styleRationale: "A long, photo-led journey across several places and seasons.",
     createdBy: ownerId,
     createdAt: "2026-08-04T10:00:00.000Z",
     updatedAt: "2026-08-04T10:00:00.000Z",
   };
+}
+
+function normaliseStory(story: Story): Story {
+  return {
+    ...story,
+    style: story.style ?? "classic",
+    styleSource: story.styleSource ?? "auto",
+    styleRationale: story.styleRationale ?? null,
+  };
+}
+
+function recommendStoryStyle(moments: MomentObject[]): { style: StoryStyle; rationale: string } {
+  const photos = moments.filter((moment) => moment.kind === "photo").length;
+  const mixedMedia = new Set(moments.map((moment) => moment.kind)).size > 1;
+  const captioned = moments.filter((moment) => moment.caption?.trim()).length;
+  const dates = moments.map((moment) => Date.parse(moment.occurredAt)).filter(Number.isFinite).sort((a, b) => a - b);
+  const spanDays = dates.length > 1 ? ((dates.at(-1) ?? 0) - (dates[0] ?? 0)) / 86_400_000 : 0;
+  if (mixedMedia) return { style: "scrapbook", rationale: "Mixed photos, recordings, and documents suit a layered keepsake layout." };
+  if (photos >= 10 || spanDays >= 45) return { style: "cinematic", rationale: "A larger journey across time benefits from an immersive, spacious narrative." };
+  if (photos >= 6 && spanDays <= 7) return { style: "flipbook", rationale: "A tightly sequenced set of photos works well as a page-by-page flipbook." };
+  if (photos >= 4 && captioned >= Math.ceil(moments.length * 0.75)) return { style: "comic", rationale: "Strong captions and visual beats can read naturally as comic panels." };
+  return { style: "classic", rationale: "A balanced editorial layout keeps the moments and their context easy to follow." };
+}
+
+async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyle; rationale: string } | null> {
+  if (process.env.NODE_ENV === "test") return null;
+  const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
+  if (!token) return null;
+  const choices: StoryStyle[] = ["classic", "flipbook", "comic", "scrapbook", "cinematic"];
+  const inventory = moments.map(({ name, caption, kind, occurredAt }) => ({ name, caption, kind, occurredAt }));
+  try {
+    const response = await fetch("https://api.zo.computer/zo/ask", {
+      method: "POST",
+      headers: { authorization: token, "content-type": "application/json" },
+      body: JSON.stringify({
+        input: `Recommend one presentation style for this private memory story. Choose only classic, flipbook, comic, scrapbook, or cinematic. Base the choice on sequence, media mix, captions, and time span. Do not invent image contents.\n\nMoments:\n${JSON.stringify(inventory)}`,
+        model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
+        output_format: {
+          type: "object",
+          properties: { style: { type: "string", enum: choices }, rationale: { type: "string" } },
+          required: ["style", "rationale"],
+          additionalProperties: false,
+        },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as { output?: { style?: string; rationale?: string } };
+    const style = body.output?.style;
+    const rationale = body.output?.rationale?.trim();
+    if (!style || !choices.includes(style as StoryStyle) || !rationale) return null;
+    return { style: style as StoryStyle, rationale: rationale.slice(0, 300) };
+  } catch {
+    return null;
+  }
 }
 
 function publicDemoPersonas() {
@@ -930,7 +990,21 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
         stories = [seeded];
       }
     }
-    return c.json({ stories: stories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
+    return c.json({ stories: stories.map(normaliseStory).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/suggest-style", zValidator("json", suggestStoryStyleSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const suggested = await aiStoryStyle(selectedMoments);
+    return c.json(suggested ? { ...suggested, source: "ai" as const } : { ...recommendStoryStyle(selectedMoments), source: "auto" as const });
   });
 
   app.post("/api/spaces/:spaceId/stories", zValidator("json", createStorySchema), async (c) => {
@@ -942,6 +1016,9 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
       throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
     }
+    const recommended = recommendStoryStyle(moments.filter((moment): moment is MomentObject => Boolean(moment)));
+    const style = input.style === "auto" ? recommended.style : input.style;
+    const styleSource = input.style === "auto" ? "auto" : (input.styleSource ?? "manual");
     const timestamp = now();
     const story: Story = {
       id: id(),
@@ -950,6 +1027,9 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       location: input.location || null,
       opening: input.opening,
       momentIds: input.momentIds,
+      style,
+      styleSource,
+      styleRationale: input.styleRationale || (input.style === "auto" ? recommended.rationale : null),
       createdBy: user.id,
       createdAt: timestamp,
       updatedAt: timestamp,

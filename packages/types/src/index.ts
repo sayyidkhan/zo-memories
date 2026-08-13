@@ -97,6 +97,10 @@ export const albumSchema = z.object({
   updatedAt: isoDateSchema,
 });
 
+export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbook", "cinematic"]);
+export const storyStylePreferenceSchema = z.enum(["auto", "classic", "flipbook", "comic", "scrapbook", "cinematic"]);
+export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
+
 export const storySchema = z.object({
   id: z.string(),
   spaceId: z.string(),
@@ -104,6 +108,9 @@ export const storySchema = z.object({
   location: z.string().nullable(),
   opening: z.string(),
   momentIds: z.array(z.string()),
+  style: storyStyleSchema.default("classic"),
+  styleSource: storyStyleSourceSchema.default("auto"),
+  styleRationale: z.string().nullable().default(null),
   createdBy: z.string(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
@@ -148,11 +155,18 @@ export const createStorySchema = z.object({
   title: z.string().trim().min(2).max(100),
   location: z.string().trim().max(100).optional(),
   opening: z.string().trim().min(10).max(1200),
+  style: storyStylePreferenceSchema.default("auto"),
+  styleSource: storyStyleSourceSchema.optional(),
+  styleRationale: z.string().trim().max(300).optional(),
   momentIds: z.array(z.string())
     .min(2)
     .max(30)
     .transform((ids) => [...new Set(ids)])
     .refine((ids) => ids.length >= 2, "Choose at least two different moments"),
+});
+
+export const suggestStoryStyleSchema = z.object({
+  momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
 });
 
 export const registerSchema = z.object({
@@ -239,6 +253,9 @@ export type ShareInvitation = z.infer<typeof shareInvitationSchema>;
 export type ShareInvitationPreview = z.infer<typeof shareInvitationPreviewSchema>;
 export type Album = z.infer<typeof albumSchema>;
 export type Story = z.infer<typeof storySchema>;
+export type StoryStyle = z.infer<typeof storyStyleSchema>;
+export type StoryStylePreference = z.infer<typeof storyStylePreferenceSchema>;
+export type StoryStyleSource = z.infer<typeof storyStyleSourceSchema>;
 export type ObjectKind = z.infer<typeof objectKindSchema>;
 export type MomentObject = z.infer<typeof momentObjectSchema>;
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
@@ -246,6 +263,7 @@ export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSchema>;
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
+export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

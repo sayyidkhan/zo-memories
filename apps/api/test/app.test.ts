@@ -192,17 +192,31 @@ describe("Zo Moments API", () => {
       momentIds.push(upload.body.object.id);
     }
 
-    const created = await owner.json<{ story: { id: string; momentIds: string[] } }>(`/api/spaces/${spaceId}/stories`, {
+    const suggestion = await owner.json<{ style: string; source: string; rationale: string }>(`/api/spaces/${spaceId}/stories/suggest-style`, {
+      method: "POST",
+      body: JSON.stringify({ momentIds }),
+    });
+    expect(suggestion.response.status).toBe(200);
+    expect(suggestion.body.style).toBe("classic");
+    expect(suggestion.body.source).toBe("auto");
+    expect(suggestion.body.rationale.length).toBeGreaterThan(10);
+
+    const created = await owner.json<{ story: { id: string; momentIds: string[]; style: string; styleSource: string; styleRationale: string | null } }>(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
         title: "The weekend the rain followed us",
         location: "Kyoto",
         opening: "We arrived with no plan and left with a story we still tell.",
         momentIds,
+        style: "comic",
+        styleSource: "manual",
       }),
     });
     expect(created.response.status).toBe(201);
     expect(created.body.story.momentIds).toEqual(momentIds);
+    expect(created.body.story.style).toBe("comic");
+    expect(created.body.story.styleSource).toBe("manual");
+    expect(created.body.story.styleRationale).toBeNull();
 
     const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
     expect(shared.response.status).toBe(200);
