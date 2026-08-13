@@ -173,6 +173,10 @@ describe("Zo Moments API", () => {
     expect(preview.status).toBe(200);
     expect(await preview.text()).toBe("moment");
 
+    const unsupported = new FormData();
+    unsupported.set("file", new File(["binary"], "program.exe", { type: "application/octet-stream" }));
+    expect((await owner.request(`/api/spaces/${spaceId}/objects`, { method: "POST", body: unsupported })).status).toBe(415);
+
     const forbidden = await member.request(`/api/spaces/${spaceId}/objects/${upload.body.object.id}`, { method: "DELETE" });
     expect(forbidden.status).toBe(403);
 

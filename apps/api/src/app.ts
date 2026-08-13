@@ -23,6 +23,7 @@ import {
   type Story,
   type StoryStyle,
 } from "@zo-moments/types";
+import { isSupportedMomentFileName } from "@zo-moments/types/upload";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
@@ -1151,6 +1152,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 100 * 1024 * 1024);
     if (file.size <= 0) throw new HTTPException(400, { message: "The selected file is empty" });
     if (file.size > maxBytes) throw new HTTPException(413, { message: `Uploads are limited to ${Math.round(maxBytes / 1024 / 1024)} MB` });
+    if (!isSupportedMomentFileName(file.name)) throw new HTTPException(415, { message: "This file format is not supported" });
 
     const albumId = typeof body.albumId === "string" && body.albumId ? body.albumId : null;
     if (albumId) {
