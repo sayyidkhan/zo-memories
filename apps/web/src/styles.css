@@ -61,8 +61,6 @@ button { cursor: pointer; }
 .story-format-auto-card { --format-tilt: -6deg; animation: format-auto-float 5s ease-in-out infinite; }
 .story-format-classic-page { animation: format-classic-drift 6s ease-in-out infinite; }
 .story-format-flip-page { animation: format-flip-page 7.2s cubic-bezier(.65,0,.35,1) infinite; }
-.story-format-flip-page:nth-of-type(1) { --format-page-tilt: -4deg; }
-.story-format-flip-page:nth-of-type(2) { --format-page-tilt: 3deg; }
 .story-format-comic-panel { animation: format-comic-pop 4.8s cubic-bezier(.16,1,.3,1) infinite; }
 .story-format-scrap-photo { --format-scrap-tilt: -6deg; animation: format-scrap-float 5.5s ease-in-out infinite; }
 .story-format-cinema-image { animation: format-cinema-push 9s ease-in-out infinite; }

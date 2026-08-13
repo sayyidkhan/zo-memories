@@ -94,9 +94,9 @@ function GalleryFormatPreview({ format, story, objects, onOpen }: { format: (typ
         </> : null}
         {format.id === "flipbook" ? <>
           <div className="absolute inset-0 bg-[#dbe2d9]">
-            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[-4deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl">{image(2, "size-full object-cover")}</div>
-            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[3deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [animation-delay:-2.4s]">{image(1, "size-full object-cover")}</div>
-            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [animation-delay:-4.8s]">{image(0, "size-full object-cover")}</div>
+            <div className="absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[-4deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl">{image(2, "size-full object-cover")}</div>
+            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[3deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [--format-page-tilt:3deg] [animation-delay:-2.4s]">{image(1, "size-full object-cover")}</div>
+            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [--format-page-tilt:0deg] [animation-delay:-4.8s]">{image(0, "size-full object-cover")}</div>
             <span className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-[.14em] text-[#526158]">Tap to turn →</span>
           </div>
         </> : null}
