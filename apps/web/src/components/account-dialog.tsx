@@ -170,7 +170,7 @@ export function AccountDialog({
             </div>
             <p className="text-xs leading-5 text-[#827b70]">Your email is used for sign-in and invitations. It cannot be changed yet.</p>
             <ErrorMessage message={profileError} />
-            <Button className="justify-self-start" disabled={profile.isPending || user.isDemo}>
+            <Button className="w-full sm:w-auto sm:justify-self-start" disabled={profile.isPending || user.isDemo}>
               {profile.isPending ? <Spinner /> : "Save changes"}
             </Button>
           </form>
@@ -188,7 +188,7 @@ export function AccountDialog({
               <Field label="Confirm new password"><Input name="confirmPassword" type="password" autoComplete="new-password" minLength={6} maxLength={128} required /></Field>
             </div>
             <ErrorMessage message={passwordError} />
-            <Button className="justify-self-start" disabled={password.isPending}>
+            <Button className="w-full sm:w-auto sm:justify-self-start" disabled={password.isPending}>
               {password.isPending ? <Spinner /> : "Update password"}
             </Button>
           </form>

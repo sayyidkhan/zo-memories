@@ -12,7 +12,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-[transform,background-color,color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#26372f] disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+        "inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-[transform,background-color,color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#26372f] disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] sm:h-11",
         variant === "primary" && "bg-[#26372f] text-[#fffaf2] shadow-[0_8px_24px_rgba(38,55,47,.18)] hover:bg-[#18251f]",
         variant === "secondary" && "border border-[#d9cdbc] bg-[#fffaf2] text-[#26372f] hover:bg-[#f4ede1]",
         variant === "ghost" && "text-[#526158] hover:bg-[#e9e0d2] hover:text-[#26372f]",
@@ -84,12 +84,12 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "modal-panel overflow-x-hidden rounded-t-[30px] bg-[#fffaf2] p-5 shadow-2xl animate-in sm:rounded-[30px] sm:p-8",
+          "modal-panel h-[100dvh] max-h-[100dvh] overflow-x-hidden rounded-none bg-[#fffaf2] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl animate-in sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-[30px] sm:p-8",
           size === "md" ? "modal-panel--md" : size === "lg" ? "modal-panel--lg" : "modal-panel--xl",
         )}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="mb-5 flex items-start justify-between gap-4 sm:mb-6">
+        <div className="sticky -top-4 z-20 -mx-4 -mt-4 mb-5 flex items-start justify-between gap-4 border-b border-[#e3d8c8] bg-[#fffaf2]/96 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-xl sm:static sm:m-0 sm:mb-6 sm:border-0 sm:bg-transparent sm:p-0">
           <div className="min-w-0">
             <h2 id={titleId} className="font-display text-3xl leading-tight text-[#26372f] sm:text-[2.15rem]">{title}</h2>
             {description ? <p className="mt-2 text-sm leading-6 text-[#766f65]">{description}</p> : null}

@@ -289,7 +289,9 @@ export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean
           </Field>
           <Field label="When it happened" hint="Optional; applied to every selected file."><Input className="block min-w-0 max-w-full [min-inline-size:0]" name="occurredAt" type="datetime-local" disabled={mutation.isPending} /></Field>
         </div>
-        <Button disabled={!remaining || mutation.isPending}>{mutation.isPending ? <><Spinner />Uploading {currentUpload || 1} of {files.length}…</> : `${files.some((file) => file.status === "done") ? "Retry" : "Upload"} ${remaining} ${remaining === 1 ? "moment" : "moments"}`}</Button>
+        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:border-0 sm:bg-transparent sm:p-0">
+          <Button className="w-full" disabled={!remaining || mutation.isPending}>{mutation.isPending ? <><Spinner />Uploading {currentUpload || 1} of {files.length}…</> : `${files.some((file) => file.status === "done") ? "Retry" : "Upload"} ${remaining} ${remaining === 1 ? "moment" : "moments"}`}</Button>
+        </div>
       </form>
     </Modal>
   );

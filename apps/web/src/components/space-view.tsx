@@ -63,13 +63,13 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
   }, {});
 
   return (
-    <div className="min-w-0">
-      <header className="relative overflow-hidden border-b border-[#d9cebe] px-5 pb-8 pt-7 sm:px-8 lg:px-12 lg:pb-10 lg:pt-11">
+    <div className="min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:pb-0">
+      <header className="relative overflow-hidden border-b border-[#d9cebe] px-4 pb-5 pt-6 sm:px-8 sm:pb-8 sm:pt-7 lg:px-12 lg:pb-10 lg:pt-11">
         <div className="absolute right-[-5%] top-[-85%] size-80 rounded-full bg-[#d9bea3]/30 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-7 xl:flex-row xl:items-end">
+        <div className="relative flex flex-col justify-between gap-5 sm:gap-7 xl:flex-row xl:items-end">
           <div>
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[.2em] text-[#9a5747]">Shared space</p>
-            <h1 className="font-display text-5xl leading-none tracking-[-.045em] text-[#26372f] sm:text-6xl">{space.name}</h1>
+            <h1 className="font-display text-4xl leading-[.96] tracking-[-.045em] text-[#26372f] sm:text-6xl">{space.name}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 text-sm text-[#746d63]">
               {space.description ? <p className="basis-full">{space.description}</p> : null}
               <button type="button" onClick={() => setDialog("members")} className="flex flex-wrap items-center gap-2 rounded-full text-left transition hover:text-[#34443a]" aria-label="View and manage space members"><span className="flex -space-x-1.5">{members.slice(0, 3).map((member, index) => <span key={member.id} className={`grid size-7 place-items-center rounded-full border-2 border-[#f4ede1] text-[8px] font-bold ${["bg-[#789083] text-white", "bg-[#b1604c] text-white", "bg-[#d7bd96] text-[#34443a]"][index % 3]}`}>{initials(member.name)}</span>)}</span><span className="font-semibold">{members.map((member) => member.name.split(" ")[0]).join(", ")}</span><span className="text-xs underline decoration-[#b9aa97] underline-offset-4">Manage</span></button>
@@ -77,18 +77,18 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
               <button type="button" onClick={() => setDialog("guide")} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#677168] transition hover:text-[#26372f]"><CircleHelp className="size-3.5" />How it works</button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap">
+          <div className="hidden gap-2 sm:flex sm:flex-nowrap">
             <Button className="whitespace-nowrap" variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
             <Button className="whitespace-nowrap" onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
           </div>
         </div>
       </header>
 
-      <div className="sticky top-0 z-20 border-b border-[#ddd2c2] bg-[#f4ede1]/90 px-5 py-4 backdrop-blur-xl sm:px-8 lg:px-12">
+      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 border-b border-[#ddd2c2] bg-[#f4ede1]/95 px-4 py-3 backdrop-blur-xl sm:top-16 sm:px-8 sm:py-4 lg:top-0 lg:px-12">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex max-w-full gap-2 overflow-x-auto pb-1 no-scrollbar">
-            <button onClick={() => setView("stories")} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${view === "stories" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><BookOpen className="size-4" />Stories{storyList.length ? <span className="opacity-65">{storyList.length}</span> : null}</button>
-            <button onClick={() => setView("moments")} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${view === "moments" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><Images className="size-4" />Moments <span className="opacity-65">{objectList.length}</span></button>
+          <div className="grid max-w-full grid-cols-2 gap-2 md:flex md:overflow-x-auto md:pb-1 no-scrollbar">
+            <button onClick={() => setView("stories")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "stories" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><BookOpen className="size-4" />Stories{storyList.length ? <span className="opacity-65">{storyList.length}</span> : null}</button>
+            <button onClick={() => setView("moments")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "moments" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><Images className="size-4" />Moments <span className="opacity-65">{objectList.length}</span></button>
           </div>
           {view === "moments" ? (
             <label className="relative block md:w-64">
@@ -99,7 +99,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
         </div>
       </div>
 
-      <main className="px-5 py-8 sm:px-8 lg:px-12 lg:py-11">
+      <main className="px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-11">
         {invitations.length ? (
           <div className="mb-8 flex items-center gap-4 rounded-[22px] border border-[#d9cbb8] bg-[#fff8ec] px-5 py-4 text-sm text-[#5d665f]">
             <div className="flex -space-x-2">{invitations.slice(0, 3).map((invite) => <span key={invite.id} className="grid size-9 place-items-center rounded-full border-2 border-[#fff8ec] bg-[#cfb99b] text-xs font-bold text-[#34443a]">{invite.email[0]?.toUpperCase()}</span>)}</div>
@@ -128,6 +128,13 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
           </>
         )}
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbc] bg-[#fffaf2]/96 px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_42px_rgba(46,39,30,.12)] backdrop-blur-xl sm:hidden">
+        <div className="grid grid-cols-2 gap-2">
+          <Button className="h-12" variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
+          <Button className="h-12" onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
+        </div>
+      </div>
 
       <UploadDialog open={dialog === "upload"} onClose={() => setDialog(null)} spaceId={spaceId} albums={albums} />
       <InviteDialog open={dialog === "invite"} onClose={() => setDialog(null)} spaceId={spaceId} />

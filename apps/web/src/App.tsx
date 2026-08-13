@@ -80,7 +80,7 @@ function AppShell({ user }: { user: User }) {
       </aside>
 
       <div className="min-w-0">
-        <header className="flex h-16 items-center justify-between gap-2 border-b border-[#d8cdbd] bg-[#eee5d8] px-3 sm:px-4 lg:hidden">
+        <header className="sticky top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between gap-2 border-b border-[#d8cdbd] bg-[#eee5d8]/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl sm:h-16 sm:px-4 sm:pt-0 lg:hidden">
           <div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.14em]"><BrandMark className="size-9" /><span className="hidden min-[480px]:inline">Zo Moments</span></div>
           <div className="flex items-center gap-2">
             {spaces.data?.spaces.length ? (

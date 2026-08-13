@@ -6,10 +6,10 @@ import { Button, Modal } from "./ui";
 
 export function MemoryCard({ object, uploader, index, onOpen }: { object: MomentObject; uploader: Member | undefined; index: number; onOpen: () => void }) {
   const imageUrl = api.objectContentUrl(object.spaceId, object.id);
-  const shape = index % 5 === 0 ? "aspect-[4/5]" : index % 7 === 0 ? "aspect-[5/4]" : "aspect-square";
+  const shape = index % 5 === 0 ? "aspect-[4/5]" : index % 7 === 0 ? "sm:aspect-[5/4]" : "sm:aspect-square";
   return (
-    <button className="group w-full text-left" onClick={onOpen}>
-      <div className={`relative overflow-hidden rounded-[24px] bg-[#ded3c2] ${shape}`}>
+    <button className="group w-full text-left active:scale-[.985]" onClick={onOpen}>
+      <div className={`relative aspect-[4/5] overflow-hidden rounded-[18px] bg-[#ded3c2] sm:rounded-[24px] ${shape}`}>
         {object.kind === "photo" ? (
           <img src={imageUrl} alt={object.caption || object.name} className="size-full object-cover transition duration-500 group-hover:scale-[1.025]" loading="lazy" />
         ) : (
@@ -23,12 +23,12 @@ export function MemoryCard({ object, uploader, index, onOpen }: { object: Moment
           <span className="ml-3 shrink-0 text-[10px] uppercase tracking-wider">{object.kind}</span>
         </div>
       </div>
-      <div className="mt-3 flex items-start justify-between gap-3 px-1">
+      <div className="mt-2 flex items-start justify-between gap-3 px-1 sm:mt-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[#34443a]">{object.caption || object.name}</p>
-          <p className="mt-0.5 text-xs text-[#888075]">{shortDate(object.occurredAt)}{uploader ? ` · Shared by ${uploader.name.split(" ")[0]}` : ""}</p>
+          <p className="mt-0.5 line-clamp-1 text-[11px] text-[#888075] sm:text-xs">{shortDate(object.occurredAt)}{uploader ? ` · ${uploader.name.split(" ")[0]}` : ""}</p>
         </div>
-        <span className="mt-0.5 shrink-0 text-[11px] text-[#91897e]">{formatBytes(object.size)}</span>
+        <span className="mt-0.5 hidden shrink-0 text-[11px] text-[#91897e] sm:inline">{formatBytes(object.size)}</span>
       </div>
     </button>
   );
@@ -46,9 +46,9 @@ export function MemoryPreview({ object, uploader, onClose, onDelete }: { object:
         {object.kind === "document" && object.mimeType === "application/pdf" ? <iframe src={contentUrl} title={object.name} className="h-[65vh] w-full bg-white" /> : null}
         {object.kind === "document" && object.mimeType !== "application/pdf" ? <div className="grid min-h-64 place-items-center p-8 text-[#fffaf2]"><div className="text-center"><FileText className="mx-auto size-12" /><p className="mt-4 text-sm">Preview is not available for this file type.</p></div></div> : null}
       </div>
-      <div className="mt-5 flex flex-wrap justify-between gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-between">
         <Button variant="danger" onClick={() => onDelete(object)}><Trash2 className="size-4" />Delete</Button>
-        <a href={api.objectContentUrl(object.spaceId, object.id, true)} download><Button variant="secondary"><Download className="size-4" />Download original</Button></a>
+        <a className="grid" href={api.objectContentUrl(object.spaceId, object.id, true)} download><Button className="w-full" variant="secondary"><Download className="size-4" />Download</Button></a>
       </div>
     </Modal>
   );

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Download, Eye, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -72,6 +72,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [asset, setAsset] = useState<ExportAsset | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [error, setError] = useState("");
+  const previewRef = useRef<HTMLElement>(null);
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
   const availableTargets = socialTargets.filter((item) => item.format === format);
   const moments = useMemo(() => {
@@ -104,6 +105,11 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setAppearanceChanged(false);
     setError("");
   }, [story.id, story.location]);
+
+  useEffect(() => {
+    if (!asset || window.innerWidth >= 1024) return;
+    requestAnimationFrame(() => previewRef.current?.scrollIntoView({ block: "start" }));
+  }, [asset]);
 
   function replaceAsset(next: ExportAsset | null) {
     setPreviewIndex(0);
@@ -236,16 +242,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const activePreviewUrl = asset?.urls[Math.min(previewIndex, asset.urls.length - 1)];
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="max-h-[94dvh] w-full overflow-y-auto rounded-t-[32px] bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-5 py-5 backdrop-blur-lg sm:px-8 sm:py-6">
+      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="h-[100dvh] max-h-[100dvh] w-full overflow-y-auto bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-auto sm:max-h-[94dvh] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-8 sm:py-6">
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a9503f]"><Share2 className="size-4" />Share this story <span className="rounded-full bg-[#e8ded0] px-2.5 py-1 text-[#526158]">{styleLabel}</span></div>
-            <h2 id="social-share-title" className="font-display text-3xl leading-none text-[#26372f] sm:text-4xl">Make it fit the destination.</h2>
+            <h2 id="social-share-title" className="font-display text-[1.7rem] leading-none text-[#26372f] sm:text-4xl">Make it fit the destination.</h2>
           </div>
           <button type="button" onClick={onClose} disabled={isBusy} className="grid size-11 shrink-0 place-items-center rounded-full bg-[#eee5d8] text-[#526158] transition hover:bg-[#e3d8c8] disabled:opacity-40" aria-label="Close sharing"><X className="size-5" /></button>
         </header>
 
-        <div className="grid gap-7 p-5 sm:p-8 lg:grid-cols-[1.08fr_.92fr]">
+        <div className="grid gap-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-7 sm:p-8 lg:grid-cols-[1.08fr_.92fr]">
           <div className="grid content-start gap-6">
             <section>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">1 · Choose the output</p>
@@ -288,10 +294,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
-            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />{asset.format === "image" ? `Share ${asset.urls.length}-slide carousel` : "Share to apps"}</Button><Button variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
-          <aside className="relative grid min-h-[25rem] place-items-center overflow-hidden rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
+          <aside ref={previewRef} className="relative flex min-h-[22rem] scroll-mt-24 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] bg-[#1d3027] p-4 sm:min-h-[34rem] sm:rounded-[28px] sm:p-5">
             {asset && activePreviewUrl ? asset.format === "image"
               ? <div className="relative grid place-items-center">
                 <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[32rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
@@ -306,6 +311,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_22%,rgba(239,196,111,.28),transparent_28%),linear-gradient(160deg,transparent,rgba(9,25,18,.8))]" />
                 <div className="relative flex flex-col items-center justify-center p-7 text-[#fff8ec]"><span className="grid size-14 place-items-center rounded-full bg-[#fff8ec]/10">{target.format === "image" ? <Image className="size-6" /> : <Film className="size-6" />}</span><strong className="mt-5 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.platform} · {target.placement}</span><p className="mt-5 max-w-52 text-xs leading-5 text-white/65">{styleLabel} composition at {target.width} × {target.height}px.</p></div>
               </div>}
+            {asset && !isBusy ? <div className="relative z-10 grid w-full gap-2 sm:grid-cols-[1fr_auto]"><Button className="h-12 bg-[#f0c681] text-[#26372f] shadow-none hover:bg-[#f6d795]" onClick={shareToApps}><Smartphone className="size-4" />{asset.format === "image" ? `Share ${asset.urls.length}-slide carousel` : "Share to apps"}</Button><Button className="text-[#fff8ec] hover:bg-white/10 hover:text-white" variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
             {isBusy ? <div className="absolute inset-0 z-10 grid place-items-center bg-[#15271f]/88 p-6 backdrop-blur-sm" role="status" aria-live="polite">
               <div className="w-full max-w-xs rounded-[24px] border border-white/10 bg-[#26372f] p-6 text-center text-[#fff8ec] shadow-[0_24px_70px_rgba(0,0,0,.35)]">
                 <span className="mx-auto grid size-14 place-items-center rounded-full bg-white/10"><Spinner /></span>
