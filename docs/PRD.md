@@ -116,6 +116,17 @@ Users can organise memories into albums, such as:
 - Birthday
 - Graduation
 
+### Stories
+
+Users turn a set of moments into a story with a title, place, personal opening, and chronological reading experience. Stories are the primary way to revisit an event; albums remain optional organisation.
+
+The creation journey is explicit inside every shared space:
+
+1. Create a shared space.
+2. Invite the people who were there.
+3. Add moments together.
+4. Shape selected moments into a story.
+
 ### Search
 
 Search by:
@@ -175,7 +186,7 @@ Organise Albums
   |
 Relive Timeline
   |
-AI Story
+Shared Story
 ```
 
 ---
@@ -191,6 +202,8 @@ AI Story
 - Upload media
 - Timeline
 - Albums
+- Guided onboarding
+- Create and read stories
 - Preview
 - Download
 
@@ -203,7 +216,7 @@ AI Story
 ### Future
 
 - AI Timeline
-- AI Story
+- AI-assisted story writing
 - AI Search
 - Shared Calendar
 - Anniversary Recaps

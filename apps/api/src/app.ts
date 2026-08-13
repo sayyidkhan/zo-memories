@@ -4,6 +4,7 @@ import {
   createAlbumSchema,
   createShareInvitationSchema,
   createSpaceSchema,
+  createStorySchema,
   demoLoginSchema,
   inviteMemberSchema,
   updateDemoModeSchema,
@@ -18,6 +19,7 @@ import {
   type ObjectKind,
   type ShareInvitation,
   type Space,
+  type Story,
 } from "@zo-moments/types";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -74,12 +76,27 @@ const SHARE_INVITATION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const DEMO_MODE_ID = "demo-mode";
 const DEMO_SPACE_ID = "demo-space";
 const DEMO_ALBUM_ID = "demo-album-journeys";
+const DEMO_STORY_ID = "demo-story-year-in-motion";
 const DEMO_PERSONAS = [
   { id: "maya", name: "Maya Chen", email: "demo-maya@zo-moments.example", role: "owner", description: "Plans the journeys" },
   { id: "leo", name: "Leo Tan", email: "demo-leo@zo-moments.example", role: "member", description: "Captures the details" },
   { id: "sam", name: "Sam Rivera", email: "demo-sam@zo-moments.example", role: "member", description: "Keeps the stories" },
 ] as const;
 const LEGACY_DEMO_USER_EMAIL = "demo@zo-moments.example";
+
+function demoStory(ownerId: string): Story {
+  return {
+    id: DEMO_STORY_ID,
+    spaceId: DEMO_SPACE_ID,
+    title: "The year we kept moving",
+    location: "From Tokyo to the Pacific Coast",
+    opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
+    momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-coast", "demo-moment-breakfast", "demo-moment-tokyo", "demo-moment-market", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace"],
+    createdBy: ownerId,
+    createdAt: "2026-08-04T10:00:00.000Z",
+    updatedAt: "2026-08-04T10:00:00.000Z",
+  };
+}
 
 function publicDemoPersonas() {
   return DEMO_PERSONAS.map(({ id, name, role, description }) => ({ id, name, role, description }));
@@ -212,6 +229,7 @@ async function ensureDemoWorkspace(
       occurredAt: sample.occurredAt,
     });
   }
+  await repositories.stories.put(demoStory(owner.id));
 }
 
 function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {
@@ -717,6 +735,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     await Promise.all([
       repositories.objects.deleteWhere((object) => object.spaceId === spaceId),
       repositories.albums.deleteWhere((album) => album.spaceId === spaceId),
+      repositories.stories.deleteWhere((story) => story.spaceId === spaceId),
       repositories.invitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.shareInvitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.members.deleteWhere((member) => member.spaceId === spaceId),
@@ -892,6 +911,60 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     return c.body(null, 204);
   });
 
+  app.get("/api/spaces/:spaceId/stories", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    let stories = await repositories.stories.find((story) => story.spaceId === spaceId);
+    if (spaceId === DEMO_SPACE_ID && stories.length === 0) {
+      const space = await repositories.spaces.get(spaceId);
+      if (space) {
+        const seeded = demoStory(space.ownerId);
+        await repositories.stories.put(seeded);
+        stories = [seeded];
+      }
+    }
+    return c.json({ stories: stories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
+  });
+
+  app.post("/api/spaces/:spaceId/stories", zValidator("json", createStorySchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const timestamp = now();
+    const story: Story = {
+      id: id(),
+      spaceId,
+      title: input.title,
+      location: input.location || null,
+      opening: input.opening,
+      momentIds: input.momentIds,
+      createdBy: user.id,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    await repositories.stories.put(story);
+    return c.json({ story }, 201);
+  });
+
+  app.delete("/api/spaces/:spaceId/stories/:storyId", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const membership = await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(c.req.param("storyId"));
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (membership.role !== "owner" && story.createdBy !== user.id) {
+      throw new HTTPException(403, { message: "Only the story creator or space owner can delete it" });
+    }
+    await repositories.stories.delete(story.id);
+    return c.body(null, 204);
+  });
+
   app.get("/api/spaces/:spaceId/objects", async (c) => {
     const user = c.get("user")!;
     const spaceId = c.req.param("spaceId");
@@ -994,6 +1067,12 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     }
     await store.delete(object.storageKey);
     await repositories.objects.delete(object.id);
+    const stories = await repositories.stories.find((story) => story.spaceId === spaceId && story.momentIds.includes(object.id));
+    await Promise.all(stories.map(async (story) => {
+      const momentIds = story.momentIds.filter((momentId) => momentId !== object.id);
+      if (momentIds.length === 0) return repositories.stories.delete(story.id);
+      return repositories.stories.put({ ...story, momentIds, updatedAt: now() });
+    }));
     return c.body(null, 204);
   });
 

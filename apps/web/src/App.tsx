@@ -97,7 +97,7 @@ function AppShell({ user }: { user: User }) {
           </div>
         </header>
 
-        {selectedSpaceId ? <SpaceView spaceId={selectedSpaceId} /> : (
+        {selectedSpaceId ? <SpaceView key={selectedSpaceId} spaceId={selectedSpaceId} /> : (
           <section className="grid min-h-[calc(100vh-4rem)] place-items-center px-6 text-center">
             <div className="max-w-xl">
               <BrandMark className="mx-auto size-20" />

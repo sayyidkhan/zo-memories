@@ -143,6 +143,12 @@ The shared SDK supports React, with future support planned for:
 - `DELETE /spaces/:id/objects/:key`
 - `GET /spaces/:id/objects/:key`
 
+### Stories
+
+- `GET /spaces/:id/stories`
+- `POST /spaces/:id/stories`
+- `DELETE /spaces/:id/stories/:storyId`
+
 ### Upload Flow
 
 ```text

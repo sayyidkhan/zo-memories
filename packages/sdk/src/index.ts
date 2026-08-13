@@ -7,6 +7,7 @@ import type {
   CreateAlbumInput,
   CreateShareInvitationInput,
   CreateSpaceInput,
+  CreateStoryInput,
   InviteMemberInput,
   Invitation,
   LoginInput,
@@ -17,6 +18,7 @@ import type {
   ShareInvitationPreview,
   SpaceDetail,
   SpaceSummary,
+  Story,
   UpdateProfileInput,
   UpdateAccountStatusInput,
   UpdateAdminRoleInput,
@@ -238,6 +240,24 @@ export class ZoMomentsClient {
   deleteAlbum(spaceId: string, albumId: string): Promise<void> {
     return this.request(
       `/api/spaces/${encodeURIComponent(spaceId)}/albums/${encodeURIComponent(albumId)}`,
+      { method: "DELETE" },
+    );
+  }
+
+  listStories(spaceId: string): Promise<{ stories: Story[] }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories`);
+  }
+
+  createStory(spaceId: string, input: CreateStoryInput): Promise<{ story: Story }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  deleteStory(spaceId: string, storyId: string): Promise<void> {
+    return this.request(
+      `/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}`,
       { method: "DELETE" },
     );
   }

@@ -155,6 +155,44 @@ describe("Zo Moments API", () => {
     expect(removed.status).toBe(204);
   });
 
+  test("turns selected moments into a private shared story", async () => {
+    const momentIds: string[] = [];
+    const samples: Array<[string, string]> = [["arrival.jpg", "We arrived before the rain"], ["dinner.jpg", "Dinner ran until midnight"]];
+    for (const [name, caption] of samples) {
+      const form = new FormData();
+      form.set("file", new File([name], name, { type: "image/jpeg" }));
+      form.set("caption", caption);
+      const upload = await owner.json<{ object: { id: string } }>(`/api/spaces/${spaceId}/objects`, { method: "POST", body: form });
+      expect(upload.response.status).toBe(201);
+      momentIds.push(upload.body.object.id);
+    }
+
+    const created = await owner.json<{ story: { id: string; momentIds: string[] } }>(`/api/spaces/${spaceId}/stories`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "The weekend the rain followed us",
+        location: "Kyoto",
+        opening: "We arrived with no plan and left with a story we still tell.",
+        momentIds,
+      }),
+    });
+    expect(created.response.status).toBe(201);
+    expect(created.body.story.momentIds).toEqual(momentIds);
+
+    const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
+    expect(shared.response.status).toBe(200);
+    expect(shared.body.stories.map(({ title }) => title)).toContain("The weekend the rain followed us");
+
+    const outsider = new BrowserSession(app);
+    expect((await outsider.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name: "Story Stranger", email: "story-stranger@example.com", password: "password123" }),
+    })).status).toBe(200);
+    expect((await outsider.request(`/api/spaces/${spaceId}/stories`)).status).toBe(403);
+    expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, { method: "DELETE" })).status).toBe(403);
+    expect((await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, { method: "DELETE" })).status).toBe(204);
+  });
+
   test("blocks non-members", async () => {
     await stranger.request("/auth/register", {
       method: "POST",
@@ -347,6 +385,10 @@ describe("Zo Moments API", () => {
     const demoObjects = await visitor.json<{ objects: { caption: string; uploadedBy: string }[] }>(`/api/spaces/${demoSpace!.id}/objects`);
     expect(demoObjects.body.objects).toHaveLength(12);
     expect(new Set(demoObjects.body.objects.map(({ uploadedBy }) => uploadedBy)).size).toBe(3);
+    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[] }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
+    expect(demoStories.body.stories).toHaveLength(1);
+    expect(demoStories.body.stories[0]?.title).toBe("The year we kept moving");
+    expect(demoStories.body.stories[0]?.momentIds).toHaveLength(12);
 
     const secondVisitor = new BrowserSession(app);
     expect((await secondVisitor.request("/auth/demo", {

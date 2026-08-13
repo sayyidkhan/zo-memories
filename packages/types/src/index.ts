@@ -97,6 +97,18 @@ export const albumSchema = z.object({
   updatedAt: isoDateSchema,
 });
 
+export const storySchema = z.object({
+  id: z.string(),
+  spaceId: z.string(),
+  title: z.string(),
+  location: z.string().nullable(),
+  opening: z.string(),
+  momentIds: z.array(z.string()),
+  createdBy: z.string(),
+  createdAt: isoDateSchema,
+  updatedAt: isoDateSchema,
+});
+
 export const objectKindSchema = z.enum(["photo", "video", "audio", "document"]);
 
 export const momentObjectSchema = z.object({
@@ -130,6 +142,17 @@ export const createShareInvitationSchema = z.object({
 export const createAlbumSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(240).optional(),
+});
+
+export const createStorySchema = z.object({
+  title: z.string().trim().min(2).max(100),
+  location: z.string().trim().max(100).optional(),
+  opening: z.string().trim().min(10).max(1200),
+  momentIds: z.array(z.string())
+    .min(2)
+    .max(30)
+    .transform((ids) => [...new Set(ids)])
+    .refine((ids) => ids.length >= 2, "Choose at least two different moments"),
 });
 
 export const registerSchema = z.object({
@@ -215,12 +238,14 @@ export type Invitation = z.infer<typeof invitationSchema>;
 export type ShareInvitation = z.infer<typeof shareInvitationSchema>;
 export type ShareInvitationPreview = z.infer<typeof shareInvitationPreviewSchema>;
 export type Album = z.infer<typeof albumSchema>;
+export type Story = z.infer<typeof storySchema>;
 export type ObjectKind = z.infer<typeof objectKindSchema>;
 export type MomentObject = z.infer<typeof momentObjectSchema>;
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSchema>;
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
+export type CreateStoryInput = z.infer<typeof createStorySchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

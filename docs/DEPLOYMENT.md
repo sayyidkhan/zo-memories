@@ -66,6 +66,7 @@ zo-moments/
     members/<id>.json
     invitations/<id>.json
     albums/<id>.json
+    stories/<id>.json
     objects/<id>.json
     avatars/<user-id>.json
     app-settings/demo-mode.json
