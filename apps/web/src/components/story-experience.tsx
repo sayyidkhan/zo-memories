@@ -283,7 +283,7 @@ export function StoryReader({ story, objects, members, canDelete, onClose, onDel
   return (
     <>
       <article className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
-        <button onClick={() => setShareOpen(true)} className="fixed right-[4.5rem] top-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:px-5"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
+        <button onClick={() => setShareOpen(true)} className="fixed right-[4.5rem] top-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
         <button onClick={onClose} className="fixed right-4 top-4 z-30 grid size-12 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105" aria-label="Close story"><X className="size-5" /></button>
         <header className="relative min-h-[88vh] overflow-hidden bg-[#183128] text-[#fff9ee]">
           {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
