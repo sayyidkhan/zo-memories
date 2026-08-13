@@ -118,32 +118,6 @@ function demoStories(ownerId: string): Story[] {
     },
     {
       ...common,
-      id: "demo-story-six-stops-above-clouds",
-      title: "Six stops above the clouds",
-      location: "Cabins · Waterfalls · Alpine lakes",
-      opening: "Each page is one breath of cold air: boots by the cabin door, spray from the falls, first light on the ridge, and the swim none of us was brave enough to admit was freezing.",
-      momentIds: ["demo-moment-snow-cabin", "demo-moment-waterfall", "demo-moment-mountain", "demo-moment-lake", "demo-moment-campfire", "demo-moment-journal"],
-      style: "flipbook",
-      styleSource: "manual",
-      styleRationale: "Flipbook lets each landscape land as its own page in a tightly paced sequence.",
-      createdAt: "2026-08-07T10:00:00.000Z",
-      updatedAt: "2026-08-07T10:00:00.000Z",
-    },
-    {
-      ...common,
-      id: "demo-story-plans-followed",
-      title: "Plans we absolutely followed",
-      location: "Mostly off route",
-      opening: "The alarm was too early, the pancakes fought back, the map was upside down, and the ferry wind won. Somehow, every mistake became the part we still quote.",
-      momentIds: ["demo-moment-airport", "demo-moment-breakfast", "demo-moment-desert", "demo-moment-ferry", "demo-moment-pottery", "demo-moment-campfire"],
-      style: "comic",
-      styleSource: "manual",
-      styleRationale: "Comic turns a caption-rich chain of mishaps into bold visual punchlines.",
-      createdAt: "2026-08-06T10:00:00.000Z",
-      updatedAt: "2026-08-06T10:00:00.000Z",
-    },
-    {
-      ...common,
       id: "demo-story-little-things-home",
       title: "The little things we brought home",
       location: "Notes from everywhere",
@@ -155,41 +129,26 @@ function demoStories(ownerId: string): Story[] {
       createdAt: "2026-08-05T10:00:00.000Z",
       updatedAt: "2026-08-05T10:00:00.000Z",
     },
-    {
-      ...common,
-      id: "demo-story-roads-water-first-light",
-      title: "Roads, water, and first light",
-      location: "Pacific Coast · Iceland · Atlas Mountains",
-      opening: "The biggest views arrived quietly: an empty coast before breakfast, water louder than conversation, a road with no next turn, and sunrise reaching the ridge before we did.",
-      momentIds: ["demo-moment-coast", "demo-moment-waterfall", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-campfire"],
-      style: "cinematic",
-      styleSource: "manual",
-      styleRationale: "Cinematic gives wide landscapes and a long journey an immersive full-bleed treatment.",
-      createdAt: "2026-08-04T10:00:00.000Z",
-      updatedAt: "2026-08-04T10:00:00.000Z",
-    },
   ];
 }
 
 function normaliseStory(story: Story): Story {
+  const style = story.style === "flipbook" || story.style === "comic" ? "classic" : (story.style ?? "classic");
   return {
     ...story,
-    style: story.style ?? "classic",
+    style,
     styleSource: story.styleSource ?? "auto",
-    styleRationale: story.styleRationale ?? null,
+    styleRationale: style !== story.style ? "Classic replaced a retired prototype format." : (story.styleRationale ?? null),
   };
 }
 
 function recommendStoryStyle(moments: MomentObject[]): { style: StoryStyle; rationale: string } {
   const photos = moments.filter((moment) => moment.kind === "photo").length;
   const mixedMedia = new Set(moments.map((moment) => moment.kind)).size > 1;
-  const captioned = moments.filter((moment) => moment.caption?.trim()).length;
   const dates = moments.map((moment) => Date.parse(moment.occurredAt)).filter(Number.isFinite).sort((a, b) => a - b);
   const spanDays = dates.length > 1 ? ((dates.at(-1) ?? 0) - (dates[0] ?? 0)) / 86_400_000 : 0;
   if (mixedMedia) return { style: "scrapbook", rationale: "Mixed photos, recordings, and documents suit a layered keepsake layout." };
   if (photos >= 10 || spanDays >= 45) return { style: "cinematic", rationale: "A larger journey across time benefits from an immersive, spacious narrative." };
-  if (photos >= 6 && spanDays <= 7) return { style: "flipbook", rationale: "A tightly sequenced set of photos works well as a page-by-page flipbook." };
-  if (photos >= 4 && captioned >= Math.ceil(moments.length * 0.75)) return { style: "comic", rationale: "Strong captions and visual beats can read naturally as comic panels." };
   return { style: "classic", rationale: "A balanced editorial layout keeps the moments and their context easy to follow." };
 }
 
@@ -205,14 +164,14 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
   if (process.env.NODE_ENV === "test") return null;
   const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
   if (!token) return null;
-  const choices: StoryStyle[] = ["classic", "flipbook", "comic", "scrapbook", "cinematic"];
+  const choices: StoryStyle[] = ["classic", "scrapbook", "cinematic"];
   const inventory = moments.map(({ name, caption, kind, occurredAt }) => ({ name, caption, kind, occurredAt }));
   try {
     const response = await fetch("https://api.zo.computer/zo/ask", {
       method: "POST",
       headers: { authorization: token, "content-type": "application/json" },
       body: JSON.stringify({
-        input: `Recommend one presentation style for this private memory story. Choose only classic, flipbook, comic, scrapbook, or cinematic. Base the choice on sequence, media mix, captions, and time span. Do not invent image contents.\n\nMoments:\n${JSON.stringify(inventory)}`,
+        input: `Recommend one presentation style for this private memory story. Choose only classic, scrapbook, or cinematic. Base the choice on sequence, media mix, captions, and time span. Do not invent image contents.\n\nMoments:\n${JSON.stringify(inventory)}`,
         model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
         output_format: {
           type: "object",
@@ -372,7 +331,15 @@ async function ensureDemoWorkspace(
       occurredAt: sample.occurredAt,
     });
   }
-  await Promise.all(demoStories(owner.id).map((story) => repositories.stories.put(story)));
+  const seededStories = demoStories(owner.id);
+  const retainedStoryIds = new Set(seededStories.map((story) => story.id));
+  const obsoleteStories = await repositories.stories.find((story) => story.spaceId === DEMO_SPACE_ID && !retainedStoryIds.has(story.id));
+  await Promise.all(obsoleteStories.map(async (story) => {
+    const exportKeys = await store.list(`zo-moments/social-exports/${DEMO_SPACE_ID}/${story.id}/`);
+    await Promise.all(exportKeys.map((key) => store.delete(key)));
+    await repositories.stories.delete(story.id);
+  }));
+  await Promise.all(seededStories.map((story) => repositories.stories.put(story)));
 }
 
 function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {

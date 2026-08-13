@@ -163,61 +163,6 @@ function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: M
   brand(context, width, height, palette.ink, profile);
 }
 
-function drawFlipbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
-  const { width, height } = context.canvas;
-  const safe = safeArea(width, height, profile);
-  context.fillStyle = palette.sage;
-  context.fillRect(0, 0, width, height);
-  const active = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
-  for (let layer = 2; layer >= 0; layer -= 1) {
-    context.save();
-    context.translate(width / 2, height * 0.4);
-    context.rotate(((layer - 1) * 2.1 * Math.PI) / 180);
-    context.shadowColor = "rgba(31,49,40,.22)";
-    context.shadowBlur = 35;
-    fillRounded(context, palette.cream, -width * 0.39 + layer * 4, -height * 0.31 + layer * 5, width * 0.78, height * 0.62, 20);
-    clippedPhoto(context, photos[(active + layer) % Math.max(photos.length, 1)], -width * 0.35 + layer * 4, -height * 0.275 + layer * 5, width * 0.7, height * 0.49, 12, 1.02);
-    context.restore();
-  }
-  context.textAlign = "left";
-  title(context, story.title, Math.max(width * 0.12, safe.left), Math.min(height * 0.755, height - safe.bottom - 230), width - Math.max(width * 0.24, safe.left + safe.right), palette.ink, 62, 2);
-  context.fillStyle = "#536158";
-  context.font = "600 18px sans-serif";
-  context.textAlign = "center";
-  context.fillText(metadata(story, moments, showLocation, showDate), width / 2, height - Math.max(105, safe.bottom + 56));
-  context.textAlign = "left";
-  brand(context, width, height, palette.ink, profile);
-}
-
-function drawComic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
-  const { width, height } = context.canvas;
-  const safe = safeArea(width, height, profile);
-  context.fillStyle = "#efd168";
-  context.fillRect(0, 0, width, height);
-  const index = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
-  const panels = [
-    { x: 42, y: 44, w: width - 84, h: height * 0.45 },
-    { x: 42, y: height * 0.525, w: width * 0.42, h: height * 0.24 },
-    { x: width * 0.49, y: height * 0.525, w: width * 0.45 - 42, h: height * 0.24 },
-  ];
-  panels.forEach((panel, panelIndex) => {
-    context.fillStyle = palette.ink;
-    context.fillRect(panel.x - 7, panel.y - 7, panel.w + 14, panel.h + 14);
-    clippedPhoto(context, photos[(index + panelIndex) % Math.max(photos.length, 1)], panel.x, panel.y, panel.w, panel.h, 0, 1.04);
-  });
-  fillRounded(context, palette.cream, 58, height * 0.705, width - 116, 128, 64);
-  context.textAlign = "center";
-  context.fillStyle = palette.ink;
-  context.font = "900 25px sans-serif";
-  context.fillText("AND THEN THIS HAPPENED…", width / 2, height * 0.747);
-  context.textAlign = "left";
-  title(context, story.title.toUpperCase(), Math.max(52, safe.left), Math.min(height * 0.825, height - safe.bottom - 205), width - Math.max(104, safe.left + safe.right), palette.ink, 58, 2);
-  context.fillStyle = "#735b2d";
-  context.font = "700 17px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), Math.max(54, safe.left), height - Math.max(102, safe.bottom + 54));
-  brand(context, width, height, palette.ink, profile);
-}
-
 function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, profile);
@@ -285,14 +230,8 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
 
 function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], progress: number) {
   context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-  const renderers: Record<StoryStyle, typeof drawClassic> = {
-    classic: drawClassic,
-    flipbook: drawFlipbook,
-    comic: drawComic,
-    scrapbook: drawScrapbook,
-    cinematic: drawCinematic,
-  };
-  renderers[options.story.style](context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
+  const renderer = options.story.style === "scrapbook" ? drawScrapbook : options.story.style === "cinematic" ? drawCinematic : drawClassic;
+  renderer(context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
 }
 
 function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialExportOptions, photo: LoadedPhoto | undefined, index: number, total: number, closing: boolean) {

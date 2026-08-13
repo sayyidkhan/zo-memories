@@ -205,6 +205,18 @@ describe("Zo Moments API", () => {
     expect(suggestion.body.source).toBe("auto");
     expect(suggestion.body.rationale.length).toBeGreaterThan(10);
 
+    const retired = await owner.request(`/api/spaces/${spaceId}/stories`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Retired prototype",
+        opening: "This old presentation style should no longer be available.",
+        momentIds,
+        style: "comic",
+        styleSource: "manual",
+      }),
+    });
+    expect(retired.status).toBe(400);
+
     const created = await owner.json<{ story: { id: string; momentIds: string[]; style: string; styleSource: string; styleRationale: string | null } }>(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
@@ -212,13 +224,13 @@ describe("Zo Moments API", () => {
         location: "Kyoto",
         opening: "We arrived with no plan and left with a story we still tell.",
         momentIds,
-        style: "comic",
+        style: "scrapbook",
         styleSource: "manual",
       }),
     });
     expect(created.response.status).toBe(201);
     expect(created.body.story.momentIds).toEqual(momentIds);
-    expect(created.body.story.style).toBe("comic");
+    expect(created.body.story.style).toBe("scrapbook");
     expect(created.body.story.styleSource).toBe("manual");
     expect(created.body.story.styleRationale).toBeNull();
 
@@ -467,17 +479,14 @@ describe("Zo Moments API", () => {
     }
     expect(demoDetail.body.members.map(({ userId }) => momentCounts.get(userId))).toEqual([6, 6, 6]);
     const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
-    expect(demoStories.body.stories).toHaveLength(6);
+    expect(demoStories.body.stories).toHaveLength(3);
     expect(demoStories.body.stories.map(({ title }) => title)).toEqual([
       "The year we kept moving",
       "Postcards from rainy cities",
-      "Six stops above the clouds",
-      "Plans we absolutely followed",
       "The little things we brought home",
-      "Roads, water, and first light",
     ]);
-    expect(demoStories.body.stories.map(({ style }) => style)).toEqual(["cinematic", "classic", "flipbook", "comic", "scrapbook", "cinematic"]);
-    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["auto", "manual", "manual", "manual", "manual", "manual"]);
+    expect(demoStories.body.stories.map(({ style }) => style)).toEqual(["cinematic", "classic", "scrapbook"]);
+    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["auto", "manual", "manual"]);
     expect(demoStories.body.stories[0]?.momentIds).toHaveLength(18);
 
     const secondVisitor = new BrowserSession(app);

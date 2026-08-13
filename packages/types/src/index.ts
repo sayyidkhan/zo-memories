@@ -98,7 +98,7 @@ export const albumSchema = z.object({
 });
 
 export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbook", "cinematic"]);
-export const storyStylePreferenceSchema = z.enum(["auto", "classic", "flipbook", "comic", "scrapbook", "cinematic"]);
+export const storyStylePreferenceSchema = z.enum(["auto", "classic", "scrapbook", "cinematic"]);
 export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
 
 export const storySchema = z.object({
