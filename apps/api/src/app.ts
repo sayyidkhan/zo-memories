@@ -125,6 +125,14 @@ function recommendStoryStyle(moments: MomentObject[]): { style: StoryStyle; rati
   return { style: "classic", rationale: "A balanced editorial layout keeps the moments and their context easy to follow." };
 }
 
+const storyStyleRationales: Record<StoryStyle, string> = {
+  classic: "A balanced editorial layout keeps the moments and their context easy to follow.",
+  flipbook: "A page-by-page sequence gives each selected moment room to land.",
+  comic: "Strong visual beats and captions can read naturally as a panelled story.",
+  scrapbook: "A layered keepsake layout works well for varied moments and personal details.",
+  cinematic: "An immersive, spacious narrative gives a larger journey room to unfold.",
+};
+
 async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyle; rationale: string } | null> {
   if (process.env.NODE_ENV === "test") return null;
   const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
@@ -150,9 +158,10 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
     if (!response.ok) return null;
     const body = await response.json() as { output?: { style?: string; rationale?: string } };
     const style = body.output?.style;
-    const rationale = body.output?.rationale?.trim();
-    if (!style || !choices.includes(style as StoryStyle) || !rationale) return null;
-    return { style: style as StoryStyle, rationale: rationale.slice(0, 300) };
+    if (!style || !choices.includes(style as StoryStyle)) return null;
+    const resolvedStyle = style as StoryStyle;
+    const rationale = body.output?.rationale?.trim() || storyStyleRationales[resolvedStyle];
+    return { style: resolvedStyle, rationale: rationale.slice(0, 300) };
   } catch {
     return null;
   }
