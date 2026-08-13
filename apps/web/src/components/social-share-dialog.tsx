@@ -31,6 +31,7 @@ const socialTargets: SocialTarget[] = [
   { id: "facebook-feed", platform: "Facebook", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
   { id: "linkedin-feed", platform: "LinkedIn", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
   { id: "x-post", platform: "X", placement: "Mobile post", format: "image", preset: "feed", width: 1080, height: 1350 },
+  { id: "threads-post", platform: "Threads", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
   { id: "pinterest-pin", platform: "Pinterest", placement: "Standard Pin", format: "image", preset: "pin", width: 1000, height: 1500 },
   { id: "instagram-reels", platform: "Instagram", placement: "Story or Reel", format: "video", preset: "vertical", width: 1080, height: 1920 },
   { id: "facebook-reels", platform: "Facebook", placement: "Story or Reel", format: "video", preset: "vertical", width: 1080, height: 1920 },
@@ -38,6 +39,7 @@ const socialTargets: SocialTarget[] = [
   { id: "youtube-shorts", platform: "YouTube", placement: "Short", format: "video", preset: "vertical", width: 1080, height: 1920 },
   { id: "whatsapp-status", platform: "WhatsApp", placement: "Status", format: "video", preset: "vertical", width: 1080, height: 1920 },
   { id: "x-vertical", platform: "X", placement: "Vertical video", format: "video", preset: "vertical", width: 1080, height: 1920 },
+  { id: "snapchat", platform: "Snapchat", placement: "Story or Spotlight", format: "video", preset: "vertical", width: 1080, height: 1920 },
 ];
 
 interface ExportAsset {
