@@ -60,6 +60,78 @@ function MomentCredit({ moment, member }: { moment: MomentObject; member?: Membe
   return <p className="mt-4 text-[10px] font-bold uppercase tracking-[.16em] opacity-70">{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(moment.occurredAt))}{member ? ` · ${member.name}` : ""}</p>;
 }
 
+const galleryFormats: Array<{ id: StoryStylePreference; title: string; eyebrow: string; description: string }> = [
+  { id: "auto", title: "Auto", eyebrow: "Best fit, chosen for you", description: "Reads the rhythm of your moments and chooses a fitting format." },
+  { id: "classic", title: "Classic", eyebrow: "Timeless and editorial", description: "Spacious chapters that let every image and caption breathe." },
+  { id: "flipbook", title: "Flipbook", eyebrow: "Quick and tactile", description: "One vivid moment per page, made for tapping straight through." },
+  { id: "comic", title: "Comic", eyebrow: "Bold and playful", description: "Expressive panels turn captions and mishaps into punchlines." },
+  { id: "scrapbook", title: "Scrapbook", eyebrow: "Personal and handmade", description: "Layered photographs, notes, and keepsakes collected over time." },
+  { id: "cinematic", title: "Cinematic", eyebrow: "Immersive and dramatic", description: "Full-bleed scenes give bigger journeys room to unfold." },
+];
+
+function GalleryFormatPreview({ format, story, objects, onOpen }: { format: (typeof galleryFormats)[number]; story?: Story | undefined; objects: MomentObject[]; onOpen: () => void }) {
+  const photos = story ? storyMoments(story, objects).filter((object) => object.kind === "photo").slice(0, 3) : [];
+  const src = (index: number) => photos[index] ? api.objectContentUrl(photos[index]!.spaceId, photos[index]!.id) : undefined;
+  const image = (index: number, className: string) => src(index) ? <img src={src(index)} alt="" className={className} /> : <div className={cn(className, "bg-[#b8c4bb]")} />;
+
+  return (
+    <button type="button" onClick={onOpen} disabled={!story} className={cn("story-format-card group overflow-hidden rounded-[26px] border text-left shadow-[0_18px_45px_rgba(62,48,31,.08)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(62,48,31,.15)] disabled:cursor-default disabled:opacity-60", `story-format-${format.id}`)}>
+      <div className="story-format-stage relative h-44 overflow-hidden sm:h-48">
+        {format.id === "auto" ? <>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,rgba(240,198,129,.3),transparent_37%),linear-gradient(145deg,#14291f,#294537)]" />
+          <div className="story-format-auto-orbit absolute left-1/2 top-1/2 size-32 rounded-full border border-[#f0c681]/35" />
+          <div className="story-format-auto-card absolute left-[18%] top-[25%] h-[5.7rem] w-[4.5rem] -rotate-6 overflow-hidden rounded-[8px] border-2 border-[#fff8ec] shadow-xl">{image(0, "size-full object-cover")}</div>
+          <div className="story-format-auto-card absolute right-[18%] top-[25%] h-[5.7rem] w-[4.5rem] rotate-6 overflow-hidden rounded-[8px] border-2 border-[#fff8ec] shadow-xl [--format-tilt:6deg] [animation-delay:-2s]">{image(1, "size-full object-cover")}</div>
+          <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#fff8ec] px-3 py-2 text-[9px] font-black uppercase tracking-[.13em] text-[#a9503f] shadow-xl"><Sparkles className="mr-1 inline size-3" />Cinematic</div>
+        </> : null}
+        {format.id === "classic" ? <>
+          <div className="absolute inset-0 bg-[#f5ecde] p-5">
+            <div className="story-format-classic-page grid h-full grid-cols-[1.25fr_.75fr] overflow-hidden rounded-[6px] bg-[#fffaf2] shadow-lg">
+              {image(0, "h-full w-full object-cover")}
+              <div className="flex flex-col justify-end p-3"><span className="font-display text-2xl italic text-[#bd705e]">01</span><span className="mt-2 h-1.5 w-full rounded bg-[#293b32]" /><span className="mt-1.5 h-1 w-3/4 rounded bg-[#c9bcaa]" /><span className="mt-1 h-1 w-1/2 rounded bg-[#d7cdbc]" /></div>
+            </div>
+          </div>
+        </> : null}
+        {format.id === "flipbook" ? <>
+          <div className="absolute inset-0 bg-[#dbe2d9]">
+            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[-4deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl">{image(2, "size-full object-cover")}</div>
+            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] rotate-[3deg] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [animation-delay:-2.4s]">{image(1, "size-full object-cover")}</div>
+            <div className="story-format-flip-page absolute inset-x-[18%] top-5 h-[8.7rem] overflow-hidden rounded-[10px] border-[5px] border-[#fffaf2] bg-[#fffaf2] shadow-xl [animation-delay:-4.8s]">{image(0, "size-full object-cover")}</div>
+            <span className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-[.14em] text-[#526158]">Tap to turn →</span>
+          </div>
+        </> : null}
+        {format.id === "comic" ? <>
+          <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1.5 bg-[#e9c756] p-3">
+            <div className="story-format-comic-panel row-span-2 overflow-hidden border-[3px] border-[#17261e] bg-white shadow-[4px_4px_0_#17261e]">{image(0, "size-full object-cover")}</div>
+            <div className="story-format-comic-panel overflow-hidden border-[3px] border-[#17261e] bg-white shadow-[4px_4px_0_#17261e] [animation-delay:-1.2s]">{image(1, "size-full object-cover")}</div>
+            <div className="story-format-comic-panel relative border-[3px] border-[#17261e] bg-[#fff7dc] p-2 shadow-[4px_4px_0_#17261e] [animation-delay:-2.4s]"><span className="text-[10px] font-black uppercase leading-none">Best detour ever!</span><span className="absolute -right-1 -top-3 grid size-7 rotate-6 place-items-center rounded-full border-2 border-[#17261e] bg-[#e88e76] text-[8px] font-black">WOW</span></div>
+          </div>
+        </> : null}
+        {format.id === "scrapbook" ? <>
+          <div className="paper-grid absolute inset-0 bg-[#e8dfcf]">
+            <div className="story-format-tape absolute left-[18%] top-3 z-10 h-4 w-14 -rotate-6 bg-[#e8aa90]/75" />
+            <div className="story-format-scrap-photo absolute left-[12%] top-5 h-[7.8rem] w-[43%] -rotate-6 bg-[#fffaf2] p-1.5 pb-5 shadow-lg">{image(0, "size-full object-cover")}</div>
+            <div className="story-format-scrap-photo absolute right-[10%] top-7 h-[7.5rem] w-[42%] rotate-5 bg-[#fffaf2] p-1.5 pb-5 shadow-lg [--format-scrap-tilt:5deg] [animation-delay:-2.3s]">{image(1, "size-full object-cover")}</div>
+            <span className="absolute bottom-3 left-[34%] rotate-[-3deg] font-display text-lg italic text-[#a9503f]">keep this day</span>
+          </div>
+        </> : null}
+        {format.id === "cinematic" ? <>
+          {image(0, "story-format-cinema-image absolute inset-0 size-full object-cover")}
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,18,12,.9),transparent_70%)]" />
+          <div className="absolute inset-x-0 top-0 h-3 bg-[#101b16]" /><div className="absolute inset-x-0 bottom-0 h-3 bg-[#101b16]" />
+          <div className="absolute bottom-6 left-5 text-[#fffaf2]"><span className="text-[8px] font-bold uppercase tracking-[.2em] text-[#f0c681]">Scene 01</span><p className="mt-1 font-display text-2xl leading-none">The road opened.</p></div>
+        </> : null}
+      </div>
+      <div className="flex min-h-40 flex-col bg-[#fffaf2] p-5">
+        <p className="text-[9px] font-bold uppercase tracking-[.17em] text-[#a9503f]">{format.eyebrow}</p>
+        <div className="mt-2 flex items-center justify-between gap-3"><h3 className="font-display text-3xl leading-none text-[#26372f]">{format.title}</h3><ArrowRight className="size-4 text-[#a9503f] transition group-hover:translate-x-1" /></div>
+        <p className="mt-3 text-xs leading-5 text-[#71695f]">{format.description}</p>
+        {format.id === "auto" && story ? <span className="mt-auto pt-3 text-[10px] font-bold text-[#526158]">This collection chose {storyStyleNames[story.style]}</span> : <span className="mt-auto pt-3 text-[10px] font-bold text-[#526158]">Open the live example</span>}
+      </div>
+    </button>
+  );
+}
+
 function StoryMoments({ story, moments, members }: { story: Story; moments: MomentObject[]; members: Member[] }) {
   if (story.style === "flipbook") return <div className="story-flipbook flex snap-x snap-mandatory gap-5 overflow-x-auto px-[8vw] py-14 no-scrollbar sm:gap-8 sm:py-20">{moments.map((moment, index) => <section key={moment.id} className="grid h-[72vh] min-w-[84vw] snap-center overflow-hidden rounded-[32px] bg-[#fffaf2] shadow-[0_28px_80px_rgba(47,39,28,.18)] md:min-w-[62vw] lg:grid-cols-[1.25fr_.75fr]"><div className="min-h-0 overflow-hidden"><StoryMomentMedia moment={moment} /></div><div className="flex flex-col justify-between p-7 sm:p-10"><span className="font-display text-6xl italic text-[#d7c5aa]">{String(index + 1).padStart(2, "0")}</span><div><h2 className="font-display text-4xl leading-none sm:text-5xl">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={members.find((member) => member.userId === moment.uploadedBy)} /><p className="mt-6 text-xs text-[#81786b]">Swipe to turn the page →</p></div></div></section>)}</div>;
   if (story.style === "comic") return <div className="mx-auto max-w-[92rem] bg-[#f5d988] px-5 py-16 sm:px-8 lg:py-24"><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{moments.map((moment, index) => <section key={moment.id} className={cn("relative overflow-hidden border-[5px] border-[#18251f] bg-[#fffaf2] shadow-[7px_7px_0_#18251f]", index % 5 === 0 && "md:col-span-2")}><div className="aspect-[4/3] overflow-hidden border-b-[5px] border-[#18251f]"><StoryMomentMedia moment={moment} /></div><div className="p-4"><span className="absolute right-3 top-3 grid size-10 place-items-center rounded-full border-4 border-[#18251f] bg-[#e8aa90] text-xs font-black">{index + 1}</span><h2 className="pr-8 text-xl font-black uppercase leading-tight tracking-[-.03em]">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={members.find((member) => member.userId === moment.uploadedBy)} /></div></section>)}</div></div>;
@@ -81,18 +153,24 @@ export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMo
     );
   }
   if (isDemo) {
+    const storyByFormat = new Map<StoryStylePreference, Story>();
+    stories.forEach((story) => {
+      if (story.styleSource === "auto") storyByFormat.set("auto", story);
+      else if (!storyByFormat.has(story.style)) storyByFormat.set(story.style, story);
+    });
     return (
       <div>
-        <div className="mb-7 rounded-[30px] border border-[#d8cbb8] bg-[#fff8ec] px-6 py-7 sm:px-8 sm:py-8">
+        <div className="mb-7 overflow-hidden rounded-[30px] border border-[#d8cbb8] bg-[#fff8ec] px-6 py-7 sm:px-8 sm:py-8">
           <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#a9503f]">Demo story gallery</p>
-          <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-            <div className="max-w-3xl">
-              <h2 className="font-display text-4xl leading-[.95] tracking-[-.04em] text-[#26372f] sm:text-5xl">See every story format in action.</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#71695f]">The same shared collection becomes six different reading experiences. Open each example to compare its pace, layout, and feeling.</p>
-            </div>
-            <div className="flex max-w-xl flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#526158]">
-              {["Auto", "Classic", "Flipbook", "Comic", "Scrapbook", "Cinematic"].map((format) => <span key={format} className="rounded-full border border-[#d7c9b6] bg-[#f4eadc] px-3 py-2">{format}</span>)}
-            </div>
+          <div className="mt-3 max-w-3xl">
+            <h2 className="font-display text-4xl leading-[.95] tracking-[-.04em] text-[#26372f] sm:text-5xl">Six ways to tell the very same adventure.</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#71695f]">Preview how each format moves, feels, and frames a memory. Every miniature opens into a complete demo story.</p>
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {galleryFormats.map((format) => {
+              const story = storyByFormat.get(format.id);
+              return <GalleryFormatPreview key={format.id} format={format} story={story} objects={objects} onOpen={() => { if (story) onOpen(story); }} />;
+            })}
           </div>
         </div>
         <div className="grid gap-6 xl:grid-cols-2">{stories.map((story) => <StoryCover key={story.id} story={story} objects={objects} compact onOpen={() => onOpen(story)} />)}</div>
