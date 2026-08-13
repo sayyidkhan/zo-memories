@@ -28,6 +28,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
+import { mkdir, rm } from "node:fs/promises";
 import { createAuth, type AuthSession } from "./auth";
 import { createRepositories, type Repositories } from "./repositories";
 import type { BlobStore } from "./storage/blob-store";
@@ -407,6 +408,36 @@ function contentDisposition(name: string, download: boolean): string {
   const fallback = safeFileName(name).replace(/["\\]/g, "-");
   const encoded = encodeURIComponent(name);
   return `${download ? "attachment" : "inline"}; filename="${fallback}"; filename*=UTF-8''${encoded}`;
+}
+
+type SocialExportFormat = "image" | "video";
+
+function socialExportKey(spaceId: string, storyId: string, format: SocialExportFormat): string {
+  return `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/story.${format === "image" ? "png" : "mp4"}`;
+}
+
+async function transcodeSocialVideo(file: File): Promise<Uint8Array> {
+  const directory = `/tmp/zo-moments-social-${crypto.randomUUID()}`;
+  const input = `${directory}/input-video`;
+  const output = `${directory}/story.mp4`;
+  await mkdir(directory, { recursive: true });
+  try {
+    await Bun.write(input, file);
+    const process = Bun.spawn([
+      "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", input,
+      "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+      "-pix_fmt", "yuv420p", "-movflags", "+faststart", output,
+    ], { stdout: "pipe", stderr: "pipe" });
+    const exitCode = await process.exited;
+    if (exitCode !== 0) {
+      const error = await new Response(process.stderr).text();
+      console.error("Social video transcoding failed", error);
+      throw new HTTPException(422, { message: "The generated video could not be prepared for sharing" });
+    }
+    return new Uint8Array(await Bun.file(output).arrayBuffer());
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
 function parseRange(header: string | undefined, size: number): { start: number; end: number } | null {
@@ -1114,6 +1145,58 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     return c.json({ story }, 201);
   });
 
+  app.get("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const storyId = c.req.param("storyId");
+    await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(storyId);
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    const keys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/`);
+    return c.json({ image: keys.includes(socialExportKey(spaceId, storyId, "image")), video: keys.includes(socialExportKey(spaceId, storyId, "video")) });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const storyId = c.req.param("storyId");
+    await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(storyId);
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    const body = await c.req.parseBody();
+    const file = body.file;
+    const format = body.format;
+    if (!(file instanceof File) || (format !== "image" && format !== "video")) throw new HTTPException(400, { message: "Choose an image or video export" });
+    if (file.size <= 0) throw new HTTPException(400, { message: "The generated export is empty" });
+    if (file.size > 100 * 1024 * 1024) throw new HTTPException(413, { message: "Social exports are limited to 100 MB" });
+    if (format === "image" && file.type !== "image/png") throw new HTTPException(415, { message: "Image exports must be PNG files" });
+    if (format === "video" && !file.type.startsWith("video/")) throw new HTTPException(415, { message: "Video exports must contain video" });
+    const contentType = format === "image" ? "image/png" : "video/mp4";
+    const value = format === "video" && file.type !== "video/mp4" ? await transcodeSocialVideo(file) : file;
+    await store.put(socialExportKey(spaceId, storyId, format), value, { contentType });
+    return c.json({ format, contentType, url: `/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${format}` }, 201);
+  });
+
+  app.get("/api/spaces/:spaceId/stories/:storyId/social-exports/:format", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const storyId = c.req.param("storyId");
+    const format = c.req.param("format");
+    await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(storyId);
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (format !== "image" && format !== "video") throw new HTTPException(404, { message: "Social export not found" });
+    const blob = await store.get(socialExportKey(spaceId, storyId, format));
+    if (!blob) throw new HTTPException(404, { message: "Social export not found" });
+    const extension = format === "image" ? "png" : "mp4";
+    return new Response(blob, { headers: {
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": contentDisposition(`${story.title}-social.${extension}`, c.req.query("download") === "1"),
+      "Content-Length": String(blob.size),
+      "Content-Type": format === "image" ? "image/png" : "video/mp4",
+    } });
+  });
+
   app.delete("/api/spaces/:spaceId/stories/:storyId", async (c) => {
     const user = c.get("user")!;
     const spaceId = c.req.param("spaceId");
@@ -1123,7 +1206,11 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (membership.role !== "owner" && story.createdBy !== user.id) {
       throw new HTTPException(403, { message: "Only the story creator or space owner can delete it" });
     }
-    await repositories.stories.delete(story.id);
+    await Promise.all([
+      repositories.stories.delete(story.id),
+      store.delete(socialExportKey(spaceId, story.id, "image")),
+      store.delete(socialExportKey(spaceId, story.id, "video")),
+    ]);
     return c.body(null, 204);
   });
 

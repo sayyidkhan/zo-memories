@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, Film, ImagePlus, Images, LayoutGrid, MapPin, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, Film, ImagePlus, Images, LayoutGrid, MapPin, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SocialShareDialog } from "./social-share-dialog";
 import { Button, Field, Input, Modal, Spinner } from "./ui";
 
 function storyMoments(story: Story, objects: MomentObject[]) {
@@ -266,36 +267,42 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
 }
 
 export function StoryReader({ story, objects, members, canDelete, onClose, onDelete }: { story: Story | null; objects: MomentObject[]; members: Member[]; canDelete: boolean; onClose: () => void; onDelete: (story: Story) => void }) {
+  const [shareOpen, setShareOpen] = useState(false);
   useEffect(() => {
     if (!story) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !shareOpen) onClose(); };
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", close); };
-  }, [onClose, story]);
+  }, [onClose, shareOpen, story]);
+  useEffect(() => { setShareOpen(false); }, [story?.id]);
   if (!story) return null;
   const moments = storyMoments(story, objects);
   const hero = moments.find((object) => object.kind === "photo");
   return (
-    <article className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
-      <button onClick={onClose} className="fixed right-4 top-4 z-30 grid size-12 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105" aria-label="Close story"><X className="size-5" /></button>
-      <header className="relative min-h-[88vh] overflow-hidden bg-[#183128] text-[#fff9ee]">
-        {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,26,19,.96),rgba(9,26,19,.47)_60%,rgba(9,26,19,.18)),linear-gradient(0deg,rgba(9,26,19,.74),transparent_58%)]" />
-        <div className="relative mx-auto flex min-h-[88vh] max-w-[92rem] flex-col justify-between px-6 py-10 sm:px-10 lg:px-16 lg:py-14">
-          <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>
-          <div className="max-w-4xl pb-8">
-            <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4" />{storyDateRange(moments)}</span>{story.location ? <span className="flex items-center gap-2"><MapPin className="size-4" />{story.location}</span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
-            <h1 className="font-display text-[clamp(4rem,10vw,10rem)] leading-[.78] tracking-[-.065em]">{story.title}</h1>
-            <p className="mt-8 max-w-2xl text-lg leading-8 text-[#eee4d6] sm:text-xl sm:leading-9">{story.opening}</p>
+    <>
+      <article className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
+        <button onClick={() => setShareOpen(true)} className="fixed right-[4.5rem] top-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:px-5"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
+        <button onClick={onClose} className="fixed right-4 top-4 z-30 grid size-12 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105" aria-label="Close story"><X className="size-5" /></button>
+        <header className="relative min-h-[88vh] overflow-hidden bg-[#183128] text-[#fff9ee]">
+          {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,26,19,.96),rgba(9,26,19,.47)_60%,rgba(9,26,19,.18)),linear-gradient(0deg,rgba(9,26,19,.74),transparent_58%)]" />
+          <div className="relative mx-auto flex min-h-[88vh] max-w-[92rem] flex-col justify-between px-6 py-10 sm:px-10 lg:px-16 lg:py-14">
+            <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>
+            <div className="max-w-4xl pb-8">
+              <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4" />{storyDateRange(moments)}</span>{story.location ? <span className="flex items-center gap-2"><MapPin className="size-4" />{story.location}</span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
+              <h1 className="font-display text-[clamp(4rem,10vw,10rem)] leading-[.78] tracking-[-.065em]">{story.title}</h1>
+              <p className="mt-8 max-w-2xl text-lg leading-8 text-[#eee4d6] sm:text-xl sm:leading-9">{story.opening}</p>
+            </div>
           </div>
+        </header>
+        <StoryMoments story={story} moments={moments} members={members} />
+        <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
+          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p><Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
         </div>
-      </header>
-      <StoryMoments story={story} moments={moments} members={members} />
-      <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
-        <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
-      </div>
-    </article>
+      </article>
+      <SocialShareDialog story={story} objects={objects} open={shareOpen} onClose={() => setShareOpen(false)} />
+    </>
   );
 }
