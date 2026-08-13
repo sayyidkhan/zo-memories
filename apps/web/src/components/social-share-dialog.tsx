@@ -263,12 +263,11 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
-            {isBusy ? <div className="rounded-[20px] bg-[#26372f] p-4 text-[#fff8ec]"><div className="flex items-center justify-between gap-3 text-sm font-semibold"><span className="flex items-center gap-2"><Spinner />{phase === "rendering" ? `Rendering for ${target.platform}…` : phase === "saving" ? "Saving privately and preparing media…" : "Opening saved export…"}</span><span>{Math.round(progress * 100)}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#efc46f] transition-[width] duration-300" style={{ width: `${Math.max(5, progress * 100)}%` }} /></div></div> : null}
             {!asset && !isBusy ? <div className="flex flex-col gap-3 sm:flex-row"><Button className="flex-1" onClick={generate}>{target.format === "image" ? <Image className="size-4" /> : <Film className="size-4" />}Generate for {target.platform}</Button>{selectedExists ? <Button variant="secondary" className="flex-1" onClick={fetchSaved}><RefreshCw className="size-4" />Use compatible saved export</Button> : null}</div> : null}
             {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={generate}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
-          <aside className="grid min-h-[25rem] place-items-center rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
+          <aside className="relative grid min-h-[25rem] place-items-center overflow-hidden rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
             {asset ? asset.format === "image"
               ? <img src={asset.url} alt={`${target.platform} preview of ${story.title}`} className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
               : <video src={asset.url} controls autoPlay loop muted playsInline className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
@@ -276,6 +275,15 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_22%,rgba(239,196,111,.28),transparent_28%),linear-gradient(160deg,transparent,rgba(9,25,18,.8))]" />
                 <div className="relative flex flex-col items-center justify-center p-7 text-[#fff8ec]"><span className="grid size-14 place-items-center rounded-full bg-[#fff8ec]/10">{target.format === "image" ? <Image className="size-6" /> : <Film className="size-6" />}</span><strong className="mt-5 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.platform} · {target.placement}</span><p className="mt-5 max-w-52 text-xs leading-5 text-white/65">{styleLabel} composition at {target.width} × {target.height}px.</p></div>
               </div>}
+            {isBusy ? <div className="absolute inset-0 z-10 grid place-items-center bg-[#15271f]/88 p-6 backdrop-blur-sm" role="status" aria-live="polite">
+              <div className="w-full max-w-xs rounded-[24px] border border-white/10 bg-[#26372f] p-6 text-center text-[#fff8ec] shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+                <span className="mx-auto grid size-14 place-items-center rounded-full bg-white/10"><Spinner /></span>
+                <strong className="mt-5 block font-display text-2xl leading-tight">{phase === "rendering" ? `Rendering for ${target.platform}` : phase === "saving" ? "Saving your export" : "Opening saved export"}</strong>
+                <p className="mt-2 text-xs leading-5 text-white/60">{phase === "rendering" ? "Composing your moments into the selected story format." : phase === "saving" ? "Keeping the reusable master private in this shared space." : "Preparing the existing master for preview."}</p>
+                <div className="mt-6 flex items-center justify-between text-xs font-bold uppercase tracking-[.14em] text-[#efc46f]"><span>Progress</span><span>{Math.round(progress * 100)}%</span></div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full w-full origin-left rounded-full bg-[#efc46f]" style={{ transform: `scaleX(${Math.max(0.05, progress)})` }} /></div>
+              </div>
+            </div> : null}
           </aside>
         </div>
       </section>
