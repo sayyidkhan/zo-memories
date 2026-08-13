@@ -5,7 +5,7 @@ import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { generateSocialExport, type SocialExportFormat } from "@/lib/social-export";
+import { generateSocialExport, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
 import { Button, Spinner } from "./ui";
 
 const styleNames: Record<StoryStyle, string> = {
@@ -24,22 +24,23 @@ interface SocialTarget {
   preset: SocialExportPreset;
   width: number;
   height: number;
+  profile: SocialExportProfile;
 }
 
 const socialTargets: SocialTarget[] = [
-  { id: "instagram-feed", platform: "Instagram", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
-  { id: "facebook-feed", platform: "Facebook", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
-  { id: "linkedin-feed", platform: "LinkedIn", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
-  { id: "x-post", platform: "X", placement: "Mobile post", format: "image", preset: "feed", width: 1080, height: 1350 },
-  { id: "threads-post", platform: "Threads", placement: "Feed post", format: "image", preset: "feed", width: 1080, height: 1350 },
-  { id: "pinterest-pin", platform: "Pinterest", placement: "Standard Pin", format: "image", preset: "pin", width: 1000, height: 1500 },
-  { id: "instagram-reels", platform: "Instagram", placement: "Story or Reel", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "facebook-reels", platform: "Facebook", placement: "Story or Reel", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "tiktok", platform: "TikTok", placement: "Vertical video", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "youtube-shorts", platform: "YouTube", placement: "Short", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "whatsapp-status", platform: "WhatsApp", placement: "Status", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "x-vertical", platform: "X", placement: "Vertical video", format: "video", preset: "vertical", width: 1080, height: 1920 },
-  { id: "snapchat", platform: "Snapchat", placement: "Story or Spotlight", format: "video", preset: "vertical", width: 1080, height: 1920 },
+  { id: "instagram-feed", platform: "Instagram", placement: "4:5 feed post", format: "image", preset: "instagram-feed", width: 1080, height: 1350, profile: { id: "instagram-feed", safeTop: .05, safeRight: .05, safeBottom: .06, safeLeft: .05, durationMs: 0, maxPhotos: 5, videoBitrate: 0, cropScale: 1.04 } },
+  { id: "facebook-feed", platform: "Facebook", placement: "4:5 feed post", format: "image", preset: "facebook-feed", width: 1200, height: 1500, profile: { id: "facebook-feed", safeTop: .04, safeRight: .04, safeBottom: .09, safeLeft: .04, durationMs: 0, maxPhotos: 6, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "linkedin-feed", platform: "LinkedIn", placement: "Square post", format: "image", preset: "linkedin-feed", width: 1200, height: 1200, profile: { id: "linkedin-feed", safeTop: .06, safeRight: .07, safeBottom: .1, safeLeft: .07, durationMs: 0, maxPhotos: 4, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "x-post", platform: "X", placement: "Square post", format: "image", preset: "x-post", width: 1200, height: 1200, profile: { id: "x-post", safeTop: .05, safeRight: .06, safeBottom: .12, safeLeft: .06, durationMs: 0, maxPhotos: 4, videoBitrate: 0, cropScale: 1.05 } },
+  { id: "threads-post", platform: "Threads", placement: "4:5 feed post", format: "image", preset: "threads-post", width: 1080, height: 1350, profile: { id: "threads-post", safeTop: .07, safeRight: .06, safeBottom: .1, safeLeft: .06, durationMs: 0, maxPhotos: 5, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "pinterest-pin", platform: "Pinterest", placement: "2:3 standard Pin", format: "image", preset: "pinterest-pin", width: 1000, height: 1500, profile: { id: "pinterest-pin", safeTop: .08, safeRight: .08, safeBottom: .12, safeLeft: .07, durationMs: 0, maxPhotos: 6, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "instagram-reels", platform: "Instagram", placement: "9:16 Story or Reel · 9s", format: "video", preset: "instagram-reels", width: 1080, height: 1920, profile: { id: "instagram-reels", safeTop: .14, safeRight: .12, safeBottom: .19, safeLeft: .07, durationMs: 9_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.04 } },
+  { id: "facebook-reels", platform: "Facebook", placement: "9:16 Story or Reel · 12s", format: "video", preset: "facebook-reels", width: 1080, height: 1920, profile: { id: "facebook-reels", safeTop: .1, safeRight: .09, safeBottom: .15, safeLeft: .07, durationMs: 12_000, maxPhotos: 9, videoBitrate: 6_000_000, cropScale: 1.03 } },
+  { id: "tiktok", platform: "TikTok", placement: "9:16 UI-safe video · 15s", format: "video", preset: "tiktok", width: 1080, height: 1920, profile: { id: "tiktok", safeTop: .13, safeRight: .2, safeBottom: .25, safeLeft: .07, durationMs: 15_000, maxPhotos: 10, videoBitrate: 6_000_000, cropScale: 1.07 } },
+  { id: "youtube-shorts", platform: "YouTube", placement: "9:16 Short · 12s", format: "video", preset: "youtube-shorts", width: 1080, height: 1920, profile: { id: "youtube-shorts", safeTop: .09, safeRight: .12, safeBottom: .2, safeLeft: .07, durationMs: 12_000, maxPhotos: 10, videoBitrate: 8_000_000, cropScale: 1.03 } },
+  { id: "whatsapp-status", platform: "WhatsApp", placement: "9:16 Status · 10s", format: "video", preset: "whatsapp-status", width: 1080, height: 1920, profile: { id: "whatsapp-status", safeTop: .09, safeRight: .06, safeBottom: .13, safeLeft: .06, durationMs: 10_000, maxPhotos: 7, videoBitrate: 5_000_000, cropScale: 1.02 } },
+  { id: "x-vertical", platform: "X", placement: "9:16 vertical video · 12s", format: "video", preset: "x-vertical", width: 1080, height: 1920, profile: { id: "x-vertical", safeTop: .07, safeRight: .08, safeBottom: .14, safeLeft: .06, durationMs: 12_000, maxPhotos: 8, videoBitrate: 7_000_000, cropScale: 1.03 } },
+  { id: "snapchat", platform: "Snapchat", placement: "9:16 Story or Spotlight · 10s", format: "video", preset: "snapchat", width: 1080, height: 1920, profile: { id: "snapchat", safeTop: .15, safeRight: .1, safeBottom: .17, safeLeft: .07, durationMs: 10_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.05 } },
 ];
 
 interface ExportAsset {
@@ -64,6 +65,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [targetId, setTargetId] = useState("instagram-feed");
   const [includeLocation, setIncludeLocation] = useState(Boolean(story.location));
   const [includeDate, setIncludeDate] = useState(true);
+  const [appearanceChanged, setAppearanceChanged] = useState(false);
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"idle" | "rendering" | "saving" | "loading">("idle");
   const [asset, setAsset] = useState<ExportAsset | null>(null);
@@ -82,7 +84,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     retry: 1,
   });
   const isBusy = phase !== "idle";
-  const selectedExists = Boolean(status.data?.[target.preset]);
+  const imageHasExports = socialTargets.some((item) => item.format === "image" && status.data?.[item.preset]);
+  const videoHasExports = socialTargets.some((item) => item.format === "video" && status.data?.[item.preset]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,6 +99,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   useEffect(() => {
     setIncludeLocation(Boolean(story.location));
     setIncludeDate(true);
+    setAppearanceChanged(false);
     setError("");
   }, [story.id, story.location]);
 
@@ -125,27 +129,17 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     link.remove();
   }
 
-  function chooseTarget(next: SocialTarget) {
-    if (isBusy || next.id === target.id) return;
-    setTargetId(next.id);
-    if (asset?.preset === next.preset) {
-      downloadForTarget(next, asset);
-    } else if (next.preset !== target.preset) {
-      replaceAsset(null);
-    }
-    setError("");
-    setProgress(0);
-  }
-
-  async function fetchSaved() {
+  async function fetchSaved(next: SocialTarget, downloadAfter: boolean) {
     setError("");
     setPhase("loading");
     setProgress(0.35);
     try {
-      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, target.preset), { credentials: "include" });
+      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, next.preset), { credentials: "include" });
       if (!response.ok) throw new Error("The saved export could not be opened");
       const blob = await response.blob();
-      replaceAsset({ blob, format: target.format, preset: target.preset, url: URL.createObjectURL(blob) });
+      const nextAsset = { blob, format: next.format, preset: next.preset, url: URL.createObjectURL(blob) } satisfies ExportAsset;
+      replaceAsset(nextAsset);
+      if (downloadAfter) downloadForTarget(next, nextAsset);
       setProgress(1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The saved export could not be opened");
@@ -154,7 +148,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     }
   }
 
-  async function generate() {
+  async function generate(next: SocialTarget, downloadAfter: boolean) {
     setError("");
     replaceAsset(null);
     setProgress(0);
@@ -163,25 +157,28 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       const rendered = await generateSocialExport({
         story,
         moments,
-        format: target.format,
+        format: next.format,
         includeLocation,
         includeDate,
-        outputWidth: target.width,
-        outputHeight: target.height,
+        outputWidth: next.width,
+        outputHeight: next.height,
+        profile: next.profile,
         onProgress: setProgress,
       });
       setPhase("saving");
       setProgress(0.92);
-      const sourceExtension = rendered.type.includes("mp4") ? "mp4" : target.format === "video" ? "webm" : "png";
+      const sourceExtension = rendered.type.includes("mp4") ? "mp4" : next.format === "video" ? "webm" : "png";
       const upload = new File([rendered], `story.${sourceExtension}`, { type: rendered.type });
-      await api.uploadSocialExport(story.spaceId, story.id, target.preset, upload);
-      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, target.preset), { credentials: "include" });
+      await api.uploadSocialExport(story.spaceId, story.id, next.preset, upload);
+      const response = await fetch(api.socialExportUrl(story.spaceId, story.id, next.preset), { credentials: "include" });
       if (!response.ok) throw new Error("The export was saved but could not be previewed");
       const stored = await response.blob();
-      replaceAsset({ blob: stored, format: target.format, preset: target.preset, url: URL.createObjectURL(stored) });
+      const nextAsset = { blob: stored, format: next.format, preset: next.preset, url: URL.createObjectURL(stored) } satisfies ExportAsset;
+      replaceAsset(nextAsset);
+      if (downloadAfter) downloadForTarget(next, nextAsset);
       setProgress(1);
       await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
-      toast.success(`${target.platform} export ready`);
+      toast.success(`${next.platform} export ready`);
     } catch (cause) {
       const message = cause instanceof ZoMomentsApiError || cause instanceof Error ? cause.message : "The social export could not be created";
       setError(message);
@@ -191,11 +188,25 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     }
   }
 
+  async function exportTo(next: SocialTarget) {
+    if (isBusy) return;
+    setTargetId(next.id);
+    setError("");
+    setProgress(0);
+    if (asset?.preset === next.preset) {
+      downloadForTarget(next, asset);
+      return;
+    }
+    replaceAsset(null);
+    if (!appearanceChanged && status.data?.[next.preset]) await fetchSaved(next, true);
+    else await generate(next, true);
+  }
+
   async function shareToApps() {
     if (!asset) return;
     const file = new File([asset.blob], filename(story, target), { type: asset.blob.type });
     if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [file] }))) {
-      toast.error("This browser cannot send files directly. Use Download instead.");
+      toast.error("This browser cannot send files directly. Select the destination again to download.");
       return;
     }
     try {
@@ -203,7 +214,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       toast.success("Shared from Zo Moments");
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") return;
-      toast.error("The share sheet could not be opened. Use Download instead.");
+      toast.error("The share sheet could not be opened. Select the destination again to download.");
     }
   }
 
@@ -227,44 +238,44 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">1 · Choose the output</p>
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => chooseFormat("image")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "image" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
-                  {status.data?.feed || status.data?.pin ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
+                  {imageHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
                   <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Image className="size-5" /></span>
                   <strong className="mt-4 block text-sm text-[#26372f]">Social image</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">PNG · Feed or Pin</span>
+                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">PNG · Adapted per platform</span>
                 </button>
                 <button type="button" onClick={() => chooseFormat("video")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "video" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
-                  {status.data?.vertical ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
+                  {videoHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
                   <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "video" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Film className="size-5" /></span>
                   <strong className="mt-4 block text-sm text-[#26372f]">Social video</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">MP4 · Story, Reel or Short</span>
+                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">MP4 · Platform-safe pacing</span>
                 </button>
               </div>
             </section>
 
             <section>
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose the destination</p>
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose what appears</p>
+              <div className="overflow-hidden rounded-[20px] border border-[#ded3c3] bg-[#fffdf8]">
+                <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[#e6ddcf] px-4 py-3.5 text-sm font-semibold text-[#34443a]">Show story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
+                <label className={cn("flex items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Show place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
+              </div>
+            </section>
+
+            <section>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Export for the destination</p>
+              <p className="mb-3 text-xs leading-5 text-[#756d63]">Each option creates its own crop, safe area and pacing. Select one to export and download.</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availableTargets.map((item) => <button key={item.id} type="button" onClick={() => item.id === target.id && asset?.preset === item.preset ? downloadForTarget(item, asset) : chooseTarget(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Choose ${item.platform} ${item.placement}`} title={asset?.preset === item.preset ? `Download for ${item.platform}` : undefined} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
-                  {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" /> : status.data?.[item.preset] ? <Check className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : null}
-                  <strong className="block pr-4 text-xs text-[#26372f]">{item.platform}</strong>
+                {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={`Export for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
+                  {asset?.preset === item.preset || status.data?.[item.preset] ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Share2 className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
+                  <strong className="block pr-5 text-xs text-[#26372f]">{item.platform}</strong>
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{item.placement}</span>
                 </button>)}
               </div>
-              <p className="mt-3 text-[11px] text-[#827a70]">{target.width} × {target.height}px · {target.format === "image" ? target.preset === "pin" ? "2:3 PNG" : "4:5 PNG" : "9:16 H.264 MP4"}</p>
-            </section>
-
-            <section>
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Choose what appears</p>
-              <div className="overflow-hidden rounded-[20px] border border-[#ded3c3] bg-[#fffdf8]">
-                <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[#e6ddcf] px-4 py-3.5 text-sm font-semibold text-[#34443a]">Show story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
-                <label className={cn("flex items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Show place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
-              </div>
+              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? "PNG" : "H.264 MP4"} · destination-safe composition</p>
             </section>
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
-            {!asset && !isBusy ? <div className="flex flex-col gap-3 sm:flex-row"><Button className="flex-1" onClick={generate}>{target.format === "image" ? <Image className="size-4" /> : <Film className="size-4" />}Generate for {target.platform}</Button>{selectedExists ? <Button variant="secondary" className="flex-1" onClick={fetchSaved}><RefreshCw className="size-4" />Use compatible saved export</Button> : null}</div> : null}
-            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={generate}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
+            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={() => void generate(target, false)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
           <aside className="relative grid min-h-[25rem] place-items-center overflow-hidden rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">

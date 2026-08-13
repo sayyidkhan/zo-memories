@@ -52,7 +52,22 @@ export interface UploadObjectInput {
   occurredAt?: string;
 }
 
-export type SocialExportPreset = "feed" | "pin" | "vertical";
+export type SocialExportPreset =
+  | "instagram-feed"
+  | "facebook-feed"
+  | "linkedin-feed"
+  | "x-post"
+  | "threads-post"
+  | "pinterest-pin"
+  | "instagram-reels"
+  | "facebook-reels"
+  | "tiktok"
+  | "youtube-shorts"
+  | "whatsapp-status"
+  | "x-vertical"
+  | "snapchat";
+
+export type SocialExportStatus = Record<SocialExportPreset, boolean>;
 
 export interface ZoMomentsClientOptions {
   baseUrl?: string;
@@ -273,7 +288,7 @@ export class ZoMomentsClient {
     );
   }
 
-  getSocialExports(spaceId: string, storyId: string): Promise<{ feed: boolean; pin: boolean; vertical: boolean }> {
+  getSocialExports(spaceId: string, storyId: string): Promise<SocialExportStatus> {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`);
   }
 

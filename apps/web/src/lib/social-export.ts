@@ -3,6 +3,18 @@ import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 
 export type SocialExportFormat = "image" | "video";
 
+export interface SocialExportProfile {
+  id: string;
+  safeTop: number;
+  safeRight: number;
+  safeBottom: number;
+  safeLeft: number;
+  durationMs: number;
+  maxPhotos: number;
+  videoBitrate: number;
+  cropScale: number;
+}
+
 interface SocialExportOptions {
   story: Story;
   moments: MomentObject[];
@@ -11,6 +23,7 @@ interface SocialExportOptions {
   includeDate: boolean;
   outputWidth: number;
   outputHeight: number;
+  profile: SocialExportProfile;
   onProgress?: (progress: number) => void;
 }
 
@@ -101,15 +114,27 @@ function metadata(story: Story, moments: MomentObject[], includeLocation: boolea
   return [includeDate ? dateRange(moments) : "", includeLocation ? story.location ?? "" : ""].filter(Boolean).join("  ·  ");
 }
 
-function brand(context: CanvasRenderingContext2D, width: number, height: number, colour: string) {
+function safeArea(width: number, height: number, profile: SocialExportProfile) {
+  return {
+    top: height * profile.safeTop,
+    right: width * profile.safeRight,
+    bottom: height * profile.safeBottom,
+    left: width * profile.safeLeft,
+  };
+}
+
+function brand(context: CanvasRenderingContext2D, width: number, height: number, colour: string, profile: SocialExportProfile) {
+  const safe = safeArea(width, height, profile);
+  const side = Math.max(54, safe.left);
+  const baseline = height - Math.max(46, safe.bottom);
   context.save();
   context.fillStyle = colour;
   context.font = "700 20px Georgia, serif";
-  context.fillText("ZO MOMENTS", 54, height - 46);
+  context.fillText("ZO MOMENTS", side, baseline);
   context.globalAlpha = 0.65;
   context.font = "600 16px sans-serif";
   context.textAlign = "right";
-  context.fillText("A shared story", width - 54, height - 47);
+  context.fillText("A shared story", width - Math.max(54, safe.right), baseline - 1);
   context.restore();
 }
 
@@ -120,24 +145,27 @@ function title(context: CanvasRenderingContext2D, value: string, x: number, y: n
   return wrapText(context, value, x, y, width, size * 0.92, maxLines);
 }
 
-function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean) {
+function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
+  const side = Math.max(62, safe.left);
   context.fillStyle = palette.paper;
   context.fillRect(0, 0, width, height);
   const drift = Math.sin(progress * Math.PI * 2) * 6;
   clippedPhoto(context, photos[Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1)], 58, 58, width - 116, height * 0.58, 24, 1.04, drift);
   context.fillStyle = palette.coral;
   context.font = "700 19px sans-serif";
-  context.fillText("A STORY WE SHARE", 62, height * 0.68);
-  title(context, story.title, 62, height * 0.705, width - 124, palette.ink, 67, 2);
+  context.fillText("A STORY WE SHARE", side, height * 0.68);
+  title(context, story.title, side, Math.min(height * 0.705, height - safe.bottom - 245), width - side - Math.max(62, safe.right), palette.ink, 67, 2);
   context.fillStyle = "#6f675d";
   context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), 62, height - 108);
-  brand(context, width, height, palette.ink);
+  context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(108, safe.bottom + 58));
+  brand(context, width, height, palette.ink, profile);
 }
 
-function drawFlipbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean) {
+function drawFlipbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
   context.fillStyle = palette.sage;
   context.fillRect(0, 0, width, height);
   const active = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
@@ -152,17 +180,18 @@ function drawFlipbook(context: CanvasRenderingContext2D, story: Story, moments: 
     context.restore();
   }
   context.textAlign = "left";
-  title(context, story.title, width * 0.12, height * 0.755, width * 0.76, palette.ink, 62, 2);
+  title(context, story.title, Math.max(width * 0.12, safe.left), Math.min(height * 0.755, height - safe.bottom - 230), width - Math.max(width * 0.24, safe.left + safe.right), palette.ink, 62, 2);
   context.fillStyle = "#536158";
   context.font = "600 18px sans-serif";
   context.textAlign = "center";
-  context.fillText(metadata(story, moments, showLocation, showDate), width / 2, height - 105);
+  context.fillText(metadata(story, moments, showLocation, showDate), width / 2, height - Math.max(105, safe.bottom + 56));
   context.textAlign = "left";
-  brand(context, width, height, palette.ink);
+  brand(context, width, height, palette.ink, profile);
 }
 
-function drawComic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean) {
+function drawComic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
   context.fillStyle = "#efd168";
   context.fillRect(0, 0, width, height);
   const index = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
@@ -182,15 +211,16 @@ function drawComic(context: CanvasRenderingContext2D, story: Story, moments: Mom
   context.font = "900 25px sans-serif";
   context.fillText("AND THEN THIS HAPPENED…", width / 2, height * 0.747);
   context.textAlign = "left";
-  title(context, story.title.toUpperCase(), 52, height * 0.825, width - 104, palette.ink, 58, 2);
+  title(context, story.title.toUpperCase(), Math.max(52, safe.left), Math.min(height * 0.825, height - safe.bottom - 205), width - Math.max(104, safe.left + safe.right), palette.ink, 58, 2);
   context.fillStyle = "#735b2d";
   context.font = "700 17px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), 54, height - 102);
-  brand(context, width, height, palette.ink);
+  context.fillText(metadata(story, moments, showLocation, showDate), Math.max(54, safe.left), height - Math.max(102, safe.bottom + 54));
+  brand(context, width, height, palette.ink, profile);
 }
 
-function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean) {
+function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
   context.fillStyle = "#e9dfcf";
   context.fillRect(0, 0, width, height);
   context.strokeStyle = "rgba(97,118,103,.14)";
@@ -221,15 +251,17 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   context.restore();
   context.fillStyle = "#70675c";
   context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), 54, height - 105);
-  brand(context, width, height, palette.ink);
+  context.fillText(metadata(story, moments, showLocation, showDate), Math.max(54, safe.left), height - Math.max(105, safe.bottom + 56));
+  brand(context, width, height, palette.ink, profile);
 }
 
-function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean) {
+function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
+  const side = Math.max(54, safe.left);
   const index = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
   const localProgress = (progress * Math.max(photos.length, 1)) % 1;
-  if (photos[index]) cover(context, photos[index]!.image, 0, 0, width, height, 1.02 + localProgress * 0.08, (localProgress - 0.5) * 14);
+  if (photos[index]) cover(context, photos[index]!.image, 0, 0, width, height, profile.cropScale + localProgress * 0.08, (localProgress - 0.5) * 14);
   else {
     context.fillStyle = palette.ink;
     context.fillRect(0, 0, width, height);
@@ -242,12 +274,13 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   context.fillRect(0, 0, width, height);
   context.fillStyle = palette.gold;
   context.font = "700 19px sans-serif";
-  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, 54, height * 0.68);
-  title(context, story.title, 54, height * 0.72, width - 108, palette.cream, 72, 3);
+  const titleTop = Math.min(height * 0.72, height - safe.bottom - 300);
+  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 50);
+  title(context, story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
   context.fillStyle = "#e8ddcd";
   context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), 54, height - 105);
-  brand(context, width, height, palette.cream);
+  context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(105, safe.bottom + 56));
+  brand(context, width, height, palette.cream, profile);
 }
 
 function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], progress: number) {
@@ -259,11 +292,11 @@ function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptio
     scrapbook: drawScrapbook,
     cinematic: drawCinematic,
   };
-  renderers[options.story.style](context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate);
+  renderers[options.story.style](context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
 }
 
-async function loadPhotos(moments: MomentObject[], onProgress?: (progress: number) => void): Promise<LoadedPhoto[]> {
-  const sources = moments.filter((moment) => moment.kind === "photo").slice(0, 8);
+async function loadPhotos(moments: MomentObject[], maxPhotos: number, onProgress?: (progress: number) => void): Promise<LoadedPhoto[]> {
+  const sources = moments.filter((moment) => moment.kind === "photo").slice(0, maxPhotos);
   const loaded: LoadedPhoto[] = [];
   for (const [index, moment] of sources.entries()) {
     const response = await fetch(api.objectContentUrl(moment.spaceId, moment.id), { credentials: "include" });
@@ -301,14 +334,14 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
   if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
   const stream = outputCanvas.captureStream(30);
   const mimeType = videoMimeType();
-  const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: 5_000_000 });
+  const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: options.profile.videoBitrate });
   const chunks: BlobPart[] = [];
   recorder.addEventListener("dataavailable", (event) => { if (event.data.size) chunks.push(event.data); });
   const result = new Promise<Blob>((resolve, reject) => {
     recorder.addEventListener("error", () => reject(new Error("The video could not be recorded")));
     recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "video/webm" })));
   });
-  const duration = 8_000;
+  const duration = options.profile.durationMs;
   const startedAt = performance.now();
   recorder.start(250);
   await new Promise<void>((resolve) => {
@@ -331,11 +364,10 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
 export async function generateSocialExport(options: SocialExportOptions): Promise<Blob> {
   await document.fonts.ready;
   options.onProgress?.(0.04);
-  const photos = await loadPhotos(options.moments, options.onProgress);
+  const photos = await loadPhotos(options.moments, options.profile.maxPhotos, options.onProgress);
   const renderCanvas = document.createElement("canvas");
-  const isPin = options.format === "image" && options.outputWidth / options.outputHeight < 0.75;
-  renderCanvas.width = options.format === "video" || isPin ? 720 : 1080;
-  renderCanvas.height = options.format === "video" ? 1280 : isPin ? 1080 : 1350;
+  renderCanvas.width = options.format === "video" ? 720 : Math.min(1080, options.outputWidth);
+  renderCanvas.height = Math.round(renderCanvas.width * (options.outputHeight / options.outputWidth));
   const renderContext = renderCanvas.getContext("2d");
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = options.outputWidth;

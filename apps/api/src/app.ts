@@ -410,11 +410,25 @@ function contentDisposition(name: string, download: boolean): string {
   return `${download ? "attachment" : "inline"}; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
-type SocialExportPreset = "feed" | "pin" | "vertical";
+const socialExportPresets = [
+  "instagram-feed", "facebook-feed", "linkedin-feed", "x-post", "threads-post", "pinterest-pin",
+  "instagram-reels", "facebook-reels", "tiktok", "youtube-shorts", "whatsapp-status", "x-vertical", "snapchat",
+] as const;
+type SocialExportPreset = typeof socialExportPresets[number];
+const socialVideoPresets = new Set<SocialExportPreset>(["instagram-reels", "facebook-reels", "tiktok", "youtube-shorts", "whatsapp-status", "x-vertical", "snapchat"]);
+
+function isSocialExportPreset(value: unknown): value is SocialExportPreset {
+  return typeof value === "string" && socialExportPresets.includes(value as SocialExportPreset);
+}
 
 function socialExportKey(spaceId: string, storyId: string, preset: SocialExportPreset): string {
-  const filename = preset === "feed" ? "story.png" : preset === "pin" ? "story-pin.png" : "story.mp4";
+  const filename = `${preset}.${socialVideoPresets.has(preset) ? "mp4" : "png"}`;
   return `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/${filename}`;
+}
+
+function legacySocialExportKeys(spaceId: string, storyId: string): string[] {
+  const prefix = `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}`;
+  return [`${prefix}/story.png`, `${prefix}/story-pin.png`, `${prefix}/story.mp4`];
 }
 
 async function transcodeSocialVideo(file: File): Promise<Uint8Array> {
@@ -1154,11 +1168,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
     const keys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/`);
-    return c.json({
-      feed: keys.includes(socialExportKey(spaceId, storyId, "feed")),
-      pin: keys.includes(socialExportKey(spaceId, storyId, "pin")),
-      vertical: keys.includes(socialExportKey(spaceId, storyId, "vertical")),
-    });
+    return c.json(Object.fromEntries(socialExportPresets.map((preset) => [preset, keys.includes(socialExportKey(spaceId, storyId, preset))])));
   });
 
   app.post("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
@@ -1171,8 +1181,8 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const body = await c.req.parseBody();
     const file = body.file;
     const preset = body.preset;
-    if (!(file instanceof File) || (preset !== "feed" && preset !== "pin" && preset !== "vertical")) throw new HTTPException(400, { message: "Choose a supported social preset" });
-    const format = preset === "vertical" ? "video" : "image";
+    if (!(file instanceof File) || !isSocialExportPreset(preset)) throw new HTTPException(400, { message: "Choose a supported social preset" });
+    const format = socialVideoPresets.has(preset) ? "video" : "image";
     if (file.size <= 0) throw new HTTPException(400, { message: "The generated export is empty" });
     if (file.size > 100 * 1024 * 1024) throw new HTTPException(413, { message: "Social exports are limited to 100 MB" });
     if (format === "image" && file.type !== "image/png") throw new HTTPException(415, { message: "Image exports must be PNG files" });
@@ -1191,10 +1201,10 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     await requireMember(repositories, spaceId, user.id);
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
-    if (preset !== "feed" && preset !== "pin" && preset !== "vertical") throw new HTTPException(404, { message: "Social export not found" });
+    if (!isSocialExportPreset(preset)) throw new HTTPException(404, { message: "Social export not found" });
     const blob = await store.get(socialExportKey(spaceId, storyId, preset));
     if (!blob) throw new HTTPException(404, { message: "Social export not found" });
-    const format = preset === "vertical" ? "video" : "image";
+    const format = socialVideoPresets.has(preset) ? "video" : "image";
     const extension = format === "image" ? "png" : "mp4";
     return new Response(blob, { headers: {
       "Cache-Control": "private, no-store",
@@ -1215,9 +1225,8 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     }
     await Promise.all([
       repositories.stories.delete(story.id),
-      store.delete(socialExportKey(spaceId, story.id, "feed")),
-      store.delete(socialExportKey(spaceId, story.id, "pin")),
-      store.delete(socialExportKey(spaceId, story.id, "vertical")),
+      ...socialExportPresets.map((preset) => store.delete(socialExportKey(spaceId, story.id, preset))),
+      ...legacySocialExportKeys(spaceId, story.id).map((key) => store.delete(key)),
     ]);
     return c.body(null, 204);
   });
