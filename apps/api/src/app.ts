@@ -153,7 +153,7 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
           additionalProperties: false,
         },
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(45_000),
     });
     if (!response.ok) return null;
     const body = await response.json() as { output?: { style?: string; rationale?: string } };
