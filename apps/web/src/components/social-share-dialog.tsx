@@ -116,10 +116,23 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setProgress(0);
   }
 
+  function downloadForTarget(next: SocialTarget, source: ExportAsset) {
+    const link = document.createElement("a");
+    link.href = source.url;
+    link.download = filename(story, next);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   function chooseTarget(next: SocialTarget) {
     if (isBusy || next.id === target.id) return;
     setTargetId(next.id);
-    if (next.preset !== target.preset) replaceAsset(null);
+    if (asset?.preset === next.preset) {
+      downloadForTarget(next, asset);
+    } else if (next.preset !== target.preset) {
+      replaceAsset(null);
+    }
     setError("");
     setProgress(0);
   }
@@ -194,16 +207,6 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     }
   }
 
-  function download() {
-    if (!asset) return;
-    const link = document.createElement("a");
-    link.href = asset.url;
-    link.download = filename(story, target);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
   if (!open) return null;
   const styleLabel = story.styleSource === "auto" ? `Auto · ${styleNames[story.style]}` : styleNames[story.style];
   const aspectRatio = `${target.width} / ${target.height}`;
@@ -241,8 +244,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             <section>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose the destination</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availableTargets.map((item) => <button key={item.id} type="button" onClick={() => chooseTarget(item)} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
-                  {status.data?.[item.preset] ? <Check className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : null}
+                {availableTargets.map((item) => <button key={item.id} type="button" onClick={() => item.id === target.id && asset?.preset === item.preset ? downloadForTarget(item, asset) : chooseTarget(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Choose ${item.platform} ${item.placement}`} title={asset?.preset === item.preset ? `Download for ${item.platform}` : undefined} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
+                  {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" /> : status.data?.[item.preset] ? <Check className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : null}
                   <strong className="block pr-4 text-xs text-[#26372f]">{item.platform}</strong>
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{item.placement}</span>
                 </button>)}
@@ -262,7 +265,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
             {isBusy ? <div className="rounded-[20px] bg-[#26372f] p-4 text-[#fff8ec]"><div className="flex items-center justify-between gap-3 text-sm font-semibold"><span className="flex items-center gap-2"><Spinner />{phase === "rendering" ? `Rendering for ${target.platform}…` : phase === "saving" ? "Saving privately and preparing media…" : "Opening saved export…"}</span><span>{Math.round(progress * 100)}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#efc46f] transition-[width] duration-300" style={{ width: `${Math.max(5, progress * 100)}%` }} /></div></div> : null}
             {!asset && !isBusy ? <div className="flex flex-col gap-3 sm:flex-row"><Button className="flex-1" onClick={generate}>{target.format === "image" ? <Image className="size-4" /> : <Film className="size-4" />}Generate for {target.platform}</Button>{selectedExists ? <Button variant="secondary" className="flex-1" onClick={fetchSaved}><RefreshCw className="size-4" />Use compatible saved export</Button> : null}</div> : null}
-            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-2"><Button className="h-12 sm:col-span-2" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="secondary" onClick={download}><Download className="size-4" />Download for {target.platform}</Button><Button variant="ghost" onClick={generate}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
+            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={generate}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
           <aside className="grid min-h-[25rem] place-items-center rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
