@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Download, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
+import { Check, Download, Eye, Film, Image, LockKeyhole, RefreshCw, Share2, Smartphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -129,7 +129,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     link.remove();
   }
 
-  async function fetchSaved(next: SocialTarget, downloadAfter: boolean) {
+  async function fetchSaved(next: SocialTarget) {
     setError("");
     setPhase("loading");
     setProgress(0.35);
@@ -139,7 +139,6 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       const blob = await response.blob();
       const nextAsset = { blob, format: next.format, preset: next.preset, url: URL.createObjectURL(blob) } satisfies ExportAsset;
       replaceAsset(nextAsset);
-      if (downloadAfter) downloadForTarget(next, nextAsset);
       setProgress(1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The saved export could not be opened");
@@ -148,7 +147,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     }
   }
 
-  async function generate(next: SocialTarget, downloadAfter: boolean) {
+  async function generate(next: SocialTarget) {
     setError("");
     replaceAsset(null);
     setProgress(0);
@@ -175,10 +174,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       const stored = await response.blob();
       const nextAsset = { blob: stored, format: next.format, preset: next.preset, url: URL.createObjectURL(stored) } satisfies ExportAsset;
       replaceAsset(nextAsset);
-      if (downloadAfter) downloadForTarget(next, nextAsset);
       setProgress(1);
       await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
-      toast.success(`${next.platform} export ready`);
+      toast.success(`${next.platform} preview ready`);
     } catch (cause) {
       const message = cause instanceof ZoMomentsApiError || cause instanceof Error ? cause.message : "The social export could not be created";
       setError(message);
@@ -198,8 +196,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       return;
     }
     replaceAsset(null);
-    if (!appearanceChanged && status.data?.[next.preset]) await fetchSaved(next, true);
-    else await generate(next, true);
+    if (!appearanceChanged && status.data?.[next.preset]) await fetchSaved(next);
+    else await generate(next);
   }
 
   async function shareToApps() {
@@ -261,11 +259,11 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             </section>
 
             <section>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Export for the destination</p>
-              <p className="mb-3 text-xs leading-5 text-[#756d63]">Each option creates its own crop, safe area and pacing. Select one to export and download.</p>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Preview and export</p>
+              <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to preview its crop, safe area and pacing. Select it again when you are ready to download.</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={`Export for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
-                  {asset?.preset === item.preset || status.data?.[item.preset] ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Share2 className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
+                {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
+                  {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
                   <strong className="block pr-5 text-xs text-[#26372f]">{item.platform}</strong>
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{item.placement}</span>
                 </button>)}
@@ -275,7 +273,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
-            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={() => void generate(target, false)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
+            {asset && !isBusy ? <div className="grid gap-3 sm:grid-cols-[1fr_auto]"><Button className="h-12" onClick={shareToApps}><Smartphone className="size-4" />Share to apps</Button><Button variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
           </div>
 
           <aside className="relative grid min-h-[25rem] place-items-center overflow-hidden rounded-[28px] bg-[#1d3027] p-5 sm:min-h-[34rem]">
