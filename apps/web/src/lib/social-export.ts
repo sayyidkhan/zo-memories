@@ -9,6 +9,8 @@ interface SocialExportOptions {
   format: SocialExportFormat;
   includeLocation: boolean;
   includeDate: boolean;
+  outputWidth: number;
+  outputHeight: number;
   onProgress?: (progress: number) => void;
 }
 
@@ -197,8 +199,8 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   for (let y = 0; y < height; y += 38) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
   const index = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
   const cards = [
-    { x: 78, y: 88, w: 440, h: 500, angle: -5 },
-    { x: 310, y: 475, w: 350, h: 420, angle: 6 },
+    { x: width * 0.08, y: height * 0.07, w: width * 0.58, h: height * 0.42, angle: -5 },
+    { x: width * 0.43, y: height * 0.36, w: width * 0.48, h: height * 0.34, angle: 6 },
   ];
   cards.forEach((card, cardIndex) => {
     context.save();
@@ -211,11 +213,11 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
     context.restore();
   });
   context.save();
-  context.translate(55, 870);
+  context.translate(width * 0.06, height * 0.71);
   context.rotate((-2 * Math.PI) / 180);
   context.fillStyle = "rgba(200,108,87,.2)";
-  context.fillRect(0, 0, width - 110, 210);
-  title(context, story.title, 24, 28, width - 158, palette.coral, 64, 2);
+  context.fillRect(0, 0, width * 0.88, height * 0.17);
+  title(context, story.title, width * 0.025, height * 0.022, width * 0.82, palette.coral, Math.min(64, width * 0.075), 2);
   context.restore();
   context.fillStyle = "#70675c";
   context.font = "600 18px sans-serif";
@@ -290,9 +292,14 @@ function videoMimeType() {
   return types.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
-async function recordVideo(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[]) {
-  if (!("MediaRecorder" in window) || typeof canvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
-  const stream = canvas.captureStream(30);
+function paintOutput(renderCanvas: HTMLCanvasElement, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D) {
+  outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+  outputContext.drawImage(renderCanvas, 0, 0, outputCanvas.width, outputCanvas.height);
+}
+
+async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: CanvasRenderingContext2D, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[]) {
+  if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
+  const stream = outputCanvas.captureStream(30);
   const mimeType = videoMimeType();
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: 5_000_000 });
   const chunks: BlobPart[] = [];
@@ -308,7 +315,8 @@ async function recordVideo(canvas: HTMLCanvasElement, context: CanvasRenderingCo
     const animate = (now: number) => {
       const elapsed = now - startedAt;
       const progress = Math.min(elapsed / duration, 1);
-      drawFrame(context, options, photos, progress === 1 ? 0.999 : progress);
+      drawFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
+      paintOutput(renderCanvas, outputCanvas, outputContext);
       options.onProgress?.(0.3 + progress * 0.55);
       if (progress < 1) requestAnimationFrame(animate);
       else resolve();
@@ -324,18 +332,24 @@ export async function generateSocialExport(options: SocialExportOptions): Promis
   await document.fonts.ready;
   options.onProgress?.(0.04);
   const photos = await loadPhotos(options.moments, options.onProgress);
-  const canvas = document.createElement("canvas");
-  canvas.width = options.format === "image" ? 1080 : 720;
-  canvas.height = options.format === "image" ? 1350 : 1280;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Your browser could not start the story renderer");
+  const renderCanvas = document.createElement("canvas");
+  const isPin = options.format === "image" && options.outputWidth / options.outputHeight < 0.75;
+  renderCanvas.width = options.format === "video" || isPin ? 720 : 1080;
+  renderCanvas.height = options.format === "video" ? 1280 : isPin ? 1080 : 1350;
+  const renderContext = renderCanvas.getContext("2d");
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = options.outputWidth;
+  outputCanvas.height = options.outputHeight;
+  const outputContext = outputCanvas.getContext("2d");
+  if (!renderContext || !outputContext) throw new Error("Your browser could not start the story renderer");
   try {
     if (options.format === "image") {
-      drawFrame(context, options, photos, 0.38);
+      drawFrame(renderContext, options, photos, 0.38);
+      paintOutput(renderCanvas, outputCanvas, outputContext);
       options.onProgress?.(0.9);
-      return await canvasBlob(canvas);
+      return await canvasBlob(outputCanvas);
     }
-    return await recordVideo(canvas, context, options, photos);
+    return await recordVideo(renderCanvas, renderContext, outputCanvas, outputContext, options, photos);
   } finally {
     photos.forEach((photo) => photo.release());
   }

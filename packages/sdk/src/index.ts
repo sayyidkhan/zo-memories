@@ -52,6 +52,8 @@ export interface UploadObjectInput {
   occurredAt?: string;
 }
 
+export type SocialExportPreset = "feed" | "pin" | "vertical";
+
 export interface ZoMomentsClientOptions {
   baseUrl?: string;
   fetch?: typeof globalThis.fetch;
@@ -271,20 +273,20 @@ export class ZoMomentsClient {
     );
   }
 
-  getSocialExports(spaceId: string, storyId: string): Promise<{ image: boolean; video: boolean }> {
+  getSocialExports(spaceId: string, storyId: string): Promise<{ feed: boolean; pin: boolean; vertical: boolean }> {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`);
   }
 
-  uploadSocialExport(spaceId: string, storyId: string, format: "image" | "video", file: File): Promise<{ format: "image" | "video"; contentType: string; url: string }> {
+  uploadSocialExport(spaceId: string, storyId: string, preset: SocialExportPreset, file: File): Promise<{ preset: SocialExportPreset; format: "image" | "video"; contentType: string; url: string }> {
     const body = new FormData();
-    body.set("format", format);
+    body.set("preset", preset);
     body.set("file", file);
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`, { method: "POST", body });
   }
 
-  socialExportUrl(spaceId: string, storyId: string, format: "image" | "video", download = false): string {
+  socialExportUrl(spaceId: string, storyId: string, preset: SocialExportPreset, download = false): string {
     const query = download ? "?download=1" : "";
-    return `${this.baseUrl}/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${format}${query}`;
+    return `${this.baseUrl}/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}${query}`;
   }
 
   listObjects(spaceId: string, input: ListObjectsInput = {}): Promise<{ objects: MomentObject[] }> {
