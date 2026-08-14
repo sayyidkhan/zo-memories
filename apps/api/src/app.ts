@@ -161,7 +161,7 @@ const storyStyleRationales: Record<StoryStyle, string> = {
   cinematic: "An immersive, spacious narrative gives a larger journey room to unfold.",
 };
 
-const defaultStoryModel = "byok:cc9d9da2-993f-4bcb-87d4-44bd304ec39c";
+const defaultStoryModel = "byok:85d2d97e-f598-4e81-8068-7032038b7cee";
 
 async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyle; rationale: string } | null> {
   if (process.env.NODE_ENV === "test") return null;
