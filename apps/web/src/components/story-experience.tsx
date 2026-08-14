@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, Film, ImagePlus, MapPin, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, Film, ImagePlus, MapPin, PencilLine, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
@@ -152,7 +152,7 @@ export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMo
   return <div className="grid gap-8">{stories.map((story) => <StoryCover key={story.id} story={story} objects={objects} onOpen={() => onOpen(story)} />)}</div>;
 }
 
-export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { open: boolean; onClose: () => void; spaceId: string; objects: MomentObject[]; onCreated: (story: Story) => void }) {
+export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }: { open: boolean; onClose: () => void; spaceId: string; objects: MomentObject[]; story?: Story | null; onSaved: (story: Story) => void }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [style, setStyle] = useState<StoryStylePreference>("auto");
@@ -164,7 +164,16 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
   const chronological = useMemo(() => [...objects].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)), [objects]);
   const hasEnoughMoments = selected.length >= 2;
   useEffect(() => {
-    if (!open) {
+    if (open && story) {
+      const available = new Set(objects.map((object) => object.id));
+      setSelected(story.momentIds.filter((momentId) => available.has(momentId)));
+      setStyle(story.styleSource === "auto" ? "auto" : story.style === "flipbook" || story.style === "comic" ? "classic" : story.style);
+      setStyleSource(story.styleSource);
+      setStyleRationale(story.styleRationale ?? "");
+      setTitle(story.title);
+      setLocation(story.location ?? "");
+      setOpening(story.opening);
+    } else if (!open) {
       setSelected([]);
       setStyle("auto");
       setStyleSource("auto");
@@ -173,7 +182,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
       setLocation("");
       setOpening("");
     }
-  }, [open]);
+  }, [open, story, objects]);
   useEffect(() => {
     if (hasEnoughMoments) return;
     setStyle("auto");
@@ -181,12 +190,14 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
     setStyleRationale("");
   }, [hasEnoughMoments]);
   const mutation = useMutation({
-    mutationFn: (input: { title: string; location?: string; opening: string; momentIds: string[]; style: StoryStylePreference; styleSource: StoryStyleSource; styleRationale?: string }) => api.createStory(spaceId, input),
-    onSuccess: async ({ story }) => {
-      await queryClient.invalidateQueries({ queryKey: ["stories", spaceId] });
-      toast.success("Your story is ready to read");
-      onCreated(story);
-      onClose();
+    mutationFn: (input: { title: string; location?: string; opening: string; momentIds: string[]; style: StoryStylePreference; styleSource: StoryStyleSource; styleRationale?: string }) => story ? api.updateStory(spaceId, story.id, input) : api.createStory(spaceId, input),
+    onSuccess: async ({ story: savedStory }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["stories", spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["social-exports", spaceId, savedStory.id] }),
+      ]);
+      toast.success(story ? "Story changes saved" : "Your story is ready to read");
+      onSaved(savedStory);
     },
   });
   const suggest = useMutation({
@@ -223,7 +234,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
     { id: "cinematic", title: "Cinematic", description: "Immersive full-bleed scenes for bigger journeys.", icon: Film },
   ];
   return (
-    <Modal open={open} onClose={onClose} title="Craft a story" description="Give the moments their meaning. Your selections will read from oldest to newest." size="xl">
+    <Modal open={open} onClose={onClose} title={story ? "Edit story" : "Craft a story"} description={story ? "Update its words, moments, or presentation. Existing exports will be cleared." : "Give the moments their meaning. Your selections will read from oldest to newest."} size="xl">
       <form className="grid gap-7" onSubmit={submit}>
         <section className="grid items-start gap-4 rounded-[24px] bg-[#f3ebdf] p-5 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">01 · Name the chapter</p></div>
@@ -256,16 +267,16 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
         <section className="grid gap-4 rounded-[24px] bg-[#20372d] p-5 text-[#fff9ee]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">04 · Tell us why it mattered</p><p className="mt-2 text-sm leading-6 text-[#d8ddd8]">Write the opening only your people could write. The moments will carry the rest.</p></div><Button type="button" variant="secondary" className="shrink-0" disabled={!hasEnoughMoments || draftOpening.isPending} onClick={() => draftOpening.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{draftOpening.isPending ? <><Spinner />Drafting…</> : <><WandSparkles className="size-4" />{opening.trim() ? "Rewrite with AI" : "Draft with AI"}</>}</Button></div>
           <textarea name="opening" value={opening} onChange={(event) => setOpening(event.target.value)} required minLength={10} maxLength={1200} rows={4} placeholder="It started before sunrise, with three coffees and no idea where the day would take us…" className="min-h-32 w-full resize-y rounded-[18px] border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/45 focus:border-[#f0c681]" />
-          <p className="text-[11px] leading-5 text-[#bfc9c2]">AI uses only the selected filenames, captions, dates, and media types. Review and edit the draft before creating your story.</p>
+          <p className="text-[11px] leading-5 text-[#bfc9c2]">AI uses only the selected filenames, captions, dates, and media types. Review and edit the draft before {story ? "saving" : "creating"} your story.</p>
         </section>
-        {mutation.error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">{mutation.error instanceof ZoMomentsApiError ? mutation.error.message : "The story could not be created"}</p> : null}
-        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={!hasEnoughMoments || mutation.isPending}>{mutation.isPending ? <Spinner /> : <><Sparkles className="size-4" />Create the story</>}</Button></div>
+        {mutation.error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">{mutation.error instanceof ZoMomentsApiError ? mutation.error.message : `The story could not be ${story ? "updated" : "created"}`}</p> : null}
+        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={!hasEnoughMoments || mutation.isPending}>{mutation.isPending ? <Spinner /> : story ? <><PencilLine className="size-4" />Save changes</> : <><Sparkles className="size-4" />Create the story</>}</Button></div>
       </form>
     </Modal>
   );
 }
 
-export function StoryReader({ story, objects, members, canDelete, onClose, onDelete }: { story: Story | null; objects: MomentObject[]; members: Member[]; canDelete: boolean; onClose: () => void; onDelete: (story: Story) => void }) {
+export function StoryReader({ story, objects, members, canEdit, canDelete, onClose, onEdit, onDelete }: { story: Story | null; objects: MomentObject[]; members: Member[]; canEdit: boolean; canDelete: boolean; onClose: () => void; onEdit: (story: Story) => void; onDelete: (story: Story) => void }) {
   const [shareOpen, setShareOpen] = useState(false);
   useEffect(() => {
     if (!story) return;
@@ -282,8 +293,11 @@ export function StoryReader({ story, objects, members, canDelete, onClose, onDel
   return (
     <>
       <article className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
-        <button onClick={() => setShareOpen(true)} className="fixed right-[4.25rem] top-[max(.75rem,env(safe-area-inset-top))] z-30 inline-flex h-11 items-center gap-2 rounded-full bg-[#f0c681] px-3 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:right-[4.5rem] sm:top-4 sm:h-12 sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
-        <button onClick={onClose} className="fixed right-3 top-[max(.75rem,env(safe-area-inset-top))] z-30 grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:right-4 sm:top-4 sm:size-12" aria-label="Close story"><X className="size-5" /></button>
+        <div className="fixed right-3 top-[max(.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2 sm:right-4 sm:top-4">
+          {canEdit ? <button onClick={() => onEdit(story)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}
+          <button onClick={() => setShareOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
+          <button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button>
+        </div>
         <header className="relative min-h-[76dvh] overflow-hidden bg-[#183128] text-[#fff9ee] sm:min-h-[88vh]">
           {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,26,19,.96),rgba(9,26,19,.47)_60%,rgba(9,26,19,.18)),linear-gradient(0deg,rgba(9,26,19,.74),transparent_58%)]" />
@@ -298,7 +312,7 @@ export function StoryReader({ story, objects, members, canDelete, onClose, onDel
         </header>
         <StoryMoments story={story} moments={moments} members={members} />
         <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
-          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p><Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
+          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit ? <Button variant="secondary" className="mt-8" onClick={() => onEdit(story)}><PencilLine className="size-4" />Edit this story</Button> : null}<Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
         </div>
       </article>
       <SocialShareDialog story={story} objects={objects} open={shareOpen} onClose={() => setShareOpen(false)} />

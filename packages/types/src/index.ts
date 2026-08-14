@@ -165,6 +165,8 @@ export const createStorySchema = z.object({
     .refine((ids) => ids.length >= 2, "Choose at least two different moments"),
 });
 
+export const updateStorySchema = createStorySchema;
+
 export const suggestStoryStyleSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
 });
@@ -269,6 +271,7 @@ export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSchema>;
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
+export type UpdateStoryInput = z.infer<typeof updateStorySchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
 export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;

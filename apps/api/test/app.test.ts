@@ -276,6 +276,33 @@ describe("Zo Moments API", () => {
     expect(socialVideoContent.headers.get("content-type")).toBe("video/mp4");
     expect(await socialVideoContent.text()).toBe("social-video");
 
+    const updateInput = {
+      title: "The Kyoto chapter we kept",
+      location: "Kyoto to Osaka",
+      opening: "We changed the plan halfway through and found the part of the journey worth keeping.",
+      momentIds,
+      style: "cinematic",
+      styleSource: "manual",
+    };
+    expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updateInput),
+    })).status).toBe(403);
+    const updated = await owner.json<{ story: { id: string; title: string; location: string; opening: string; style: string; momentIds: string[] } }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updateInput),
+    });
+    expect(updated.response.status).toBe(200);
+    expect(updated.body.story.id).toBe(created.body.story.id);
+    expect(updated.body.story.title).toBe(updateInput.title);
+    expect(updated.body.story.location).toBe(updateInput.location);
+    expect(updated.body.story.opening).toBe(updateInput.opening);
+    expect(updated.body.story.style).toBe("cinematic");
+    expect(updated.body.story.momentIds).toEqual(momentIds);
+    const clearedSocialStatus = await owner.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`);
+    expect(clearedSocialStatus.body["instagram-feed"]).toBe(0);
+    expect(clearedSocialStatus.body.tiktok).toBe(0);
+
     const outsider = new BrowserSession(app);
     expect((await outsider.request("/auth/register", {
       method: "POST",

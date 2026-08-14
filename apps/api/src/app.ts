@@ -13,6 +13,7 @@ import {
   updateAccountStatusSchema,
   updateAdminRoleSchema,
   updateProfileSchema,
+  updateStorySchema,
   type Album,
   type Avatar,
   type Invitation,
@@ -1197,6 +1198,41 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     };
     await repositories.stories.put(story);
     return c.json({ story }, 201);
+  });
+
+  app.patch("/api/spaces/:spaceId/stories/:storyId", zValidator("json", updateStorySchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const membership = await requireMember(repositories, spaceId, user.id);
+    const existing = await repositories.stories.get(c.req.param("storyId"));
+    if (!existing || existing.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (membership.role !== "owner" && existing.createdBy !== user.id) {
+      throw new HTTPException(403, { message: "Only the story creator or space owner can edit it" });
+    }
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const recommended = recommendStoryStyle(moments.filter((moment): moment is MomentObject => Boolean(moment)));
+    const style = input.style === "auto" ? recommended.style : input.style;
+    const story: Story = {
+      ...existing,
+      title: input.title,
+      location: input.location || null,
+      opening: input.opening,
+      momentIds: input.momentIds,
+      style,
+      styleSource: input.style === "auto" ? "auto" : (input.styleSource ?? "manual"),
+      styleRationale: input.styleRationale || (input.style === "auto" ? recommended.rationale : null),
+      updatedAt: now(),
+    };
+    const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
+    await Promise.all([
+      repositories.stories.put(story),
+      ...exportKeys.map((key) => store.delete(key)),
+    ]);
+    return c.json({ story });
   });
 
   app.get("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
