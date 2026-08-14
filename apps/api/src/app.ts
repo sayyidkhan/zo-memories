@@ -161,6 +161,8 @@ const storyStyleRationales: Record<StoryStyle, string> = {
   cinematic: "An immersive, spacious narrative gives a larger journey room to unfold.",
 };
 
+const defaultStoryModel = "byok:cc9d9da2-993f-4bcb-87d4-44bd304ec39c";
+
 async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyle; rationale: string } | null> {
   if (process.env.NODE_ENV === "test") return null;
   const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
@@ -173,7 +175,7 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
       headers: { authorization: token, "content-type": "application/json" },
       body: JSON.stringify({
         input: `Recommend one presentation style for this private memory story. Choose only classic, scrapbook, or cinematic. Base the choice on sequence, media mix, captions, and time span. Do not invent image contents.\n\nMoments:\n${JSON.stringify(inventory)}`,
-        model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
+        model_name: process.env.ZO_STORY_MODEL ?? defaultStoryModel,
         output_format: {
           type: "object",
           properties: { style: { type: "string", enum: choices }, rationale: { type: "string" } },
@@ -215,7 +217,7 @@ async function aiStoryOpening(moments: MomentObject[], title?: string, location?
       headers: { authorization: token, "content-type": "application/json" },
       body: JSON.stringify({
         input: `Write one warm, specific opening paragraph for a private shared memory story. Use 35 to 75 words. Sound human and personal, not promotional. Use only the supplied title, place, captions, filenames, media types, and dates. Do not invent people, events, sensory details, or image contents. Put only the paragraph in the opening field.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nMoments:\n${JSON.stringify(inventory)}`,
-        model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
+        model_name: process.env.ZO_STORY_MODEL ?? defaultStoryModel,
         output_format: {
           type: "object",
           properties: { opening: { type: "string" } },
