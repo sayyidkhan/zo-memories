@@ -214,7 +214,7 @@ async function aiStoryOpening(moments: MomentObject[], title?: string, location?
       method: "POST",
       headers: { authorization: token, "content-type": "application/json" },
       body: JSON.stringify({
-        input: `Write one warm, specific opening paragraph for a private shared memory story. Use 35 to 75 words. Sound human and personal, not promotional. Use only the supplied title, place, captions, filenames, media types, and dates. Do not invent people, events, sensory details, or image contents. Return only the opening paragraph.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nMoments:\n${JSON.stringify(inventory)}`,
+        input: `Write one warm, specific opening paragraph for a private shared memory story. Use 35 to 75 words. Sound human and personal, not promotional. Use only the supplied title, place, captions, filenames, media types, and dates. Do not invent people, events, sensory details, or image contents. Put only the paragraph in the opening field.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nMoments:\n${JSON.stringify(inventory)}`,
         model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
         output_format: {
           type: "object",
@@ -226,8 +226,14 @@ async function aiStoryOpening(moments: MomentObject[], title?: string, location?
       signal: AbortSignal.timeout(45_000),
     });
     if (!response.ok) return null;
-    const body = await response.json() as { output?: { opening?: string } };
-    const opening = body.output?.opening?.trim();
+    const body = await response.json() as { output?: string | Record<string, unknown> };
+    const output = body.output;
+    const value = typeof output === "string"
+      ? output
+      : typeof output?.opening === "string"
+        ? output.opening
+        : Object.values(output ?? {}).find((candidate): candidate is string => typeof candidate === "string");
+    const opening = value?.trim();
     return opening && opening.length >= 10 ? opening.slice(0, 1200) : null;
   } catch {
     return null;
