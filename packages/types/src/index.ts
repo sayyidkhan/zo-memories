@@ -169,6 +169,12 @@ export const suggestStoryStyleSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
 });
 
+export const suggestStoryOpeningSchema = z.object({
+  title: z.string().trim().max(100).optional(),
+  location: z.string().trim().max(100).optional(),
+  momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
+});
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().toLowerCase().email(),
@@ -264,6 +270,7 @@ export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSch
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
+export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

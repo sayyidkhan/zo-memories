@@ -7,6 +7,7 @@ import {
   createStorySchema,
   demoLoginSchema,
   inviteMemberSchema,
+  suggestStoryOpeningSchema,
   suggestStoryStyleSchema,
   updateDemoModeSchema,
   updateAccountStatusSchema,
@@ -189,6 +190,45 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
     const resolvedStyle = style as StoryStyle;
     const rationale = body.output?.rationale?.trim() || storyStyleRationales[resolvedStyle];
     return { style: resolvedStyle, rationale: rationale.slice(0, 300) };
+  } catch {
+    return null;
+  }
+}
+
+function automaticStoryOpening(moments: MomentObject[], title?: string, location?: string): string {
+  const ordered = [...moments].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  const first = ordered[0]?.caption || ordered[0]?.name || "one small moment";
+  const last = ordered.at(-1)?.caption || ordered.at(-1)?.name || "something worth remembering";
+  const beginning = title ? `${title} began` : "It began";
+  const place = location ? ` in ${location}` : "";
+  return `${beginning}${place} with ${first}. Across ${ordered.length} moments, it carried us all the way to ${last}. This is the part we wanted to keep.`.slice(0, 1200);
+}
+
+async function aiStoryOpening(moments: MomentObject[], title?: string, location?: string): Promise<string | null> {
+  if (process.env.NODE_ENV === "test") return null;
+  const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
+  if (!token) return null;
+  const inventory = moments.map(({ name, caption, kind, occurredAt }) => ({ name, caption, kind, occurredAt }));
+  try {
+    const response = await fetch("https://api.zo.computer/zo/ask", {
+      method: "POST",
+      headers: { authorization: token, "content-type": "application/json" },
+      body: JSON.stringify({
+        input: `Write one warm, specific opening paragraph for a private shared memory story. Use 35 to 75 words. Sound human and personal, not promotional. Use only the supplied title, place, captions, filenames, media types, and dates. Do not invent people, events, sensory details, or image contents. Return only the opening paragraph.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nMoments:\n${JSON.stringify(inventory)}`,
+        model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
+        output_format: {
+          type: "object",
+          properties: { opening: { type: "string" } },
+          required: ["opening"],
+          additionalProperties: false,
+        },
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as { output?: { opening?: string } };
+    const opening = body.output?.opening?.trim();
+    return opening && opening.length >= 10 ? opening.slice(0, 1200) : null;
   } catch {
     return null;
   }
@@ -1102,6 +1142,22 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
     const suggested = await aiStoryStyle(selectedMoments);
     return c.json(suggested ? { ...suggested, source: "ai" as const } : { ...recommendStoryStyle(selectedMoments), source: "auto" as const });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/suggest-opening", zValidator("json", suggestStoryOpeningSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const opening = await aiStoryOpening(selectedMoments, input.title, input.location);
+    return c.json(opening
+      ? { opening, source: "ai" as const }
+      : { opening: automaticStoryOpening(selectedMoments, input.title, input.location), source: "auto" as const });
   });
 
   app.post("/api/spaces/:spaceId/stories", zValidator("json", createStorySchema), async (c) => {

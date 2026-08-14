@@ -158,8 +158,28 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
   const [style, setStyle] = useState<StoryStylePreference>("auto");
   const [styleSource, setStyleSource] = useState<StoryStyleSource>("auto");
   const [styleRationale, setStyleRationale] = useState("");
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [opening, setOpening] = useState("");
   const chronological = useMemo(() => [...objects].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)), [objects]);
-  useEffect(() => { if (!open) { setSelected([]); setStyle("auto"); setStyleSource("auto"); setStyleRationale(""); } }, [open]);
+  const hasEnoughMoments = selected.length >= 2;
+  useEffect(() => {
+    if (!open) {
+      setSelected([]);
+      setStyle("auto");
+      setStyleSource("auto");
+      setStyleRationale("");
+      setTitle("");
+      setLocation("");
+      setOpening("");
+    }
+  }, [open]);
+  useEffect(() => {
+    if (hasEnoughMoments) return;
+    setStyle("auto");
+    setStyleSource("auto");
+    setStyleRationale("");
+  }, [hasEnoughMoments]);
   const mutation = useMutation({
     mutationFn: (input: { title: string; location?: string; opening: string; momentIds: string[]; style: StoryStylePreference; styleSource: StoryStyleSource; styleRationale?: string }) => api.createStory(spaceId, input),
     onSuccess: async ({ story }) => {
@@ -178,15 +198,24 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
       toast.success(suggestion.source === "ai" ? "AI suggested a story format" : "A private automatic suggestion is ready");
     },
   });
+  const draftOpening = useMutation({
+    mutationFn: (momentIds: string[]) => api.suggestStoryOpening(spaceId, {
+      momentIds,
+      ...(title.trim() ? { title: title.trim() } : {}),
+      ...(location.trim() ? { location: location.trim() } : {}),
+    }),
+    onSuccess: (draft) => {
+      setOpening(draft.opening);
+      toast.success(draft.source === "ai" ? "AI drafted an opening for you" : "A private opening draft is ready");
+    },
+  });
   function toggle(id: string) {
     setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const location = String(data.get("location") ?? "").trim();
     const momentIds = chronological.filter((object) => selected.includes(object.id)).map((object) => object.id);
-    mutation.mutate({ title: String(data.get("title") ?? ""), opening: String(data.get("opening") ?? ""), momentIds, style, styleSource, ...(styleRationale ? { styleRationale } : {}), ...(location ? { location } : {}) });
+    mutation.mutate({ title, opening, momentIds, style, styleSource, ...(styleRationale ? { styleRationale } : {}), ...(location.trim() ? { location: location.trim() } : {}) });
   }
   const formats: Array<{ id: StoryStylePreference; title: string; description: string; icon: typeof BookOpen }> = [
     { id: "classic", title: "Classic", description: "Timeless editorial chapters with generous space.", icon: BookOpen },
@@ -198,8 +227,8 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
       <form className="grid gap-7" onSubmit={submit}>
         <section className="grid items-start gap-4 rounded-[24px] bg-[#f3ebdf] p-5 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">01 · Name the chapter</p></div>
-          <Field label="Story title"><Input name="title" placeholder="The weekend the rain followed us" minLength={2} maxLength={100} required /></Field>
-          <Field label="Place or route" hint="Optional"><Input name="location" placeholder="Kyoto · Spring 2026" maxLength={100} /></Field>
+          <Field label="Story title"><Input name="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="The weekend the rain followed us" minLength={2} maxLength={100} required /></Field>
+          <Field label="Place or route" hint="Optional"><Input name="location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Kyoto · Spring 2026" maxLength={100} /></Field>
         </section>
         <section>
           <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">02 · Choose the moments</p><p className="mt-1 text-sm text-[#746d63]">Pick at least two. They will read from oldest to newest.</p></div><span className="shrink-0 rounded-full bg-[#e9dfd0] px-3 py-1.5 text-xs font-bold text-[#536158]">{selected.length} selected</span></div>
@@ -216,20 +245,21 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
           </div>
         </section>
         <section>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">03 · Choose the experience</p><p className="mt-1 text-sm text-[#746d63]">Control the outcome, or leave it on Auto.</p></div><Button type="button" variant="secondary" disabled={selected.length < 2 || suggest.isPending} onClick={() => suggest.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{suggest.isPending ? <><Spinner />AI is reviewing the sequence…</> : <><Sparkles className="size-4" />Ask AI to suggest</>}</Button></div>
-          <button type="button" onClick={() => { setStyle("auto"); setStyleSource("auto"); setStyleRationale(""); }} className={cn("mb-3 flex w-full items-center gap-4 rounded-[20px] border-2 p-4 text-left transition", style === "auto" ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><span className={cn("grid size-10 shrink-0 place-items-center rounded-[14px]", style === "auto" ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><WandSparkles className="size-4" /></span><span className="min-w-0 flex-1"><strong className="block text-sm text-[#26372f]">Choose for me</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">Privately select the best fit from Classic, Scrapbook, or Cinematic.</span></span>{style === "auto" ? <Check className="size-4 shrink-0 text-[#a9503f]" /> : null}</button>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">03 · Choose the experience</p><p className="mt-1 text-sm text-[#746d63]">{hasEnoughMoments ? "Control the outcome, or leave it on Auto." : "Choose at least two moments above to unlock the story formats."}</p></div><Button type="button" variant="secondary" disabled={!hasEnoughMoments || suggest.isPending} onClick={() => suggest.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{suggest.isPending ? <><Spinner />AI is reviewing the sequence…</> : <><Sparkles className="size-4" />Ask AI to suggest</>}</Button></div>
+          <button type="button" disabled={!hasEnoughMoments} onClick={() => { setStyle("auto"); setStyleSource("auto"); setStyleRationale(""); }} className={cn("mb-3 flex w-full items-center gap-4 rounded-[20px] border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", style === "auto" ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><span className={cn("grid size-10 shrink-0 place-items-center rounded-[14px]", style === "auto" ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><WandSparkles className="size-4" /></span><span className="min-w-0 flex-1"><strong className="block text-sm text-[#26372f]">Choose for me</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">Privately select the best fit from Classic, Scrapbook, or Cinematic.</span></span>{style === "auto" && hasEnoughMoments ? <Check className="size-4 shrink-0 text-[#a9503f]" /> : null}</button>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {formats.map((format) => <button key={format.id} type="button" onClick={() => { setStyle(format.id); setStyleSource(format.id === "auto" ? "auto" : "manual"); setStyleRationale(""); }} className={cn("rounded-[20px] border-2 p-4 text-left transition", style === format.id ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><div className="flex items-center justify-between"><span className={cn("grid size-10 place-items-center rounded-[14px]", style === format.id ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><format.icon className="size-4" /></span>{style === format.id ? <Check className="size-4 text-[#a9503f]" /> : null}</div><strong className="mt-3 block text-sm text-[#26372f]">{format.title}</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">{format.description}</span></button>)}
+            {formats.map((format) => <button key={format.id} type="button" disabled={!hasEnoughMoments} onClick={() => { setStyle(format.id); setStyleSource(format.id === "auto" ? "auto" : "manual"); setStyleRationale(""); }} className={cn("rounded-[20px] border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", style === format.id ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><div className="flex items-center justify-between"><span className={cn("grid size-10 place-items-center rounded-[14px]", style === format.id ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><format.icon className="size-4" /></span>{style === format.id && hasEnoughMoments ? <Check className="size-4 text-[#a9503f]" /> : null}</div><strong className="mt-3 block text-sm text-[#26372f]">{format.title}</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">{format.description}</span></button>)}
           </div>
           {styleRationale ? <div className="mt-4 flex gap-3 rounded-[18px] border border-[#d5dfd5] bg-[#edf3ed] p-4 text-xs leading-5 text-[#526158]"><Sparkles className="mt-0.5 size-4 shrink-0 text-[#496151]" /><p><strong className="text-[#34443a]">AI suggests {formats.find((format) => format.id === style)?.title}.</strong> {styleRationale} You can still choose any other format.</p></div> : null}
           <p className="mt-3 text-[11px] leading-5 text-[#8a8277]">AI is optional. When used, Zo receives only filenames, captions, dates, and media types, not your photos or files.</p>
         </section>
         <section className="grid gap-4 rounded-[24px] bg-[#20372d] p-5 text-[#fff9ee]">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">04 · Tell us why it mattered</p><p className="mt-2 text-sm leading-6 text-[#d8ddd8]">Write the opening only your people could write. The moments will carry the rest.</p></div>
-          <textarea name="opening" required minLength={10} maxLength={1200} rows={4} placeholder="It started before sunrise, with three coffees and no idea where the day would take us…" className="min-h-32 w-full resize-y rounded-[18px] border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/45 focus:border-[#f0c681]" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">04 · Tell us why it mattered</p><p className="mt-2 text-sm leading-6 text-[#d8ddd8]">Write the opening only your people could write. The moments will carry the rest.</p></div><Button type="button" variant="secondary" className="shrink-0" disabled={!hasEnoughMoments || draftOpening.isPending} onClick={() => draftOpening.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{draftOpening.isPending ? <><Spinner />Drafting…</> : <><WandSparkles className="size-4" />{opening.trim() ? "Rewrite with AI" : "Draft with AI"}</>}</Button></div>
+          <textarea name="opening" value={opening} onChange={(event) => setOpening(event.target.value)} required minLength={10} maxLength={1200} rows={4} placeholder="It started before sunrise, with three coffees and no idea where the day would take us…" className="min-h-32 w-full resize-y rounded-[18px] border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/45 focus:border-[#f0c681]" />
+          <p className="text-[11px] leading-5 text-[#bfc9c2]">AI uses only the selected filenames, captions, dates, and media types. Review and edit the draft before creating your story.</p>
         </section>
         {mutation.error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">{mutation.error instanceof ZoMomentsApiError ? mutation.error.message : "The story could not be created"}</p> : null}
-        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={selected.length < 2 || mutation.isPending}>{mutation.isPending ? <Spinner /> : <><Sparkles className="size-4" />Create the story</>}</Button></div>
+        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={!hasEnoughMoments || mutation.isPending}>{mutation.isPending ? <Spinner /> : <><Sparkles className="size-4" />Create the story</>}</Button></div>
       </form>
     </Modal>
   );

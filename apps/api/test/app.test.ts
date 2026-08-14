@@ -205,6 +205,14 @@ describe("Zo Moments API", () => {
     expect(suggestion.body.source).toBe("auto");
     expect(suggestion.body.rationale.length).toBeGreaterThan(10);
 
+    const opening = await owner.json<{ opening: string; source: string }>(`/api/spaces/${spaceId}/stories/suggest-opening`, {
+      method: "POST",
+      body: JSON.stringify({ title: "Rainy Kyoto", location: "Kyoto", momentIds }),
+    });
+    expect(opening.response.status).toBe(200);
+    expect(opening.body.source).toBe("auto");
+    expect(opening.body.opening.length).toBeGreaterThan(10);
+
     const retired = await owner.request(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
