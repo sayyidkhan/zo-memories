@@ -19,11 +19,13 @@ import type {
   SpaceDetail,
   SpaceSummary,
   Story,
+  StoryRevision,
   StoryStyle,
   SuggestStoryOpeningInput,
   SuggestStoryStyleInput,
   UpdateProfileInput,
   UpdateStoryInput,
+  UpdateStoryCanvasInput,
   UpdateAccountStatusInput,
   UpdateAdminRoleInput,
   UpdateDemoModeInput,
@@ -281,6 +283,21 @@ export class ZoMomentsClient {
       method: "PATCH",
       body: JSON.stringify(input),
     });
+  }
+
+  updateStoryCanvas(spaceId: string, storyId: string, input: UpdateStoryCanvasInput): Promise<{ story: Story }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/canvas`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  listStoryRevisions(spaceId: string, storyId: string): Promise<{ revisions: StoryRevision[] }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/revisions`);
+  }
+
+  restoreStoryRevision(spaceId: string, storyId: string, revisionId: string): Promise<{ story: Story }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/revisions/${encodeURIComponent(revisionId)}/restore`, { method: "POST" });
   }
 
   suggestStoryStyle(spaceId: string, input: SuggestStoryStyleInput): Promise<{ style: StoryStyle; rationale: string; source: "ai" | "auto" }> {

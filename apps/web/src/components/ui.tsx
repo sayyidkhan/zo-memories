@@ -78,7 +78,7 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-[#17231e]/45 backdrop-blur-[3px] sm:place-items-center" role="presentation" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[80] grid place-items-end bg-[#17231e]/45 backdrop-blur-[3px] sm:place-items-center" role="presentation" onMouseDown={onClose}>
       <section
         role="dialog"
         aria-modal="true"

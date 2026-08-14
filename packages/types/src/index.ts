@@ -101,6 +101,21 @@ export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbo
 export const storyStylePreferenceSchema = z.enum(["auto", "classic", "scrapbook", "cinematic"]);
 export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
 
+export const storyCanvasMomentSchema = z.object({
+  momentId: z.string(),
+  title: z.string().trim().min(1).max(200),
+  meta: z.string().trim().max(200),
+});
+
+export const storyCanvasSchema = z.object({
+  title: z.string().trim().min(2).max(100),
+  location: z.string().trim().max(100),
+  dateRange: z.string().trim().max(100),
+  opening: z.string().trim().min(10).max(1200),
+  moments: z.array(storyCanvasMomentSchema).min(1).max(30)
+    .refine((moments) => new Set(moments.map(({ momentId }) => momentId)).size === moments.length, "Every canvas moment must be unique"),
+});
+
 export const storySchema = z.object({
   id: z.string(),
   spaceId: z.string(),
@@ -111,9 +126,19 @@ export const storySchema = z.object({
   style: storyStyleSchema.default("classic"),
   styleSource: storyStyleSourceSchema.default("auto"),
   styleRationale: z.string().nullable().default(null),
+  canvas: storyCanvasSchema.optional(),
   createdBy: z.string(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
+});
+
+export const storyRevisionSchema = z.object({
+  id: z.string(),
+  storyId: z.string(),
+  spaceId: z.string(),
+  canvas: storyCanvasSchema,
+  createdBy: z.string(),
+  createdAt: isoDateSchema,
 });
 
 export const objectKindSchema = z.enum(["photo", "video", "audio", "document"]);
@@ -166,6 +191,10 @@ export const createStorySchema = z.object({
 });
 
 export const updateStorySchema = createStorySchema;
+
+export const updateStoryCanvasSchema = z.object({
+  canvas: storyCanvasSchema,
+});
 
 export const suggestStoryStyleSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
@@ -261,6 +290,9 @@ export type ShareInvitation = z.infer<typeof shareInvitationSchema>;
 export type ShareInvitationPreview = z.infer<typeof shareInvitationPreviewSchema>;
 export type Album = z.infer<typeof albumSchema>;
 export type Story = z.infer<typeof storySchema>;
+export type StoryCanvas = z.infer<typeof storyCanvasSchema>;
+export type StoryCanvasMoment = z.infer<typeof storyCanvasMomentSchema>;
+export type StoryRevision = z.infer<typeof storyRevisionSchema>;
 export type StoryStyle = z.infer<typeof storyStyleSchema>;
 export type StoryStylePreference = z.infer<typeof storyStylePreferenceSchema>;
 export type StoryStyleSource = z.infer<typeof storyStyleSourceSchema>;
@@ -272,6 +304,7 @@ export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSch
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
 export type UpdateStoryInput = z.infer<typeof updateStorySchema>;
+export type UpdateStoryCanvasInput = z.infer<typeof updateStoryCanvasSchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
 export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;

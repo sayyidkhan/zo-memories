@@ -14,10 +14,9 @@ import { Button, EmptyState, Spinner } from "./ui";
 
 export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolean }) {
   const queryClient = useQueryClient();
-  const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | "edit-story" | "guide" | "members" | null>(null);
+  const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | "guide" | "members" | null>(null);
   const [preview, setPreview] = useState<MomentObject | null>(null);
   const [openStory, setOpenStory] = useState<Story | null>(null);
-  const [editingStory, setEditingStory] = useState<Story | null>(null);
   const [view, setView] = useState<"stories" | "moments">("stories");
   const { selectedAlbumId, setSelectedAlbumId, search, setSearch } = useAppStore();
   const deferredSearch = useDeferredValue(search);
@@ -141,18 +140,13 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <InviteDialog open={dialog === "invite"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <AlbumDialog open={dialog === "album"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <StoryDialog
-        open={dialog === "story" || dialog === "edit-story"}
-        onClose={() => {
-          if (dialog === "edit-story") setOpenStory(editingStory);
-          setEditingStory(null);
-          setDialog(null);
-        }}
+        open={dialog === "story"}
+        onClose={() => setDialog(null)}
         spaceId={spaceId}
         objects={objectList}
-        story={dialog === "edit-story" ? editingStory : null}
+        story={null}
         onSaved={(story) => {
           setOpenStory(story);
-          setEditingStory(null);
           setView("stories");
           setDialog(null);
         }}
@@ -160,7 +154,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <HowItWorksDialog open={dialog === "guide"} onClose={() => setDialog(null)} members={members} momentCount={objectList.length} storyCount={storyList.length} canInvite={membership.role === "owner"} onAction={(action) => setDialog(action)} />
       <MembersDialog open={dialog === "members"} onClose={() => setDialog(null)} spaceId={spaceId} spaceName={space.name} membership={membership} members={members} invitations={invitations} objects={objectList} onInvite={() => setDialog("invite")} />
       <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
-      <StoryReader story={openStory} objects={objectList} members={members} canEdit={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onEdit={(story) => { setEditingStory(story); setOpenStory(null); setDialog("edit-story"); }} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
+      <StoryReader story={openStory} objects={objectList} canEdit={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
     </div>
   );
 }

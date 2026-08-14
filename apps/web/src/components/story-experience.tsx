@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, FileText, Film, ImagePlus, MapPin, PencilLine, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, Cloud, FileText, Film, History, ImagePlus, MapPin, PencilLine, RotateCcw, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
-import type { Member, MomentObject, Story, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
+import type { MomentObject, Story, StoryCanvas, StoryCanvasMoment, StoryRevision, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SocialShareDialog } from "./social-share-dialog";
@@ -51,14 +51,52 @@ function StoryCover({ story, objects, onOpen }: { story: Story; objects: MomentO
   );
 }
 
-function StoryMomentMedia({ moment, className }: { moment: MomentObject; className?: string }) {
+function StoryMomentMedia({ moment, className, alt }: { moment: MomentObject; className?: string; alt?: string }) {
   return moment.kind === "photo"
-    ? <img src={api.objectContentUrl(moment.spaceId, moment.id)} alt={moment.caption || moment.name} className={cn("size-full object-cover", className)} />
+    ? <img src={api.objectContentUrl(moment.spaceId, moment.id)} alt={alt ?? moment.caption ?? moment.name} className={cn("size-full object-cover", className)} />
     : <div className={cn("grid min-h-80 place-items-center bg-[#26372f] text-[#f0c681]", className)}><FileText className="size-14" /></div>;
 }
 
-function MomentCredit({ moment, member }: { moment: MomentObject; member?: Member | undefined }) {
-  return <p className="mt-4 text-[10px] font-bold uppercase tracking-[.16em] opacity-70">{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(moment.occurredAt))}{member ? ` · ${member.name}` : ""}</p>;
+function InlineText({ value, onChange, editing, label, maxLength, singleLine = false, className, editClassName }: { value: string; onChange: (value: string) => void; editing: boolean; label: string; maxLength: number; singleLine?: boolean; className?: string | undefined; editClassName?: string | undefined }) {
+  const element = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = element.current;
+    if (target && document.activeElement !== target && target.textContent !== value) target.textContent = value;
+  }, [value]);
+  function paste(event: ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const text = event.clipboardData.getData("text/plain").slice(0, maxLength);
+    document.execCommand("insertText", false, singleLine ? text.replace(/\s+/g, " ") : text);
+  }
+  return (
+    <div
+      ref={element}
+      contentEditable={editing}
+      suppressContentEditableWarning
+      role={editing ? "textbox" : undefined}
+      aria-label={editing ? label : undefined}
+      aria-multiline={editing && !singleLine ? true : undefined}
+      data-placeholder={editing ? `Edit ${label.toLowerCase()}` : undefined}
+      onPaste={paste}
+      onInput={(event) => {
+        const target = event.currentTarget;
+        const text = (target.textContent ?? "").slice(0, maxLength);
+        if (target.textContent !== text) target.textContent = text;
+        onChange(singleLine ? text.replace(/\s+/g, " ") : text);
+      }}
+      onKeyDown={(event) => {
+        if (singleLine && event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.blur();
+        }
+      }}
+      className={cn(
+        className,
+        editing && "cursor-text rounded-lg outline outline-1 outline-dashed outline-[#f0c681]/65 transition hover:bg-white/10 hover:outline-solid focus:bg-white/10 focus:outline-2 focus:outline-solid focus:outline-[#f0c681] empty:before:text-current empty:before:opacity-45 empty:before:content-[attr(data-placeholder)]",
+        editing && editClassName,
+      )}
+    />
+  );
 }
 
 const galleryFormats: Array<{ id: StoryStyle; title: string; eyebrow: string; description: string }> = [
@@ -108,10 +146,24 @@ function GalleryFormatPreview({ format, story, objects, onOpen }: { format: (typ
   );
 }
 
-function StoryMoments({ story, moments, members }: { story: Story; moments: MomentObject[]; members: Member[] }) {
-  if (story.style === "scrapbook") return <div className="paper-grid mx-auto max-w-[92rem] px-5 py-12 sm:px-10 sm:py-20 lg:py-28"><div className="columns-1 gap-10 md:columns-2 xl:columns-3">{moments.map((moment, index) => <section key={moment.id} className={cn("mb-8 break-inside-avoid bg-[#fffaf2] p-3 pb-6 shadow-[0_18px_45px_rgba(70,53,33,.17)] sm:mb-12", index % 3 === 0 ? "-rotate-1" : index % 3 === 1 ? "rotate-1" : "-rotate-[.35deg]")}><div className="aspect-[4/3] overflow-hidden bg-[#d8cbbb]"><StoryMomentMedia moment={moment} /></div><div className="px-3 pt-5"><span className="font-display text-4xl italic text-[#b1604c]">{String(index + 1).padStart(2, "0")}</span><h2 className="mt-2 font-display text-3xl leading-none">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={members.find((member) => member.userId === moment.uploadedBy)} /></div></section>)}</div></div>;
-  if (story.style === "cinematic") return <div className="bg-[#101b16] text-[#fffaf2]">{moments.map((moment, index) => <section key={moment.id} className="relative min-h-[76dvh] overflow-hidden sm:min-h-[88vh]"><StoryMomentMedia moment={moment} className="absolute inset-0" /><div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,14,9,.92),rgba(5,14,9,.08)_68%),linear-gradient(90deg,rgba(5,14,9,.5),transparent_55%)]" /><div className="relative mx-auto flex min-h-[76dvh] max-w-[92rem] items-end px-5 py-10 sm:min-h-[88vh] sm:px-10 sm:py-14 lg:px-16 lg:py-20"><div className="max-w-3xl"><p className="font-display text-6xl italic text-[#f0c681]/70 sm:text-7xl">{String(index + 1).padStart(2, "0")}</p><h2 className="mt-3 font-display text-[clamp(2.75rem,12vw,7rem)] leading-[.88] tracking-[-.055em] sm:mt-4">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={members.find((member) => member.userId === moment.uploadedBy)} /></div></div></section>)}</div>;
-  return <div className="mx-auto max-w-[86rem] px-4 py-12 sm:px-8 sm:py-20 lg:py-28"><div className="mb-12 flex items-center gap-4 sm:mb-20 sm:gap-5"><span className="font-display text-5xl italic text-[#b1604c] sm:text-6xl">01</span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#9a5747]">The moments, in order</p><p className="mt-1 text-sm text-[#756e64]">Told by {new Set(moments.map((moment) => moment.uploadedBy)).size} people across {moments.length} memories</p></div></div><div className="grid gap-16 sm:gap-24 lg:gap-36">{moments.map((moment, index) => { const uploader = members.find((member) => member.userId === moment.uploadedBy); const reverse = index % 2 === 1; return <section key={moment.id} className={cn("story-reader-chapter grid items-center gap-5 sm:gap-8 lg:grid-cols-[1.25fr_.75fr] lg:gap-16", reverse && "lg:grid-cols-[.75fr_1.25fr]")}><div className={cn("overflow-hidden rounded-[22px] bg-[#d8cbbb] shadow-[0_24px_60px_rgba(55,45,32,.14)] sm:rounded-[28px] sm:shadow-[0_30px_80px_rgba(55,45,32,.16)]", reverse && "lg:order-2")}><StoryMomentMedia moment={moment} className="max-h-[72dvh] sm:max-h-[78vh]" /></div><div className={cn(reverse && "lg:order-1 lg:text-right")}><p className="font-display text-5xl italic text-[#cfb99b] sm:text-6xl">{String(index + 1).padStart(2, "0")}</p><h2 className="mt-2 font-display text-3xl leading-[1.02] tracking-[-.035em] sm:mt-4 sm:text-5xl">{moment.caption || moment.name}</h2><MomentCredit moment={moment} member={uploader} /></div></section>; })}</div></div>;
+function StoryMoments({ story, moments, canvas, editing, onMomentChange }: { story: Story; moments: MomentObject[]; canvas: StoryCanvas; editing: boolean; onMomentChange: (momentId: string, field: keyof Pick<StoryCanvasMoment, "title" | "meta">, value: string) => void }) {
+  const canvasById = new Map(canvas.moments.map((moment) => [moment.momentId, moment]));
+  const content = (moment: MomentObject) => canvasById.get(moment.id) ?? { momentId: moment.id, title: moment.caption || moment.name, meta: "" };
+  const credit = (moment: MomentObject, className?: string) => {
+    const value = content(moment);
+    return <InlineText value={value.meta} onChange={(next) => onMomentChange(moment.id, "meta", next)} editing={editing} label="scene details" maxLength={200} singleLine className={cn("mt-4 text-[10px] font-bold uppercase tracking-[.16em] opacity-70", className)} />;
+  };
+  const title = (moment: MomentObject, className?: string) => {
+    const value = content(moment);
+    return <InlineText value={value.title} onChange={(next) => onMomentChange(moment.id, "title", next)} editing={editing} label="scene title" maxLength={200} singleLine className={className} />;
+  };
+  if (story.style === "scrapbook") {
+    return <div className="paper-grid mx-auto max-w-[92rem] px-5 py-12 sm:px-10 sm:py-20 lg:py-28"><div className="columns-1 gap-10 md:columns-2 xl:columns-3">{moments.map((moment, index) => <section key={moment.id} className={cn("mb-8 break-inside-avoid bg-[#fffaf2] p-3 pb-6 shadow-[0_18px_45px_rgba(70,53,33,.17)] sm:mb-12", index % 3 === 0 ? "-rotate-1" : index % 3 === 1 ? "rotate-1" : "-rotate-[.35deg]")}><div className="aspect-[4/3] overflow-hidden bg-[#d8cbbb]"><StoryMomentMedia moment={moment} alt={content(moment).title} /></div><div className="px-3 pt-5"><span className="font-display text-4xl italic text-[#b1604c]">{String(index + 1).padStart(2, "0")}</span>{title(moment, "mt-2 font-display text-3xl leading-none")}{credit(moment, editing ? "text-[#51493e]" : undefined)}</div></section>)}</div></div>;
+  }
+  if (story.style === "cinematic") {
+    return <div className="bg-[#101b16] text-[#fffaf2]">{moments.map((moment, index) => <section key={moment.id} className="relative min-h-[76dvh] overflow-hidden sm:min-h-[88vh]"><StoryMomentMedia moment={moment} alt={content(moment).title} className="absolute inset-0" /><div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,14,9,.92),rgba(5,14,9,.08)_68%),linear-gradient(90deg,rgba(5,14,9,.5),transparent_55%)]" /><div className="relative mx-auto flex min-h-[76dvh] max-w-[92rem] items-end px-5 py-10 sm:min-h-[88vh] sm:px-10 sm:py-14 lg:px-16 lg:py-20"><div className="max-w-3xl"><p className="font-display text-6xl italic text-[#f0c681]/70 sm:text-7xl">{String(index + 1).padStart(2, "0")}</p>{title(moment, "mt-3 font-display text-[clamp(2.75rem,12vw,7rem)] leading-[.88] tracking-[-.055em] sm:mt-4")}{credit(moment)}</div></div></section>)}</div>;
+  }
+  return <div className="mx-auto max-w-[86rem] px-4 py-12 sm:px-8 sm:py-20 lg:py-28"><div className="mb-12 flex items-center gap-4 sm:mb-20 sm:gap-5"><span className="font-display text-5xl italic text-[#b1604c] sm:text-6xl">01</span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#9a5747]">The moments, in order</p><p className="mt-1 text-sm text-[#756e64]">{moments.length} scenes in this story</p></div></div><div className="grid gap-16 sm:gap-24 lg:gap-36">{moments.map((moment, index) => { const reverse = index % 2 === 1; return <section key={moment.id} className={cn("story-reader-chapter grid items-center gap-5 sm:gap-8 lg:grid-cols-[1.25fr_.75fr] lg:gap-16", reverse && "lg:grid-cols-[.75fr_1.25fr]")}><div className={cn("overflow-hidden rounded-[22px] bg-[#d8cbbb] shadow-[0_24px_60px_rgba(55,45,32,.14)] sm:rounded-[28px] sm:shadow-[0_30px_80px_rgba(55,45,32,.16)]", reverse && "lg:order-2")}><StoryMomentMedia moment={moment} alt={content(moment).title} className="max-h-[72dvh] sm:max-h-[78vh]" /></div><div className={cn(reverse && "lg:order-1 lg:text-right")}><p className="font-display text-5xl italic text-[#cfb99b] sm:text-6xl">{String(index + 1).padStart(2, "0")}</p>{title(moment, "mt-2 font-display text-3xl leading-[1.02] tracking-[-.035em] sm:mt-4 sm:text-5xl")}{credit(moment, editing ? "text-[#51493e]" : undefined)}</div></section>; })}</div></div>;
 }
 
 export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMoments }: { stories: Story[]; objects: MomentObject[]; isDemo: boolean; onOpen: (story: Story) => void; onCreate: () => void; onAddMoments: () => void }) {
@@ -276,46 +328,158 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
   );
 }
 
-export function StoryReader({ story, objects, members, canEdit, canDelete, onClose, onEdit, onDelete }: { story: Story | null; objects: MomentObject[]; members: Member[]; canEdit: boolean; canDelete: boolean; onClose: () => void; onEdit: (story: Story) => void; onDelete: (story: Story) => void }) {
+function fallbackCanvas(story: Story, objects: MomentObject[]): StoryCanvas {
+  const moments = storyMoments(story, objects);
+  return {
+    title: story.title,
+    location: story.location ?? "",
+    dateRange: storyDateRange(moments),
+    opening: story.opening,
+    moments: moments.map((moment) => ({ momentId: moment.id, title: moment.caption || moment.name, meta: "" })),
+  };
+}
+
+function StoryHistoryDialog({ open, story, currentCanvas, onClose, onRestored }: { open: boolean; story: Story; currentCanvas: StoryCanvas; onClose: () => void; onRestored: (story: Story) => void }) {
+  const queryClient = useQueryClient();
+  const revisions = useQuery({
+    queryKey: ["story-revisions", story.spaceId, story.id],
+    queryFn: () => api.listStoryRevisions(story.spaceId, story.id),
+    enabled: open,
+  });
+  const restore = useMutation({
+    mutationFn: (revision: StoryRevision) => api.restoreStoryRevision(story.spaceId, story.id, revision.id),
+    onSuccess: async ({ story: restored }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["stories", story.spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["story-revisions", story.spaceId, story.id] }),
+        queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] }),
+      ]);
+      onRestored(restored);
+      onClose();
+      toast.success("Earlier version restored");
+    },
+  });
+  const when = (value: string) => new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return (
+    <Modal open={open} onClose={onClose} title="Version history" description="Zo Moments keeps a snapshot before every autosaved change. Restoring one also preserves your current version." size="lg">
+      <div className="grid gap-3">
+        <div className="rounded-[20px] border-2 border-[#8ca091] bg-[#edf3ed] p-5">
+          <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-bold uppercase tracking-[.18em] text-[#496151]">Current version</span><Cloud className="size-4 text-[#496151]" /></div>
+          <h3 className="mt-3 font-display text-2xl leading-tight text-[#26372f]">{currentCanvas.title}</h3>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#667168]">{currentCanvas.opening}</p>
+        </div>
+        {revisions.isLoading ? <div className="grid min-h-40 place-items-center text-[#657169]"><Spinner /></div> : null}
+        {revisions.error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">Version history could not be loaded.</p> : null}
+        {revisions.data?.revisions.length === 0 ? <div className="rounded-[20px] border border-dashed border-[#cfc1af] p-8 text-center"><History className="mx-auto size-6 text-[#9a5747]" /><p className="mt-3 text-sm text-[#756e64]">Your first snapshot will appear after you change the story.</p></div> : null}
+        {revisions.data?.revisions.map((revision) => <div key={revision.id} className="flex flex-col gap-4 rounded-[20px] border border-[#ddd1c1] bg-[#fffdf8] p-5 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#9a5747]">{when(revision.createdAt)}</p><h3 className="mt-2 truncate font-display text-2xl text-[#26372f]">{revision.canvas.title}</h3><p className="mt-1 line-clamp-1 text-sm text-[#756e64]">{revision.canvas.opening}</p></div><Button type="button" variant="secondary" className="shrink-0" disabled={restore.isPending} onClick={() => restore.mutate(revision)}>{restore.isPending && restore.variables?.id === revision.id ? <Spinner /> : <RotateCcw className="size-4" />}Restore</Button></div>)}
+      </div>
+    </Modal>
+  );
+}
+
+export function StoryReader({ story, objects, canEdit, canDelete, onClose, onStoryChanged, onDelete }: { story: Story | null; objects: MomentObject[]; canEdit: boolean; canDelete: boolean; onClose: () => void; onStoryChanged: (story: Story) => void; onDelete: (story: Story) => void }) {
+  const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [canvas, setCanvas] = useState<StoryCanvas>({ title: "", location: "", dateRange: "", opening: "", moments: [] });
+  const canvasRef = useRef(canvas);
+  const savedCanvasRef = useRef("");
+  const canvasSerialised = JSON.stringify(canvas);
+  const canvasValid = canvas.title.trim().length >= 2 && canvas.opening.trim().length >= 10 && canvas.moments.every((moment) => moment.title.trim().length > 0);
+  const dirty = canvasSerialised !== savedCanvasRef.current;
+  const saveCanvas = useMutation({
+    mutationFn: ({ spaceId, storyId, value }: { spaceId: string; storyId: string; value: StoryCanvas }) => api.updateStoryCanvas(spaceId, storyId, { canvas: value }),
+    onSuccess: async ({ story: saved }, variables) => {
+      const savedCanvas = saved.canvas ?? variables.value;
+      savedCanvasRef.current = JSON.stringify(savedCanvas);
+      if (JSON.stringify(canvasRef.current) === JSON.stringify(variables.value)) {
+        canvasRef.current = savedCanvas;
+        setCanvas(savedCanvas);
+      }
+      onStoryChanged(saved);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["stories", saved.spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["story-revisions", saved.spaceId, saved.id] }),
+        queryClient.invalidateQueries({ queryKey: ["social-exports", saved.spaceId, saved.id] }),
+      ]);
+    },
+  });
+  useEffect(() => { canvasRef.current = canvas; }, [canvas]);
+  useEffect(() => {
+    if (!story) return;
+    const next = story.canvas ?? fallbackCanvas(story, objects);
+    canvasRef.current = next;
+    savedCanvasRef.current = JSON.stringify(next);
+    setCanvas(next);
+    setEditing(false);
+    setShareOpen(false);
+    setHistoryOpen(false);
+    saveCanvas.reset();
+  }, [story?.id]);
+  useEffect(() => {
+    if (!editing || !story || !canvasValid || !dirty || saveCanvas.isPending) return;
+    const timer = window.setTimeout(() => saveCanvas.mutate({ spaceId: story.spaceId, storyId: story.id, value: canvas }), 800);
+    return () => window.clearTimeout(timer);
+  }, [canvas, canvasValid, dirty, editing, saveCanvas.isPending, story]);
   useEffect(() => {
     if (!story) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !shareOpen) onClose(); };
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !shareOpen && !historyOpen && !editing) onClose(); };
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", close); };
-  }, [onClose, shareOpen, story]);
-  useEffect(() => { setShareOpen(false); }, [story?.id]);
+  }, [editing, historyOpen, onClose, shareOpen, story]);
   if (!story) return null;
   const moments = storyMoments(story, objects);
   const hero = moments.find((object) => object.kind === "photo");
+  const updateCanvas = <K extends keyof StoryCanvas>(field: K, value: StoryCanvas[K]) => setCanvas((current) => ({ ...current, [field]: value }));
+  const updateMoment = (momentId: string, field: keyof Pick<StoryCanvasMoment, "title" | "meta">, value: string) => setCanvas((current) => ({ ...current, moments: current.moments.map((moment) => moment.momentId === momentId ? { ...moment, [field]: value } : moment) }));
+  const finishEditing = () => {
+    if (!canvasValid) return;
+    if (!dirty) {
+      setEditing(false);
+      return;
+    }
+    saveCanvas.mutate({ spaceId: story.spaceId, storyId: story.id, value: canvas }, {
+      onSuccess: ({ story: saved }) => {
+        if (JSON.stringify(canvasRef.current) === JSON.stringify(saved.canvas)) setEditing(false);
+      },
+    });
+  };
+  const restored = (restoredStory: Story) => {
+    const next = restoredStory.canvas ?? fallbackCanvas(restoredStory, objects);
+    canvasRef.current = next;
+    savedCanvasRef.current = JSON.stringify(next);
+    setCanvas(next);
+    onStoryChanged(restoredStory);
+  };
+  const saveLabel = !canvasValid ? "Finish required text" : saveCanvas.isPending ? "Saving…" : saveCanvas.isError ? "Save failed" : dirty ? "Changes pending" : "Saved";
   return (
     <>
-      <article className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
+      <article data-editing={editing || undefined} className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
         <div className="fixed right-3 top-[max(.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2 sm:right-4 sm:top-4">
-          {canEdit ? <button onClick={() => onEdit(story)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}
-          <button onClick={() => setShareOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button>
-          <button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button>
+          {editing ? <><span className={cn("inline-flex size-11 items-center justify-center rounded-full bg-[#183128]/88 text-[#fff9ee] shadow-xl backdrop-blur-md sm:hidden", saveCanvas.isError && "bg-[#8a372b]")} aria-label={saveLabel}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}</span><span className={cn("hidden h-11 items-center gap-2 rounded-full bg-[#183128]/88 px-4 text-xs font-bold text-[#fff9ee] shadow-xl backdrop-blur-md sm:inline-flex", saveCanvas.isError && "bg-[#8a372b]")}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}{saveLabel}</span><button onClick={() => setHistoryOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/94 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md sm:h-12 sm:w-auto sm:px-5" aria-label="Version history"><History className="size-4" /><span className="hidden sm:inline">Versions</span></button><button onClick={finishEditing} disabled={!canvasValid || saveCanvas.isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl transition hover:bg-[#f6d795] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:px-5"><Check className="size-4" />Done</button></> : <>{canEdit ? <button onClick={() => setEditing(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}<button onClick={() => setShareOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button><button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button></>}
         </div>
         <header className="relative min-h-[76dvh] overflow-hidden bg-[#183128] text-[#fff9ee] sm:min-h-[88vh]">
           {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,26,19,.96),rgba(9,26,19,.47)_60%,rgba(9,26,19,.18)),linear-gradient(0deg,rgba(9,26,19,.74),transparent_58%)]" />
           <div className="relative mx-auto flex min-h-[76dvh] max-w-[92rem] flex-col justify-between px-5 pb-9 pt-[max(1.25rem,env(safe-area-inset-top))] sm:min-h-[88vh] sm:px-10 sm:py-10 lg:px-16 lg:py-14">
-            <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>
+            {editing ? <span className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><PencilLine className="size-4" />Tap any outlined text to edit</span> : <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>}
             <div className="max-w-4xl pb-8">
-              <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4" />{storyDateRange(moments)}</span>{story.location ? <span className="flex items-center gap-2"><MapPin className="size-4" />{story.location}</span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
-              <h1 className="font-display text-[clamp(3.15rem,14vw,10rem)] leading-[.82] tracking-[-.06em]">{story.title}</h1>
-              <p className="mt-6 max-w-2xl text-base leading-7 text-[#eee4d6] sm:mt-8 sm:text-xl sm:leading-9">{story.opening}</p>
+              <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4 shrink-0" /><InlineText value={canvas.dateRange} onChange={(value) => updateCanvas("dateRange", value)} editing={editing} label="story date" maxLength={100} singleLine className="min-w-24" /></span>{editing || canvas.location ? <span className="flex items-center gap-2"><MapPin className="size-4 shrink-0" /><InlineText value={canvas.location} onChange={(value) => updateCanvas("location", value)} editing={editing} label="place or route" maxLength={100} singleLine className="min-w-24" /></span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
+              <InlineText value={canvas.title} onChange={(value) => updateCanvas("title", value)} editing={editing} label="story title" maxLength={100} singleLine className="font-display text-[clamp(3.15rem,14vw,10rem)] leading-[.82] tracking-[-.06em]" />
+              <InlineText value={canvas.opening} onChange={(value) => updateCanvas("opening", value)} editing={editing} label="story opening" maxLength={1200} className="mt-6 max-w-2xl whitespace-pre-wrap text-base leading-7 text-[#eee4d6] sm:mt-8 sm:text-xl sm:leading-9" />
             </div>
           </div>
         </header>
-        <StoryMoments story={story} moments={moments} members={members} />
+        <StoryMoments story={story} moments={moments} canvas={canvas} editing={editing} onMomentChange={updateMoment} />
         <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
-          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit ? <Button variant="secondary" className="mt-8" onClick={() => onEdit(story)}><PencilLine className="size-4" />Edit this story</Button> : null}<Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button>{canDelete ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
+          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit && !editing ? <Button variant="secondary" className="mt-8" onClick={() => setEditing(true)}><PencilLine className="size-4" />Edit on the canvas</Button> : null}{!editing ? <Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button> : null}{canDelete && !editing ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
         </div>
       </article>
       <SocialShareDialog story={story} objects={objects} open={shareOpen} onClose={() => setShareOpen(false)} />
+      <StoryHistoryDialog open={historyOpen} story={story} currentCanvas={canvas} onClose={() => setHistoryOpen(false)} onRestored={restored} />
     </>
   );
 }

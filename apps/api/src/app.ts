@@ -13,6 +13,7 @@ import {
   updateAccountStatusSchema,
   updateAdminRoleSchema,
   updateProfileSchema,
+  updateStoryCanvasSchema,
   updateStorySchema,
   type Album,
   type Avatar,
@@ -23,6 +24,8 @@ import {
   type ShareInvitation,
   type Space,
   type Story,
+  type StoryCanvas,
+  type StoryRevision,
   type StoryStyle,
 } from "@zo-moments/types";
 import { isSupportedMomentFileName } from "@zo-moments/types/upload";
@@ -142,6 +145,79 @@ function normaliseStory(story: Story): Story {
     styleSource: story.styleSource ?? "auto",
     styleRationale: style !== story.style ? "Classic replaced a retired prototype format." : (story.styleRationale ?? null),
   };
+}
+
+function canvasDate(value: string): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+}
+
+function canvasDateRange(moments: MomentObject[]): string {
+  if (!moments.length) return "A shared story";
+  const ordered = [...moments].sort((left, right) => left.occurredAt.localeCompare(right.occurredAt));
+  const first = ordered[0]!.occurredAt;
+  const last = ordered.at(-1)!.occurredAt;
+  return first.slice(0, 10) === last.slice(0, 10) ? canvasDate(first) : `${canvasDate(first)} — ${canvasDate(last)}`;
+}
+
+async function buildStoryCanvas(repositories: Repositories, story: Story, suppliedMoments?: MomentObject[]): Promise<StoryCanvas> {
+  const moments = suppliedMoments ?? (await Promise.all(story.momentIds.map((momentId) => repositories.objects.get(momentId))))
+    .filter((moment): moment is MomentObject => Boolean(moment));
+  const members = await repositories.members.find((member) => member.spaceId === story.spaceId);
+  const names = new Map(members.map((member) => [member.userId, member.name]));
+  return {
+    title: story.title,
+    location: story.location ?? "",
+    dateRange: canvasDateRange(moments),
+    opening: story.opening,
+    moments: moments.map((moment) => ({
+      momentId: moment.id,
+      title: moment.caption || moment.name,
+      meta: [canvasDate(moment.occurredAt), names.get(moment.uploadedBy) ?? ""].filter(Boolean).join(" · "),
+    })),
+  };
+}
+
+async function storyWithCanvas(repositories: Repositories, value: Story): Promise<Story> {
+  const story = normaliseStory(value);
+  return story.canvas ? story : { ...story, canvas: await buildStoryCanvas(repositories, story) };
+}
+
+async function clearStoryExports(store: BlobStore, story: Story): Promise<void> {
+  const prefix = `zo-moments/social-exports/${safeFileName(story.spaceId)}/${safeFileName(story.id)}/`;
+  const keys = await store.list(prefix);
+  await Promise.all(keys.map((key) => store.delete(key)));
+}
+
+async function addStoryRevision(repositories: Repositories, story: Story, canvas: StoryCanvas, userId: string): Promise<StoryRevision> {
+  const revision: StoryRevision = {
+    id: id(),
+    storyId: story.id,
+    spaceId: story.spaceId,
+    canvas,
+    createdBy: userId,
+    createdAt: now(),
+  };
+  await repositories.storyRevisions.put(revision);
+  const revisions = await repositories.storyRevisions.find((candidate) => candidate.storyId === story.id);
+  const obsolete = revisions.sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(50);
+  await Promise.all(obsolete.map((candidate) => repositories.storyRevisions.delete(candidate.id)));
+  return revision;
+}
+
+async function saveStoryCanvas(repositories: Repositories, store: BlobStore, value: Story, canvas: StoryCanvas, userId: string): Promise<Story> {
+  const story = await storyWithCanvas(repositories, value);
+  if (JSON.stringify(story.canvas) === JSON.stringify(canvas)) return story;
+  await addStoryRevision(repositories, story, story.canvas!, userId);
+  const updated: Story = {
+    ...story,
+    title: canvas.title,
+    location: canvas.location || null,
+    opening: canvas.opening,
+    canvas,
+    updatedAt: now(),
+  };
+  await Promise.all([repositories.stories.put(updated), clearStoryExports(store, story)]);
+  return updated;
 }
 
 function recommendStoryStyle(moments: MomentObject[]): { style: StoryStyle; rationale: string } {
@@ -387,8 +463,11 @@ async function ensureDemoWorkspace(
     const exportKeys = await store.list(`zo-moments/social-exports/${DEMO_SPACE_ID}/${story.id}/`);
     await Promise.all(exportKeys.map((key) => store.delete(key)));
     await repositories.stories.delete(story.id);
+    await repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id);
   }));
-  await Promise.all(seededStories.map((story) => repositories.stories.put(story)));
+  await Promise.all(seededStories.map(async (story) => {
+    if (!(await repositories.stories.get(story.id))) await repositories.stories.put(story);
+  }));
 }
 
 function detectedImage(bytes: Uint8Array): { mimeType: string; extension: string } | null {
@@ -941,6 +1020,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       repositories.objects.deleteWhere((object) => object.spaceId === spaceId),
       repositories.albums.deleteWhere((album) => album.spaceId === spaceId),
       repositories.stories.deleteWhere((story) => story.spaceId === spaceId),
+      repositories.storyRevisions.deleteWhere((revision) => revision.spaceId === spaceId),
       repositories.invitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.shareInvitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.members.deleteWhere((member) => member.spaceId === spaceId),
@@ -1131,12 +1211,16 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
           const exportKeys = await store.list(`zo-moments/social-exports/${DEMO_SPACE_ID}/${story.id}/`);
           await Promise.all(exportKeys.map((key) => store.delete(key)));
           await repositories.stories.delete(story.id);
+          await repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id);
         }));
-        await Promise.all(seeded.map((story) => repositories.stories.put(story)));
-        stories = seeded;
+        await Promise.all(seeded.map(async (story) => {
+          if (!(await repositories.stories.get(story.id))) await repositories.stories.put(story);
+        }));
+        stories = await repositories.stories.find((story) => story.spaceId === spaceId);
       }
     }
-    return c.json({ stories: stories.map(normaliseStory).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
+    const hydrated = await Promise.all(stories.map((story) => storyWithCanvas(repositories, story)));
+    return c.json({ stories: hydrated.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
   });
 
   app.post("/api/spaces/:spaceId/stories/suggest-style", zValidator("json", suggestStoryStyleSchema), async (c) => {
@@ -1196,6 +1280,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+    story.canvas = await buildStoryCanvas(repositories, story, moments.filter((moment): moment is MomentObject => Boolean(moment)));
     await repositories.stories.put(story);
     return c.json({ story }, 201);
   });
@@ -1216,8 +1301,9 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     }
     const recommended = recommendStoryStyle(moments.filter((moment): moment is MomentObject => Boolean(moment)));
     const style = input.style === "auto" ? recommended.style : input.style;
+    const current = await storyWithCanvas(repositories, existing);
     const story: Story = {
-      ...existing,
+      ...current,
       title: input.title,
       location: input.location || null,
       opening: input.opening,
@@ -1227,12 +1313,73 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       styleRationale: input.styleRationale || (input.style === "auto" ? recommended.rationale : null),
       updatedAt: now(),
     };
-    const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
+    const rebuiltCanvas = await buildStoryCanvas(repositories, story, moments.filter((moment): moment is MomentObject => Boolean(moment)));
+    const previousCanvas = current.canvas!;
+    const previousMoments = new Map(previousCanvas.moments.map((moment) => [moment.momentId, moment]));
+    story.canvas = {
+      ...rebuiltCanvas,
+      moments: rebuiltCanvas.moments.map((moment) => previousMoments.get(moment.momentId) ?? moment),
+    };
+    if (JSON.stringify(previousCanvas) !== JSON.stringify(story.canvas)) {
+      await addStoryRevision(repositories, current, previousCanvas, user.id);
+    }
     await Promise.all([
       repositories.stories.put(story),
-      ...exportKeys.map((key) => store.delete(key)),
+      clearStoryExports(store, story),
     ]);
     return c.json({ story });
+  });
+
+  app.patch("/api/spaces/:spaceId/stories/:storyId/canvas", zValidator("json", updateStoryCanvasSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const membership = await requireMember(repositories, spaceId, user.id);
+    const existing = await repositories.stories.get(c.req.param("storyId"));
+    if (!existing || existing.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (membership.role !== "owner" && existing.createdBy !== user.id) {
+      throw new HTTPException(403, { message: "Only the story creator or space owner can edit it" });
+    }
+    const canvas = c.req.valid("json").canvas;
+    const allowedMomentIds = new Set(existing.momentIds);
+    if (canvas.moments.some((moment) => !allowedMomentIds.has(moment.momentId)) || canvas.moments.length !== existing.momentIds.length) {
+      throw new HTTPException(400, { message: "Canvas moments must match this story" });
+    }
+    const story = await saveStoryCanvas(repositories, store, existing, canvas, user.id);
+    return c.json({ story });
+  });
+
+  app.get("/api/spaces/:spaceId/stories/:storyId/revisions", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const membership = await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(c.req.param("storyId"));
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (membership.role !== "owner" && story.createdBy !== user.id) {
+      throw new HTTPException(403, { message: "Only the story creator or space owner can view its versions" });
+    }
+    const revisions = await repositories.storyRevisions.find((revision) => revision.storyId === story.id);
+    return c.json({ revisions: revisions.sort((left, right) => right.createdAt.localeCompare(left.createdAt)) });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/:storyId/revisions/:revisionId/restore", async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    const membership = await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(c.req.param("storyId"));
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    if (membership.role !== "owner" && story.createdBy !== user.id) {
+      throw new HTTPException(403, { message: "Only the story creator or space owner can restore a version" });
+    }
+    const revision = await repositories.storyRevisions.get(c.req.param("revisionId"));
+    if (!revision || revision.storyId !== story.id || revision.spaceId !== spaceId) {
+      throw new HTTPException(404, { message: "Story version not found" });
+    }
+    const currentMomentIds = new Set(story.momentIds);
+    if (revision.canvas.moments.length !== story.momentIds.length || revision.canvas.moments.some((moment) => !currentMomentIds.has(moment.momentId))) {
+      throw new HTTPException(409, { message: "This version references moments that are no longer in the story" });
+    }
+    const restored = await saveStoryCanvas(repositories, store, story, revision.canvas, user.id);
+    return c.json({ story: restored });
   });
 
   app.get("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
@@ -1335,6 +1482,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
     await Promise.all([
       repositories.stories.delete(story.id),
+      repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
       ...exportKeys.map((key) => store.delete(key)),
     ]);
     return c.body(null, 204);
@@ -1446,8 +1594,17 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const stories = await repositories.stories.find((story) => story.spaceId === spaceId && story.momentIds.includes(object.id));
     await Promise.all(stories.map(async (story) => {
       const momentIds = story.momentIds.filter((momentId) => momentId !== object.id);
-      if (momentIds.length === 0) return repositories.stories.delete(story.id);
-      return repositories.stories.put({ ...story, momentIds, updatedAt: now() });
+      if (momentIds.length === 0) {
+        await Promise.all([
+          repositories.stories.delete(story.id),
+          repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
+          clearStoryExports(store, story),
+        ]);
+        return;
+      }
+      const current = await storyWithCanvas(repositories, story);
+      const updated = { ...current, momentIds, canvas: { ...current.canvas!, moments: current.canvas!.moments.filter((moment) => moment.momentId !== object.id) }, updatedAt: now() };
+      await Promise.all([repositories.stories.put(updated), clearStoryExports(store, story)]);
     }));
     return c.body(null, 204);
   });

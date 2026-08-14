@@ -79,8 +79,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const availableTargets = socialTargets.filter((item) => item.format === format);
   const moments = useMemo(() => {
     const byId = new Map(objects.map((object) => [object.id, object]));
-    return story.momentIds.map((id) => byId.get(id)).filter((object): object is MomentObject => Boolean(object));
-  }, [objects, story.momentIds]);
+    const overrides = new Map(story.canvas?.moments.map((moment) => [moment.momentId, moment.title]) ?? []);
+    return story.momentIds.map((id) => byId.get(id)).filter((object): object is MomentObject => Boolean(object)).map((object) => ({ ...object, caption: overrides.get(object.id) ?? object.caption }));
+  }, [objects, story.canvas, story.momentIds]);
   const status = useQuery({
     queryKey: ["social-exports", story.spaceId, story.id],
     queryFn: () => api.getSocialExports(story.spaceId, story.id),

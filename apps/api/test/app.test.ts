@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import type { Story, StoryRevision } from "@zo-moments/types";
 import { createApp } from "../src/app";
 import { MemoryBlobStore } from "../src/storage/blob-store";
 
@@ -225,7 +226,7 @@ describe("Zo Moments API", () => {
     });
     expect(retired.status).toBe(400);
 
-    const created = await owner.json<{ story: { id: string; momentIds: string[]; style: string; styleSource: string; styleRationale: string | null } }>(`/api/spaces/${spaceId}/stories`, {
+    const created = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
         title: "The weekend the rain followed us",
@@ -241,6 +242,8 @@ describe("Zo Moments API", () => {
     expect(created.body.story.style).toBe("scrapbook");
     expect(created.body.story.styleSource).toBe("manual");
     expect(created.body.story.styleRationale).toBeNull();
+    expect(created.body.story.canvas?.title).toBe("The weekend the rain followed us");
+    expect(created.body.story.canvas?.moments.map(({ title }) => title)).toEqual(samples.map(([, caption]) => caption));
 
     const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
     expect(shared.response.status).toBe(200);
@@ -288,7 +291,7 @@ describe("Zo Moments API", () => {
       method: "PATCH",
       body: JSON.stringify(updateInput),
     })).status).toBe(403);
-    const updated = await owner.json<{ story: { id: string; title: string; location: string; opening: string; style: string; momentIds: string[] } }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, {
+    const updated = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, {
       method: "PATCH",
       body: JSON.stringify(updateInput),
     });
@@ -302,6 +305,40 @@ describe("Zo Moments API", () => {
     const clearedSocialStatus = await owner.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`);
     expect(clearedSocialStatus.body["instagram-feed"]).toBe(0);
     expect(clearedSocialStatus.body.tiktok).toBe(0);
+
+    const regeneratedSocial = new FormData();
+    regeneratedSocial.set("preset", "instagram-feed");
+    regeneratedSocial.set("file-0", new File(["regenerated-cover"], "story-01.png", { type: "image/png" }));
+    expect((await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`, { method: "POST", body: regeneratedSocial })).status).toBe(201);
+
+    const canvas = {
+      ...updated.body.story.canvas!,
+      title: "Kyoto, rewritten on the canvas",
+      location: "A route we renamed",
+      dateRange: "Our long weekend",
+      opening: "This opening exists only inside the finished story and no longer follows the source moments.",
+      moments: updated.body.story.canvas!.moments.map((moment, index) => index === 0 ? { ...moment, title: "A new first scene", meta: "Friday evening · Our own note" } : moment),
+    };
+    expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/canvas`, { method: "PATCH", body: JSON.stringify({ canvas }) })).status).toBe(403);
+    const canvasUpdate = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/canvas`, { method: "PATCH", body: JSON.stringify({ canvas }) });
+    expect(canvasUpdate.response.status).toBe(200);
+    expect(canvasUpdate.body.story.title).toBe(canvas.title);
+    expect(canvasUpdate.body.story.location).toBe(canvas.location);
+    expect(canvasUpdate.body.story.opening).toBe(canvas.opening);
+    expect(canvasUpdate.body.story.canvas).toEqual(canvas);
+    expect((await owner.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`)).body["instagram-feed"]).toBe(0);
+
+    expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions`)).status).toBe(403);
+    const history = await owner.json<{ revisions: StoryRevision[] }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions`);
+    expect(history.response.status).toBe(200);
+    expect(history.body.revisions.length).toBeGreaterThanOrEqual(2);
+    const beforeCanvasEdit = history.body.revisions.find((revision) => revision.canvas.title === updateInput.title);
+    expect(beforeCanvasEdit).toBeDefined();
+    const restored = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions/${beforeCanvasEdit!.id}/restore`, { method: "POST" });
+    expect(restored.response.status).toBe(200);
+    expect(restored.body.story.canvas?.title).toBe(updateInput.title);
+    const restoredHistory = await owner.json<{ revisions: StoryRevision[] }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions`);
+    expect(restoredHistory.body.revisions.some((revision) => revision.canvas.title === canvas.title)).toBe(true);
 
     const outsider = new BrowserSession(app);
     expect((await outsider.request("/auth/register", {

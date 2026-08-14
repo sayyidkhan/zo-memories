@@ -120,6 +120,8 @@ Users can organise memories into albums, such as:
 
 Users turn a set of moments into a story with a title, place, personal opening, and chronological reading experience. Stories are the primary way to revisit an event; albums remain optional organisation.
 
+After creation, the story behaves like an editable canvas. Creators and space owners can edit the rendered title, place, display date, opening, scene titles, and scene metadata in place. These values are story-specific overrides and do not change the source moments. Changes autosave, keep restorable snapshots, and flow into future social exports.
+
 The creation journey is explicit inside every shared space:
 
 1. Create a shared space.

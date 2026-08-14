@@ -111,7 +111,7 @@ function dateRange(moments: MomentObject[]) {
 }
 
 function metadata(story: Story, moments: MomentObject[], includeLocation: boolean, includeDate: boolean) {
-  return [includeDate ? dateRange(moments) : "", includeLocation ? story.location ?? "" : ""].filter(Boolean).join("  ·  ");
+  return [includeDate ? story.canvas?.dateRange ?? dateRange(moments) : "", includeLocation ? story.canvas?.location ?? story.location ?? "" : ""].filter(Boolean).join("  ·  ");
 }
 
 function safeArea(width: number, height: number, profile: SocialExportProfile) {
