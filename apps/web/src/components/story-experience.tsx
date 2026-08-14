@@ -196,7 +196,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, onCreated }: { op
   return (
     <Modal open={open} onClose={onClose} title="Craft a story" description="Give the moments their meaning. Your selections will read from oldest to newest." size="xl">
       <form className="grid gap-7" onSubmit={submit}>
-        <section className="grid gap-4 rounded-[24px] bg-[#f3ebdf] p-5 sm:grid-cols-2">
+        <section className="grid items-start gap-4 rounded-[24px] bg-[#f3ebdf] p-5 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">01 · Name the chapter</p></div>
           <Field label="Story title"><Input name="title" placeholder="The weekend the rain followed us" minLength={2} maxLength={100} required /></Field>
           <Field label="Place or route" hint="Optional"><Input name="location" placeholder="Kyoto · Spring 2026" maxLength={100} /></Field>
