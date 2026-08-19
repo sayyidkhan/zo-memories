@@ -118,7 +118,15 @@ Users can organise memories into albums, such as:
 
 ### Stories
 
-Users turn a set of moments into a story with a title, place, personal opening, and chronological reading experience. Stories are the primary way to revisit an event; albums remain optional organisation.
+Users turn selected moments into one canonical journey with a title, place, summary, narrative chapters, story beats, and closing reflection. AI can draft the structure from metadata, or the application can create it locally without AI. Users edit text directly on the story canvas; changes autosave and keep recoverable previous versions.
+
+The journey can then be presented in different forms without changing its meaning:
+
+- Interactive storybook
+- Social image carousel
+- Vertical social video
+
+Classic, Scrapbook, and Cinematic are visual themes that can be changed after creation. They are not separate copies of the story.
 
 After creation, the story behaves like an editable canvas. Creators and space owners can edit the rendered title, place, display date, opening, scene titles, and scene metadata in place. These values are story-specific overrides and do not change the source moments. Changes autosave, keep restorable snapshots, and flow into future social exports.
 
@@ -206,6 +214,8 @@ Shared Story
 - Albums
 - Guided onboarding
 - Create and read stories
+- Edit stories inline and restore previous versions
+- Switch story theme without regenerating the narrative
 - Preview
 - Download
 
@@ -249,6 +259,8 @@ Shared Story
 
 - Google Photos
 - Apple Shared Library
+- Polarsteps
+- Journi
 - Family Albums
 - Timehop
 - BeReal Memories

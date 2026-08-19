@@ -154,7 +154,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <HowItWorksDialog open={dialog === "guide"} onClose={() => setDialog(null)} members={members} momentCount={objectList.length} storyCount={storyList.length} canInvite={membership.role === "owner"} onAction={(action) => setDialog(action)} />
       <MembersDialog open={dialog === "members"} onClose={() => setDialog(null)} spaceId={spaceId} spaceName={space.name} membership={membership} members={members} invitations={invitations} objects={objectList} onInvite={() => setDialog("invite")} />
       <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
-      <StoryReader story={openStory} objects={objectList} canEdit={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
+      <StoryReader story={openStory} objects={objectList} canEdit={!isDemo && Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
     </div>
   );
 }

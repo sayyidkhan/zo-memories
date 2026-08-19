@@ -147,6 +147,9 @@ The shared SDK supports React, with future support planned for:
 
 - `GET /spaces/:id/stories`
 - `POST /spaces/:id/stories`
+- `POST /spaces/:id/stories/suggest-opening`
+- `POST /spaces/:id/stories/suggest-blueprint`
+- `PATCH /spaces/:id/stories/:storyId`
 - `PATCH /spaces/:id/stories/:storyId/canvas`
 - `GET /spaces/:id/stories/:storyId/revisions`
 - `POST /spaces/:id/stories/:storyId/revisions/:revisionId/restore`

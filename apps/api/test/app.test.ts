@@ -214,6 +214,14 @@ describe("Zo Moments API", () => {
     expect(opening.body.source).toBe("auto");
     expect(opening.body.opening.length).toBeGreaterThan(10);
 
+    const blueprint = await owner.json<{ blueprint: { summary: string; chapters: Array<{ momentIds: string[] }>; closing: string }; source: string }>(`/api/spaces/${spaceId}/stories/suggest-blueprint`, {
+      method: "POST",
+      body: JSON.stringify({ title: "Rainy Kyoto", location: "Kyoto", opening: opening.body.opening, momentIds }),
+    });
+    expect(blueprint.response.status).toBe(200);
+    expect(blueprint.body.source).toBe("auto");
+    expect(blueprint.body.blueprint.chapters.flatMap((chapter) => chapter.momentIds)).toEqual(momentIds);
+
     const retired = await owner.request(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
@@ -235,6 +243,7 @@ describe("Zo Moments API", () => {
         momentIds,
         style: "scrapbook",
         styleSource: "manual",
+        blueprint: blueprint.body.blueprint,
       }),
     });
     expect(created.response.status).toBe(201);
@@ -244,6 +253,7 @@ describe("Zo Moments API", () => {
     expect(created.body.story.styleRationale).toBeNull();
     expect(created.body.story.canvas?.title).toBe("The weekend the rain followed us");
     expect(created.body.story.canvas?.moments.map(({ title }) => title)).toEqual(samples.map(([, caption]) => caption));
+    expect(created.body.story.blueprint?.chapters).toHaveLength(2);
 
     const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
     expect(shared.response.status).toBe(200);
@@ -318,6 +328,11 @@ describe("Zo Moments API", () => {
       dateRange: "Our long weekend",
       opening: "This opening exists only inside the finished story and no longer follows the source moments.",
       moments: updated.body.story.canvas!.moments.map((moment, index) => index === 0 ? { ...moment, title: "A new first scene", meta: "Friday evening · Our own note" } : moment),
+      blueprint: {
+        ...updated.body.story.canvas!.blueprint!,
+        chapters: updated.body.story.canvas!.blueprint!.chapters.map((chapter, index) => index === 0 ? { ...chapter, title: "The rainy arrival" } : chapter),
+        closing: "We came home with a story that still belongs to all of us.",
+      },
     };
     expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/canvas`, { method: "PATCH", body: JSON.stringify({ canvas }) })).status).toBe(403);
     const canvasUpdate = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/canvas`, { method: "PATCH", body: JSON.stringify({ canvas }) });
@@ -326,6 +341,7 @@ describe("Zo Moments API", () => {
     expect(canvasUpdate.body.story.location).toBe(canvas.location);
     expect(canvasUpdate.body.story.opening).toBe(canvas.opening);
     expect(canvasUpdate.body.story.canvas).toEqual(canvas);
+    expect(canvasUpdate.body.story.blueprint?.chapters[0]?.title).toBe("The rainy arrival");
     expect((await owner.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`)).body["instagram-feed"]).toBe(0);
 
     expect((await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions`)).status).toBe(403);
@@ -337,6 +353,7 @@ describe("Zo Moments API", () => {
     const restored = await owner.json<{ story: Story }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions/${beforeCanvasEdit!.id}/restore`, { method: "POST" });
     expect(restored.response.status).toBe(200);
     expect(restored.body.story.canvas?.title).toBe(updateInput.title);
+    expect(restored.body.story.blueprint?.chapters[0]?.title).not.toBe("The rainy arrival");
     const restoredHistory = await owner.json<{ revisions: StoryRevision[] }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/revisions`);
     expect(restoredHistory.body.revisions.some((revision) => revision.canvas.title === canvas.title)).toBe(true);
 
@@ -550,16 +567,16 @@ describe("Zo Moments API", () => {
       momentCounts.set(object.uploadedBy, (momentCounts.get(object.uploadedBy) ?? 0) + 1);
     }
     expect(demoDetail.body.members.map(({ userId }) => momentCounts.get(userId))).toEqual([6, 6, 6]);
-    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
+    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string; blueprint: { chapters: unknown[] } }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
     expect(demoStories.body.stories).toHaveLength(3);
     expect(demoStories.body.stories.map(({ title }) => title)).toEqual([
       "The year we kept moving",
-      "Postcards from rainy cities",
-      "The little things we brought home",
+      "The year we kept moving",
+      "The year we kept moving",
     ]);
     expect(demoStories.body.stories.map(({ style }) => style)).toEqual(["cinematic", "classic", "scrapbook"]);
-    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["auto", "manual", "manual"]);
-    expect(demoStories.body.stories[0]?.momentIds).toHaveLength(18);
+    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["manual", "manual", "manual"]);
+    expect(demoStories.body.stories.every((story) => story.momentIds.length === 18 && story.blueprint.chapters.length === 5)).toBe(true);
 
     const secondVisitor = new BrowserSession(app);
     expect((await secondVisitor.request("/auth/demo", {

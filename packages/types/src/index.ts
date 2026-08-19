@@ -100,6 +100,21 @@ export const albumSchema = z.object({
 export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbook", "cinematic"]);
 export const storyStylePreferenceSchema = z.enum(["auto", "classic", "scrapbook", "cinematic"]);
 export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
+export const storyBeatSchema = z.enum(["arrival", "discovery", "highlight", "turning-point", "reflection"]);
+
+export const storyChapterSchema = z.object({
+  id: z.string(),
+  beat: storyBeatSchema,
+  title: z.string().trim().min(1).max(120),
+  narration: z.string().trim().min(1).max(1600),
+  momentIds: z.array(z.string()).min(1).max(12),
+});
+
+export const storyBlueprintSchema = z.object({
+  summary: z.string().trim().min(10).max(1200),
+  chapters: z.array(storyChapterSchema).min(1).max(8),
+  closing: z.string().trim().min(10).max(1200),
+});
 
 export const storyCanvasMomentSchema = z.object({
   momentId: z.string(),
@@ -114,6 +129,7 @@ export const storyCanvasSchema = z.object({
   opening: z.string().trim().min(10).max(1200),
   moments: z.array(storyCanvasMomentSchema).min(1).max(30)
     .refine((moments) => new Set(moments.map(({ momentId }) => momentId)).size === moments.length, "Every canvas moment must be unique"),
+  blueprint: storyBlueprintSchema.optional(),
 });
 
 export const storySchema = z.object({
@@ -127,6 +143,7 @@ export const storySchema = z.object({
   styleSource: storyStyleSourceSchema.default("auto"),
   styleRationale: z.string().nullable().default(null),
   canvas: storyCanvasSchema.optional(),
+  blueprint: storyBlueprintSchema.optional(),
   createdBy: z.string(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
@@ -183,6 +200,7 @@ export const createStorySchema = z.object({
   style: storyStylePreferenceSchema.default("auto"),
   styleSource: storyStyleSourceSchema.optional(),
   styleRationale: z.string().trim().max(300).optional(),
+  blueprint: storyBlueprintSchema.optional(),
   momentIds: z.array(z.string())
     .min(2)
     .max(30)
@@ -206,6 +224,9 @@ export const suggestStoryOpeningSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
 });
 
+export const suggestStoryBlueprintSchema = suggestStoryOpeningSchema.extend({
+  opening: z.string().trim().min(10).max(1200),
+});
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().toLowerCase().email(),
@@ -296,6 +317,9 @@ export type StoryRevision = z.infer<typeof storyRevisionSchema>;
 export type StoryStyle = z.infer<typeof storyStyleSchema>;
 export type StoryStylePreference = z.infer<typeof storyStylePreferenceSchema>;
 export type StoryStyleSource = z.infer<typeof storyStyleSourceSchema>;
+export type StoryBeat = z.infer<typeof storyBeatSchema>;
+export type StoryChapter = z.infer<typeof storyChapterSchema>;
+export type StoryBlueprint = z.infer<typeof storyBlueprintSchema>;
 export type ObjectKind = z.infer<typeof objectKindSchema>;
 export type MomentObject = z.infer<typeof momentObjectSchema>;
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
@@ -307,6 +331,7 @@ export type UpdateStoryInput = z.infer<typeof updateStorySchema>;
 export type UpdateStoryCanvasInput = z.infer<typeof updateStoryCanvasSchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
 export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
+export type SuggestStoryBlueprintInput = z.infer<typeof suggestStoryBlueprintSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

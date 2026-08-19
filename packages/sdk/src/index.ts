@@ -20,7 +20,9 @@ import type {
   SpaceSummary,
   Story,
   StoryRevision,
+  StoryBlueprint,
   StoryStyle,
+  SuggestStoryBlueprintInput,
   SuggestStoryOpeningInput,
   SuggestStoryStyleInput,
   UpdateProfileInput,
@@ -309,6 +311,13 @@ export class ZoMomentsClient {
 
   suggestStoryOpening(spaceId: string, input: SuggestStoryOpeningInput): Promise<{ opening: string; source: "ai" | "auto" }> {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-opening`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  suggestStoryBlueprint(spaceId: string, input: SuggestStoryBlueprintInput): Promise<{ blueprint: StoryBlueprint; source: "ai" | "auto" }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-blueprint`, {
       method: "POST",
       body: JSON.stringify(input),
     });

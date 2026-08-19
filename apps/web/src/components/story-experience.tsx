@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, Cloud, FileText, Film, History, ImagePlus, MapPin, PencilLine, RotateCcw, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
-import type { MomentObject, Story, StoryCanvas, StoryCanvasMoment, StoryRevision, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
+import type { MomentObject, Story, StoryBlueprint, StoryCanvas, StoryCanvasMoment, StoryRevision, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SocialShareDialog } from "./social-share-dialog";
@@ -146,24 +146,27 @@ function GalleryFormatPreview({ format, story, objects, onOpen }: { format: (typ
   );
 }
 
-function StoryMoments({ story, moments, canvas, editing, onMomentChange }: { story: Story; moments: MomentObject[]; canvas: StoryCanvas; editing: boolean; onMomentChange: (momentId: string, field: keyof Pick<StoryCanvasMoment, "title" | "meta">, value: string) => void }) {
+function StoryMoments({ story, moments, canvas, editing, onMomentChange, onBlueprintChange }: { story: Story; moments: MomentObject[]; canvas: StoryCanvas; editing: boolean; onMomentChange: (momentId: string, field: keyof Pick<StoryCanvasMoment, "title" | "meta">, value: string) => void; onBlueprintChange: (blueprint: StoryBlueprint) => void }) {
   const canvasById = new Map(canvas.moments.map((moment) => [moment.momentId, moment]));
+  const momentById = new Map(moments.map((moment) => [moment.id, moment]));
+  const blueprint = canvas.blueprint ?? story.blueprint ?? { summary: canvas.opening, chapters: [{ id: "chapter-1", beat: "arrival" as const, title: "The journey", narration: canvas.opening, momentIds: moments.map((moment) => moment.id) }], closing: "This is the part we chose to keep." };
+  const updateChapter = (chapterId: string, field: "title" | "narration", value: string) => onBlueprintChange({ ...blueprint, chapters: blueprint.chapters.map((chapter) => chapter.id === chapterId ? { ...chapter, [field]: value } : chapter) });
   const content = (moment: MomentObject) => canvasById.get(moment.id) ?? { momentId: moment.id, title: moment.caption || moment.name, meta: "" };
-  const credit = (moment: MomentObject, className?: string) => {
+  const scene = (moment: MomentObject, compact = false) => {
     const value = content(moment);
-    return <InlineText value={value.meta} onChange={(next) => onMomentChange(moment.id, "meta", next)} editing={editing} label="scene details" maxLength={200} singleLine className={cn("mt-4 text-[10px] font-bold uppercase tracking-[.16em] opacity-70", className)} />;
+    return <figure key={moment.id} className="overflow-hidden rounded-[22px] bg-[#fffaf2] shadow-[0_20px_55px_rgba(55,45,32,.14)]"><div className={cn("overflow-hidden bg-[#d8cbbb]", compact ? "aspect-square" : "aspect-[4/3]")}><StoryMomentMedia moment={moment} alt={value.title} /></div><figcaption className="p-4 sm:p-5"><InlineText value={value.title} onChange={(next) => onMomentChange(moment.id, "title", next)} editing={editing} label="scene title" maxLength={200} singleLine className="font-display text-2xl leading-none text-[#26372f]" /><InlineText value={value.meta} onChange={(next) => onMomentChange(moment.id, "meta", next)} editing={editing} label="scene details" maxLength={200} singleLine className="mt-3 text-[10px] font-bold uppercase tracking-[.14em] text-[#756e64]" /></figcaption></figure>;
   };
-  const title = (moment: MomentObject, className?: string) => {
-    const value = content(moment);
-    return <InlineText value={value.title} onChange={(next) => onMomentChange(moment.id, "title", next)} editing={editing} label="scene title" maxLength={200} singleLine className={className} />;
-  };
-  if (story.style === "scrapbook") {
-    return <div className="paper-grid mx-auto max-w-[92rem] px-5 py-12 sm:px-10 sm:py-20 lg:py-28"><div className="columns-1 gap-10 md:columns-2 xl:columns-3">{moments.map((moment, index) => <section key={moment.id} className={cn("mb-8 break-inside-avoid bg-[#fffaf2] p-3 pb-6 shadow-[0_18px_45px_rgba(70,53,33,.17)] sm:mb-12", index % 3 === 0 ? "-rotate-1" : index % 3 === 1 ? "rotate-1" : "-rotate-[.35deg]")}><div className="aspect-[4/3] overflow-hidden bg-[#d8cbbb]"><StoryMomentMedia moment={moment} alt={content(moment).title} /></div><div className="px-3 pt-5"><span className="font-display text-4xl italic text-[#b1604c]">{String(index + 1).padStart(2, "0")}</span>{title(moment, "mt-2 font-display text-3xl leading-none")}{credit(moment, editing ? "text-[#51493e]" : undefined)}</div></section>)}</div></div>;
-  }
-  if (story.style === "cinematic") {
-    return <div className="bg-[#101b16] text-[#fffaf2]">{moments.map((moment, index) => <section key={moment.id} className="relative min-h-[76dvh] overflow-hidden sm:min-h-[88vh]"><StoryMomentMedia moment={moment} alt={content(moment).title} className="absolute inset-0" /><div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,14,9,.92),rgba(5,14,9,.08)_68%),linear-gradient(90deg,rgba(5,14,9,.5),transparent_55%)]" /><div className="relative mx-auto flex min-h-[76dvh] max-w-[92rem] items-end px-5 py-10 sm:min-h-[88vh] sm:px-10 sm:py-14 lg:px-16 lg:py-20"><div className="max-w-3xl"><p className="font-display text-6xl italic text-[#f0c681]/70 sm:text-7xl">{String(index + 1).padStart(2, "0")}</p>{title(moment, "mt-3 font-display text-[clamp(2.75rem,12vw,7rem)] leading-[.88] tracking-[-.055em] sm:mt-4")}{credit(moment)}</div></div></section>)}</div>;
-  }
-  return <div className="mx-auto max-w-[86rem] px-4 py-12 sm:px-8 sm:py-20 lg:py-28"><div className="mb-12 flex items-center gap-4 sm:mb-20 sm:gap-5"><span className="font-display text-5xl italic text-[#b1604c] sm:text-6xl">01</span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#9a5747]">The moments, in order</p><p className="mt-1 text-sm text-[#756e64]">{moments.length} scenes in this story</p></div></div><div className="grid gap-16 sm:gap-24 lg:gap-36">{moments.map((moment, index) => { const reverse = index % 2 === 1; return <section key={moment.id} className={cn("story-reader-chapter grid items-center gap-5 sm:gap-8 lg:grid-cols-[1.25fr_.75fr] lg:gap-16", reverse && "lg:grid-cols-[.75fr_1.25fr]")}><div className={cn("overflow-hidden rounded-[22px] bg-[#d8cbbb] shadow-[0_24px_60px_rgba(55,45,32,.14)] sm:rounded-[28px] sm:shadow-[0_30px_80px_rgba(55,45,32,.16)]", reverse && "lg:order-2")}><StoryMomentMedia moment={moment} alt={content(moment).title} className="max-h-[72dvh] sm:max-h-[78vh]" /></div><div className={cn(reverse && "lg:order-1 lg:text-right")}><p className="font-display text-5xl italic text-[#cfb99b] sm:text-6xl">{String(index + 1).padStart(2, "0")}</p>{title(moment, "mt-2 font-display text-3xl leading-[1.02] tracking-[-.035em] sm:mt-4 sm:text-5xl")}{credit(moment, editing ? "text-[#51493e]" : undefined)}</div></section>; })}</div></div>;
+  const closing = <div className="mx-auto max-w-3xl px-5 py-20 text-center sm:py-28"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#b1604c]">What stayed with us</p><InlineText value={blueprint.closing} onChange={(value) => onBlueprintChange({ ...blueprint, closing: value })} editing={editing} label="closing reflection" maxLength={1200} className="mt-5 font-display text-3xl italic leading-tight sm:text-5xl" /></div>;
+
+  if (story.style === "scrapbook") return <div className="paper-grid"><div className="mx-auto grid max-w-[92rem] gap-16 px-5 py-12 sm:px-10 sm:py-20">{blueprint.chapters.map((chapter, index) => <section key={chapter.id} className={cn("rounded-[28px] bg-[#eadfcd] p-5 shadow-[0_24px_65px_rgba(70,53,33,.14)] sm:p-8", index % 2 ? "rotate-[.35deg]" : "-rotate-[.35deg]")}><p className="font-display text-5xl italic text-[#b1604c]">{String(index + 1).padStart(2, "0")}</p><InlineText value={chapter.title} onChange={(value) => updateChapter(chapter.id, "title", value)} editing={editing} label="chapter title" maxLength={120} singleLine className="mt-2 font-display text-4xl leading-none sm:text-6xl" /><InlineText value={chapter.narration} onChange={(value) => updateChapter(chapter.id, "narration", value)} editing={editing} label="chapter narration" maxLength={1600} className="mt-5 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-[#675f55] sm:text-base" /><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{chapter.momentIds.map((id) => momentById.get(id)).filter((moment): moment is MomentObject => Boolean(moment)).map((moment) => scene(moment, true))}</div></section>)}</div>{closing}</div>;
+
+  if (story.style === "cinematic") return <div className="bg-[#101b16] text-[#fffaf2]">{blueprint.chapters.map((chapter, index) => {
+    const chapterMoments = chapter.momentIds.map((id) => momentById.get(id)).filter((moment): moment is MomentObject => Boolean(moment));
+    const hero = chapterMoments[0];
+    return <section key={chapter.id}><div className="relative min-h-[78dvh] overflow-hidden">{hero ? <StoryMomentMedia moment={hero} alt={content(hero).title} className="absolute inset-0" /> : null}<div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,14,9,.95),rgba(5,14,9,.1)_70%),linear-gradient(90deg,rgba(5,14,9,.55),transparent_65%)]" /><div className="relative mx-auto flex min-h-[78dvh] max-w-[92rem] items-end px-5 py-12 sm:px-10 sm:py-16 lg:px-16 lg:py-20"><div className="max-w-4xl"><p className="font-display text-6xl italic text-[#f0c681]/70">{String(index + 1).padStart(2, "0")}</p><InlineText value={chapter.title} onChange={(value) => updateChapter(chapter.id, "title", value)} editing={editing} label="chapter title" maxLength={120} singleLine className="mt-3 font-display text-[clamp(3rem,11vw,8rem)] leading-[.86] tracking-[-.055em]" /><InlineText value={chapter.narration} onChange={(value) => updateChapter(chapter.id, "narration", value)} editing={editing} label="chapter narration" maxLength={1600} className="mt-6 max-w-2xl whitespace-pre-wrap text-base leading-7 text-[#e6ded1] sm:text-xl sm:leading-8" /></div></div></div>{chapterMoments.length > 1 ? <div className="mx-auto grid max-w-[92rem] gap-5 px-5 py-10 sm:grid-cols-2 sm:px-10 lg:grid-cols-3 lg:px-16">{chapterMoments.slice(1).map((moment) => scene(moment, true))}</div> : null}</section>;
+  })}{closing}</div>;
+
+  return <div className="mx-auto max-w-[86rem] px-4 py-12 sm:px-8 sm:py-20 lg:py-28"><div className="grid gap-20 sm:gap-28">{blueprint.chapters.map((chapter, index) => <section key={chapter.id} className="story-reader-chapter"><div className="mb-8 grid gap-4 lg:grid-cols-[.32fr_1fr] lg:gap-12"><p className="font-display text-6xl italic text-[#cfb99b]">{String(index + 1).padStart(2, "0")}</p><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#9a5747]">{chapter.beat.replace("-", " ")}</p><InlineText value={chapter.title} onChange={(value) => updateChapter(chapter.id, "title", value)} editing={editing} label="chapter title" maxLength={120} singleLine className="mt-2 font-display text-4xl leading-none sm:text-6xl" /><InlineText value={chapter.narration} onChange={(value) => updateChapter(chapter.id, "narration", value)} editing={editing} label="chapter narration" maxLength={1600} className="mt-5 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-[#756e64] sm:text-base" /></div></div><div className="grid gap-5 sm:grid-cols-2">{chapter.momentIds.map((id) => momentById.get(id)).filter((moment): moment is MomentObject => Boolean(moment)).map((moment) => scene(moment))}</div></section>)}</div>{closing}</div>;
 }
 
 export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMoments }: { stories: Story[]; objects: MomentObject[]; isDemo: boolean; onOpen: (story: Story) => void; onCreate: () => void; onAddMoments: () => void }) {
@@ -213,6 +216,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [opening, setOpening] = useState("");
+  const [blueprint, setBlueprint] = useState<StoryBlueprint | null>(null);
   const chronological = useMemo(() => [...objects].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)), [objects]);
   const hasEnoughMoments = selected.length >= 2;
   useEffect(() => {
@@ -225,6 +229,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
       setTitle(story.title);
       setLocation(story.location ?? "");
       setOpening(story.opening);
+      setBlueprint(story.blueprint ?? null);
     } else if (!open) {
       setSelected([]);
       setStyle("auto");
@@ -233,6 +238,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
       setTitle("");
       setLocation("");
       setOpening("");
+      setBlueprint(null);
     }
   }, [open, story, objects]);
   useEffect(() => {
@@ -242,7 +248,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
     setStyleRationale("");
   }, [hasEnoughMoments]);
   const mutation = useMutation({
-    mutationFn: (input: { title: string; location?: string; opening: string; momentIds: string[]; style: StoryStylePreference; styleSource: StoryStyleSource; styleRationale?: string }) => story ? api.updateStory(spaceId, story.id, input) : api.createStory(spaceId, input),
+    mutationFn: (input: { title: string; location?: string; opening: string; momentIds: string[]; style: StoryStylePreference; styleSource: StoryStyleSource; styleRationale?: string; blueprint?: StoryBlueprint }) => story ? api.updateStory(spaceId, story.id, input) : api.createStory(spaceId, input),
     onSuccess: async ({ story: savedStory }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["stories", spaceId] }),
@@ -269,16 +275,35 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
     }),
     onSuccess: (draft) => {
       setOpening(draft.opening);
+      setBlueprint(null);
       toast.success(draft.source === "ai" ? "AI drafted an opening for you" : "A private opening draft is ready");
     },
   });
+  const draftBlueprint = useMutation({
+    mutationFn: async () => {
+      const momentIds = chronological.filter((object) => selected.includes(object.id)).map((object) => object.id);
+      let nextOpening = opening.trim();
+      if (nextOpening.length < 10) {
+        const draft = await api.suggestStoryOpening(spaceId, { momentIds, ...(title.trim() ? { title: title.trim() } : {}), ...(location.trim() ? { location: location.trim() } : {}) });
+        nextOpening = draft.opening;
+      }
+      const result = await api.suggestStoryBlueprint(spaceId, { momentIds, opening: nextOpening, ...(title.trim() ? { title: title.trim() } : {}), ...(location.trim() ? { location: location.trim() } : {}) });
+      return { ...result, opening: nextOpening };
+    },
+    onSuccess: (draft) => {
+      setOpening(draft.opening);
+      setBlueprint(draft.blueprint);
+      toast.success(draft.source === "ai" ? "AI shaped the journey into chapters" : "A private story blueprint is ready");
+    },
+  });
   function toggle(id: string) {
+    setBlueprint(null);
     setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const momentIds = chronological.filter((object) => selected.includes(object.id)).map((object) => object.id);
-    mutation.mutate({ title, opening, momentIds, style, styleSource, ...(styleRationale ? { styleRationale } : {}), ...(location.trim() ? { location: location.trim() } : {}) });
+    mutation.mutate({ title, opening, momentIds, style, styleSource, ...(styleRationale ? { styleRationale } : {}), ...(location.trim() ? { location: location.trim() } : {}), ...(blueprint ? { blueprint } : {}) });
   }
   const formats: Array<{ id: StoryStylePreference; title: string; description: string; icon: typeof BookOpen }> = [
     { id: "classic", title: "Classic", description: "Timeless editorial chapters with generous space.", icon: BookOpen },
@@ -290,8 +315,8 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
       <form className="grid gap-7" onSubmit={submit}>
         <section className="grid items-start gap-4 rounded-[24px] bg-[#f3ebdf] p-5 sm:grid-cols-2">
           <div className="sm:col-span-2"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">01 · Name the chapter</p></div>
-          <Field label="Story title"><Input name="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="The weekend the rain followed us" minLength={2} maxLength={100} required /></Field>
-          <Field label="Place or route" hint="Optional"><Input name="location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Kyoto · Spring 2026" maxLength={100} /></Field>
+          <Field label="Story title"><Input name="title" value={title} onChange={(event) => { setTitle(event.target.value); setBlueprint(null); }} placeholder="The weekend the rain followed us" minLength={2} maxLength={100} required /></Field>
+          <Field label="Place or route" hint="Optional"><Input name="location" value={location} onChange={(event) => { setLocation(event.target.value); setBlueprint(null); }} placeholder="Kyoto · Spring 2026" maxLength={100} /></Field>
         </section>
         <section>
           <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">02 · Choose the moments</p><p className="mt-1 text-sm text-[#746d63]">Pick at least two. They will read from oldest to newest.</p></div><span className="shrink-0 rounded-full bg-[#e9dfd0] px-3 py-1.5 text-xs font-bold text-[#536158]">{selected.length} selected</span></div>
@@ -308,7 +333,7 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
           </div>
         </section>
         <section>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">03 · Choose the experience</p><p className="mt-1 text-sm text-[#746d63]">{hasEnoughMoments ? "Control the outcome, or leave it on Auto." : "Choose at least two moments above to unlock the story formats."}</p></div><Button type="button" variant="secondary" disabled={!hasEnoughMoments || suggest.isPending} onClick={() => suggest.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{suggest.isPending ? <><Spinner />AI is reviewing the sequence…</> : <><Sparkles className="size-4" />Ask AI to suggest</>}</Button></div>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a9503f]">03 · Choose the theme</p><p className="mt-1 text-sm text-[#746d63]">{hasEnoughMoments ? "Change the visual mood without changing the journey." : "Choose at least two moments above to unlock the themes."}</p></div><Button type="button" variant="secondary" disabled={!hasEnoughMoments || suggest.isPending} onClick={() => suggest.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{suggest.isPending ? <><Spinner />AI is reviewing the sequence…</> : <><Sparkles className="size-4" />Ask AI to suggest</>}</Button></div>
           <button type="button" disabled={!hasEnoughMoments} onClick={() => { setStyle("auto"); setStyleSource("auto"); setStyleRationale(""); }} className={cn("mb-3 flex w-full items-center gap-4 rounded-[20px] border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", style === "auto" ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><span className={cn("grid size-10 shrink-0 place-items-center rounded-[14px]", style === "auto" ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><WandSparkles className="size-4" /></span><span className="min-w-0 flex-1"><strong className="block text-sm text-[#26372f]">Choose for me</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">Privately select the best fit from Classic, Scrapbook, or Cinematic.</span></span>{style === "auto" && hasEnoughMoments ? <Check className="size-4 shrink-0 text-[#a9503f]" /> : null}</button>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {formats.map((format) => <button key={format.id} type="button" disabled={!hasEnoughMoments} onClick={() => { setStyle(format.id); setStyleSource(format.id === "auto" ? "auto" : "manual"); setStyleRationale(""); }} className={cn("rounded-[20px] border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", style === format.id ? "border-[#a9503f] bg-[#fff8ec] shadow-[0_10px_28px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f4ede1] hover:border-[#b9aa96]")}><div className="flex items-center justify-between"><span className={cn("grid size-10 place-items-center rounded-[14px]", style === format.id ? "bg-[#a9503f] text-white" : "bg-[#e4d8c7] text-[#526158]")}><format.icon className="size-4" /></span>{style === format.id && hasEnoughMoments ? <Check className="size-4 text-[#a9503f]" /> : null}</div><strong className="mt-3 block text-sm text-[#26372f]">{format.title}</strong><span className="mt-1 block text-xs leading-5 text-[#7a7267]">{format.description}</span></button>)}
@@ -317,12 +342,13 @@ export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }:
           <p className="mt-3 text-[11px] leading-5 text-[#8a8277]">AI is optional. When used, Zo receives only filenames, captions, dates, and media types, not your photos or files.</p>
         </section>
         <section className="grid gap-4 rounded-[24px] bg-[#20372d] p-5 text-[#fff9ee]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">04 · Tell us why it mattered</p><p className="mt-2 text-sm leading-6 text-[#d8ddd8]">Write the opening only your people could write. The moments will carry the rest.</p></div><Button type="button" variant="secondary" className="shrink-0" disabled={!hasEnoughMoments || draftOpening.isPending} onClick={() => draftOpening.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{draftOpening.isPending ? <><Spinner />Drafting…</> : <><WandSparkles className="size-4" />{opening.trim() ? "Rewrite with AI" : "Draft with AI"}</>}</Button></div>
-          <textarea name="opening" value={opening} onChange={(event) => setOpening(event.target.value)} required minLength={10} maxLength={1200} rows={4} placeholder="It started before sunrise, with three coffees and no idea where the day would take us…" className="min-h-32 w-full resize-y rounded-[18px] border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/45 focus:border-[#f0c681]" />
-          <p className="text-[11px] leading-5 text-[#bfc9c2]">AI uses only the selected filenames, captions, dates, and media types. Review and edit the draft before {story ? "saving" : "creating"} your story.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">04 · Shape the journey</p><p className="mt-2 text-sm leading-6 text-[#d8ddd8]">Add the context only your people know, then organise every moment into editable chapters.</p></div><div className="flex shrink-0 flex-wrap gap-2"><Button type="button" variant="secondary" disabled={!hasEnoughMoments || draftOpening.isPending} onClick={() => draftOpening.mutate(chronological.filter((object) => selected.includes(object.id)).map((object) => object.id))}>{draftOpening.isPending ? <><Spinner />Drafting…</> : <><WandSparkles className="size-4" />Draft opening</>}</Button><Button type="button" variant="secondary" disabled={!hasEnoughMoments || draftBlueprint.isPending} onClick={() => draftBlueprint.mutate()}>{draftBlueprint.isPending ? <><Spinner />Writing chapters…</> : <><BookOpen className="size-4" />Draft full story</>}</Button></div></div>
+          <textarea name="opening" value={opening} onChange={(event) => { setOpening(event.target.value); setBlueprint(null); }} required minLength={10} maxLength={1200} rows={4} placeholder="It started before sunrise, with three coffees and no idea where the day would take us…" className="min-h-32 w-full resize-y rounded-[18px] border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/45 focus:border-[#f0c681]" />
+          {blueprint ? <div className="rounded-[18px] border border-white/15 bg-white/8 p-4"><div className="flex items-center justify-between gap-3"><p className="text-xs font-bold text-[#f0c681]">Journey blueprint ready</p><span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.14em]">{blueprint.chapters.length} chapters</span></div><div className="mt-3 grid gap-2">{blueprint.chapters.map((chapter, index) => <div key={chapter.id} className="flex items-center gap-3 rounded-xl bg-black/10 px-3 py-2"><span className="font-display text-xl italic text-[#f0c681]">{String(index + 1).padStart(2, "0")}</span><div><strong className="block text-xs">{chapter.title}</strong><span className="text-[10px] text-white/55">{chapter.momentIds.length} {chapter.momentIds.length === 1 ? "moment" : "moments"} · {chapter.beat.replace("-", " ")}</span></div></div>)}</div></div> : null}
+          <p className="text-[11px] leading-5 text-[#bfc9c2]">AI uses only filenames, captions, dates, and media types, never the media bytes. Everything remains editable.</p>
         </section>
         {mutation.error ? <p className="rounded-2xl bg-[#f8e3dd] px-4 py-3 text-sm text-[#8a372b]">{mutation.error instanceof ZoMomentsApiError ? mutation.error.message : `The story could not be ${story ? "updated" : "created"}`}</p> : null}
-        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={!hasEnoughMoments || mutation.isPending}>{mutation.isPending ? <Spinner /> : story ? <><PencilLine className="size-4" />Save changes</> : <><Sparkles className="size-4" />Create the story</>}</Button></div>
+        <div className="sticky -bottom-4 z-20 -mx-4 border-t border-[#e2d7c8] bg-[#fffaf2]/96 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"><Button className="w-full sm:w-auto" disabled={!hasEnoughMoments || mutation.isPending || draftBlueprint.isPending}>{mutation.isPending ? <Spinner /> : story ? <><PencilLine className="size-4" />Save changes</> : <><Sparkles className="size-4" />Create the storybook</>}</Button></div>
       </form>
     </Modal>
   );
@@ -336,6 +362,7 @@ function fallbackCanvas(story: Story, objects: MomentObject[]): StoryCanvas {
     dateRange: storyDateRange(moments),
     opening: story.opening,
     moments: moments.map((moment) => ({ momentId: moment.id, title: moment.caption || moment.name, meta: "" })),
+    blueprint: story.blueprint,
   };
 }
 
@@ -386,7 +413,10 @@ export function StoryReader({ story, objects, canEdit, canDelete, onClose, onSto
   const canvasRef = useRef(canvas);
   const savedCanvasRef = useRef("");
   const canvasSerialised = JSON.stringify(canvas);
-  const canvasValid = canvas.title.trim().length >= 2 && canvas.opening.trim().length >= 10 && canvas.moments.every((moment) => moment.title.trim().length > 0);
+  const canvasValid = canvas.title.trim().length >= 2
+    && canvas.opening.trim().length >= 10
+    && canvas.moments.every((moment) => moment.title.trim().length > 0)
+    && (!canvas.blueprint || (canvas.blueprint.closing.trim().length >= 10 && canvas.blueprint.chapters.every((chapter) => chapter.title.trim().length > 0 && chapter.narration.trim().length > 0)));
   const dirty = canvasSerialised !== savedCanvasRef.current;
   const saveCanvas = useMutation({
     mutationFn: ({ spaceId, storyId, value }: { spaceId: string; storyId: string; value: StoryCanvas }) => api.updateStoryCanvas(spaceId, storyId, { canvas: value }),
@@ -403,6 +433,21 @@ export function StoryReader({ story, objects, canEdit, canDelete, onClose, onSto
         queryClient.invalidateQueries({ queryKey: ["story-revisions", saved.spaceId, saved.id] }),
         queryClient.invalidateQueries({ queryKey: ["social-exports", saved.spaceId, saved.id] }),
       ]);
+    },
+  });
+  const changeTheme = useMutation({
+    mutationFn: (style: "classic" | "scrapbook" | "cinematic") => api.updateStory(story!.spaceId, story!.id, {
+      title: canvas.title,
+      location: canvas.location || undefined,
+      opening: canvas.opening,
+      momentIds: story!.momentIds,
+      style,
+      styleSource: "manual",
+      ...(canvas.blueprint ? { blueprint: canvas.blueprint } : {}),
+    }),
+    onSuccess: async ({ story: saved }) => {
+      onStoryChanged(saved);
+      await queryClient.invalidateQueries({ queryKey: ["stories", saved.spaceId] });
     },
   });
   useEffect(() => { canvasRef.current = canvas; }, [canvas]);
@@ -435,6 +480,7 @@ export function StoryReader({ story, objects, canEdit, canDelete, onClose, onSto
   const hero = moments.find((object) => object.kind === "photo");
   const updateCanvas = <K extends keyof StoryCanvas>(field: K, value: StoryCanvas[K]) => setCanvas((current) => ({ ...current, [field]: value }));
   const updateMoment = (momentId: string, field: keyof Pick<StoryCanvasMoment, "title" | "meta">, value: string) => setCanvas((current) => ({ ...current, moments: current.moments.map((moment) => moment.momentId === momentId ? { ...moment, [field]: value } : moment) }));
+  const updateBlueprint = (blueprint: StoryBlueprint) => setCanvas((current) => ({ ...current, blueprint }));
   const finishEditing = () => {
     if (!canvasValid) return;
     if (!dirty) {
@@ -468,12 +514,13 @@ export function StoryReader({ story, objects, canEdit, canDelete, onClose, onSto
             {editing ? <span className="mt-14 flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681] sm:mt-0"><PencilLine className="size-4" />Tap any outlined text to edit</span> : <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>}
             <div className="max-w-4xl pb-8">
               <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4 shrink-0" /><InlineText value={canvas.dateRange} onChange={(value) => updateCanvas("dateRange", value)} editing={editing} label="story date" maxLength={100} singleLine className="min-w-24" /></span>{editing || canvas.location ? <span className="flex items-center gap-2"><MapPin className="size-4 shrink-0" /><InlineText value={canvas.location} onChange={(value) => updateCanvas("location", value)} editing={editing} label="place or route" maxLength={100} singleLine className="min-w-24" /></span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
+              {editing ? <div className="mb-6 grid w-full max-w-md grid-cols-3 gap-1 rounded-[18px] border border-white/15 bg-black/20 p-1">{(["classic", "scrapbook", "cinematic"] as const).map((theme) => <button key={theme} type="button" disabled={changeTheme.isPending} onClick={() => changeTheme.mutate(theme)} className={cn("min-w-0 rounded-[14px] px-1.5 py-2 text-[9px] font-bold uppercase tracking-[.08em] transition sm:px-3 sm:text-[10px]", story.style === theme ? "bg-[#f0c681] text-[#26372f]" : "text-white/65 hover:text-white")}>{storyStyleNames[theme]}</button>)}</div> : null}
               <InlineText value={canvas.title} onChange={(value) => updateCanvas("title", value)} editing={editing} label="story title" maxLength={100} singleLine className="font-display text-[clamp(3.15rem,14vw,10rem)] leading-[.82] tracking-[-.06em]" />
               <InlineText value={canvas.opening} onChange={(value) => updateCanvas("opening", value)} editing={editing} label="story opening" maxLength={1200} className="mt-6 max-w-2xl whitespace-pre-wrap text-base leading-7 text-[#eee4d6] sm:mt-8 sm:text-xl sm:leading-9" />
             </div>
           </div>
         </header>
-        <StoryMoments story={story} moments={moments} canvas={canvas} editing={editing} onMomentChange={updateMoment} />
+        <StoryMoments story={story} moments={moments} canvas={canvas} editing={editing} onMomentChange={updateMoment} onBlueprintChange={updateBlueprint} />
         <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
           <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit && !editing ? <Button variant="secondary" className="mt-8" onClick={() => setEditing(true)}><PencilLine className="size-4" />Edit on the canvas</Button> : null}{!editing ? <Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button> : null}{canDelete && !editing ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
         </div>

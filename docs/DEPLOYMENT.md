@@ -82,7 +82,7 @@ The data directory is not served by Zo Router. Media is streamed through authent
 
 Demo mode is disabled by default. When enabled, visitors choose one of three protected demo personas that share the same travel journal; generated passwords are never exposed. Demo identities are excluded from the user directory and cannot change their profiles, avatars, or passwords.
 
-Story format selection works without AI. Auto uses local media metadata to choose a presentation. If `ZO_CLIENT_IDENTITY_TOKEN` is available and a user explicitly requests an AI suggestion, the API sends only selected filenames, captions, dates, and media types to Zo; it never sends media bytes. The application defaults these requests to Codex - GPT-5.6 Luna; `ZO_STORY_MODEL` may optionally override that model.
+Story theme selection and deterministic journey blueprints work without AI. If `ZO_CLIENT_IDENTITY_TOKEN` is available and a user explicitly requests AI drafting, the API uses GPT-5.6 Luna by default and sends only selected IDs, filenames, captions, dates, and media types to Zo; it never sends media bytes. `ZO_STORY_MODEL` may override that default.
 
 ## MVP Constraints
 

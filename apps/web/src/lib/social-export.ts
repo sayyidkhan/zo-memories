@@ -114,6 +114,11 @@ function metadata(story: Story, moments: MomentObject[], includeLocation: boolea
   return [includeDate ? story.canvas?.dateRange ?? dateRange(moments) : "", includeLocation ? story.canvas?.location ?? story.location ?? "" : ""].filter(Boolean).join("  ·  ");
 }
 
+function chapterForMoment(story: Story, momentId: string | undefined) {
+  if (!momentId) return undefined;
+  return story.blueprint?.chapters.find((chapter) => chapter.momentIds.includes(momentId));
+}
+
 function safeArea(width: number, height: number, profile: SocialExportProfile) {
   return {
     top: height * profile.safeTop,
@@ -152,11 +157,12 @@ function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: M
   context.fillStyle = palette.paper;
   context.fillRect(0, 0, width, height);
   const drift = Math.sin(progress * Math.PI * 2) * 6;
-  clippedPhoto(context, photos[Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1)], 58, 58, width - 116, height * 0.58, 24, 1.04, drift);
+  const photo = photos[Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1)];
+  clippedPhoto(context, photo, 58, 58, width - 116, height * 0.58, 24, 1.04, drift);
   context.fillStyle = palette.coral;
   context.font = "700 19px sans-serif";
   context.fillText("A STORY WE SHARE", side, height * 0.68);
-  title(context, story.title, side, Math.min(height * 0.705, height - safe.bottom - 245), width - side - Math.max(62, safe.right), palette.ink, 67, 2);
+  title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side, Math.min(height * 0.705, height - safe.bottom - 245), width - side - Math.max(62, safe.right), palette.ink, 67, 2);
   context.fillStyle = "#6f675d";
   context.font = "600 18px sans-serif";
   context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(108, safe.bottom + 58));
@@ -192,7 +198,7 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   context.rotate((-2 * Math.PI) / 180);
   context.fillStyle = "rgba(200,108,87,.2)";
   context.fillRect(0, 0, width * 0.88, height * 0.17);
-  title(context, story.title, width * 0.025, height * 0.022, width * 0.82, palette.coral, Math.min(64, width * 0.075), 2);
+  title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, width * 0.025, height * 0.022, width * 0.82, palette.coral, Math.min(64, width * 0.075), 2);
   context.restore();
   context.fillStyle = "#70675c";
   context.font = "600 18px sans-serif";
@@ -221,7 +227,7 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   context.font = "700 19px sans-serif";
   const titleTop = Math.min(height * 0.72, height - safe.bottom - 300);
   context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 50);
-  title(context, story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
+  title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
   context.fillStyle = "#e8ddcd";
   context.font = "600 18px sans-serif";
   context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(105, safe.bottom + 56));
@@ -248,7 +254,7 @@ function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialE
   context.restore();
 
   if (photo && !closing) {
-    const caption = photo.moment.caption?.trim() || photo.moment.name.replace(/\.[^.]+$/, "");
+    const caption = chapterForMoment(options.story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
     fillRounded(context, "rgba(20,36,29,.82)", side, Math.max(34, safe.top * 0.55), Math.min(width * 0.58, width - side - safe.right - 116), 44, 22);
     context.save();
     context.fillStyle = palette.cream;
@@ -270,7 +276,7 @@ function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialE
     title(context, "Keep the moments moving.", side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(42, width * 0.05), 2);
     context.fillStyle = "#625f58";
     context.font = "500 16px sans-serif";
-    wrapText(context, options.story.opening, side + 28, cardY + 150, cardWidth - 56, 23, 3);
+    wrapText(context, options.story.blueprint?.closing ?? options.story.opening, side + 28, cardY + 150, cardWidth - 56, 23, 3);
     context.restore();
   }
 }
