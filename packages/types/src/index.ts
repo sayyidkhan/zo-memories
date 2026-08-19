@@ -100,6 +100,31 @@ export const albumSchema = z.object({
 export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbook", "cinematic"]);
 export const storyStylePreferenceSchema = z.enum(["auto", "classic", "scrapbook", "cinematic"]);
 export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
+export const storyBeatSchema = z.enum(["arrival", "discovery", "highlight", "turning-point", "reflection"]);
+
+export const storyChapterSchema = z.object({
+  id: z.string(),
+  beat: storyBeatSchema,
+  title: z.string().trim().min(1).max(120),
+  narration: z.string().trim().min(1).max(1600),
+  momentIds: z.array(z.string()).min(1).max(12),
+});
+
+export const storyBlueprintSchema = z.object({
+  summary: z.string().trim().min(10).max(1200),
+  chapters: z.array(storyChapterSchema).min(1).max(8),
+  closing: z.string().trim().min(10).max(1200),
+});
+
+export const storyRevisionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  location: z.string().nullable(),
+  opening: z.string(),
+  blueprint: storyBlueprintSchema,
+  savedAt: isoDateSchema,
+  savedBy: z.string(),
+});
 
 export const storySchema = z.object({
   id: z.string(),
@@ -111,6 +136,8 @@ export const storySchema = z.object({
   style: storyStyleSchema.default("classic"),
   styleSource: storyStyleSourceSchema.default("auto"),
   styleRationale: z.string().nullable().default(null),
+  blueprint: storyBlueprintSchema.optional(),
+  revisions: z.array(storyRevisionSchema).max(20).optional(),
   createdBy: z.string(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
@@ -158,6 +185,7 @@ export const createStorySchema = z.object({
   style: storyStylePreferenceSchema.default("auto"),
   styleSource: storyStyleSourceSchema.optional(),
   styleRationale: z.string().trim().max(300).optional(),
+  blueprint: storyBlueprintSchema.optional(),
   momentIds: z.array(z.string())
     .min(2)
     .max(30)
@@ -167,6 +195,28 @@ export const createStorySchema = z.object({
 
 export const suggestStoryStyleSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
+});
+
+export const suggestStoryOpeningSchema = z.object({
+  title: z.string().trim().max(100).optional(),
+  location: z.string().trim().max(100).optional(),
+  momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
+});
+
+export const suggestStoryBlueprintSchema = suggestStoryOpeningSchema.extend({
+  opening: z.string().trim().min(10).max(1200),
+});
+
+export const updateStorySchema = z.object({
+  title: z.string().trim().min(2).max(100),
+  location: z.string().trim().max(100).nullable(),
+  opening: z.string().trim().min(10).max(1200),
+  blueprint: storyBlueprintSchema,
+  style: z.enum(["classic", "scrapbook", "cinematic"]).optional(),
+});
+
+export const restoreStoryRevisionSchema = z.object({
+  revisionId: z.string().min(1),
 });
 
 export const registerSchema = z.object({
@@ -256,6 +306,10 @@ export type Story = z.infer<typeof storySchema>;
 export type StoryStyle = z.infer<typeof storyStyleSchema>;
 export type StoryStylePreference = z.infer<typeof storyStylePreferenceSchema>;
 export type StoryStyleSource = z.infer<typeof storyStyleSourceSchema>;
+export type StoryBeat = z.infer<typeof storyBeatSchema>;
+export type StoryChapter = z.infer<typeof storyChapterSchema>;
+export type StoryBlueprint = z.infer<typeof storyBlueprintSchema>;
+export type StoryRevision = z.infer<typeof storyRevisionSchema>;
 export type ObjectKind = z.infer<typeof objectKindSchema>;
 export type MomentObject = z.infer<typeof momentObjectSchema>;
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
@@ -264,6 +318,10 @@ export type CreateShareInvitationInput = z.infer<typeof createShareInvitationSch
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
+export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
+export type SuggestStoryBlueprintInput = z.infer<typeof suggestStoryBlueprintSchema>;
+export type UpdateStoryInput = z.infer<typeof updateStorySchema>;
+export type RestoreStoryRevisionInput = z.infer<typeof restoreStoryRevisionSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

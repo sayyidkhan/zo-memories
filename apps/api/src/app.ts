@@ -7,11 +7,16 @@ import {
   createStorySchema,
   demoLoginSchema,
   inviteMemberSchema,
+  restoreStoryRevisionSchema,
+  storyBlueprintSchema,
+  suggestStoryBlueprintSchema,
+  suggestStoryOpeningSchema,
   suggestStoryStyleSchema,
   updateDemoModeSchema,
   updateAccountStatusSchema,
   updateAdminRoleSchema,
   updateProfileSchema,
+  updateStorySchema,
   type Album,
   type Avatar,
   type Invitation,
@@ -21,6 +26,8 @@ import {
   type ShareInvitation,
   type Space,
   type Story,
+  type StoryBeat,
+  type StoryBlueprint,
   type StoryStyle,
 } from "@zo-moments/types";
 import { isSupportedMomentFileName } from "@zo-moments/types/upload";
@@ -88,47 +95,24 @@ const DEMO_PERSONAS = [
 const LEGACY_DEMO_USER_EMAIL = "demo@zo-moments.example";
 
 function demoStories(ownerId: string): Story[] {
-  const common = { spaceId: DEMO_SPACE_ID, createdBy: ownerId };
+  const momentIds = ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"];
+  const opening = "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.";
+  const blueprint: StoryBlueprint = {
+    summary: opening,
+    chapters: [
+      { id: "departure", beat: "arrival", title: "Before the city woke", narration: "The journey began in transit: an airport before sunrise, a train window, a snow cabin, and the first long stretch of coast. We were still learning what kind of year this would become.", momentIds: momentIds.slice(0, 4) },
+      { id: "cities", beat: "discovery", title: "Following the warmest light", narration: "Lisbon mornings gave way to waterfalls and Tokyo evenings. Different places developed the same rhythm: look closer, stay a little longer, and let the day decide where we went next.", momentIds: momentIds.slice(4, 8) },
+      { id: "detours", beat: "turning-point", title: "The detours became the plan", narration: "A night market, a desert road, an island ferry, and a mountain morning changed the scale of the adventure. The unplanned parts stopped feeling like interruptions and became the story itself.", momentIds: momentIds.slice(8, 12) },
+      { id: "keepsakes", beat: "highlight", title: "Small things worth carrying home", narration: "By the lake, on a Marrakech rooftop, during a pottery class, and beside a beach campfire, the journey became quieter. These were not landmarks so much as moments we wanted to keep.", momentIds: momentIds.slice(12, 16) },
+      { id: "home", beat: "reflection", title: "What stayed after the road", narration: "The final terrace dinner and the journal page brought every route back together. We returned with photographs, but also with a shared language for the year we kept moving.", momentIds: momentIds.slice(16) },
+    ],
+    closing: "We did not remember every route in perfect detail. We remembered who was beside us, the detours we chose, and how an ordinary collection of days became our story.",
+  };
+  const common = { spaceId: DEMO_SPACE_ID, title: "The year we kept moving", location: "From Tokyo to the Pacific Coast", opening, momentIds, blueprint, revisions: [], createdBy: ownerId };
   return [
-    {
-      ...common,
-      id: "demo-story-year-in-motion",
-      title: "The year we kept moving",
-      location: "From Tokyo to the Pacific Coast",
-      opening: "It started before sunrise at an airport and became a year measured in missed trains, rain-lit streets, cold swims, and dinners that ran past midnight. None of us planned a grand adventure. We just kept saying yes to the next small detour.",
-      momentIds: ["demo-moment-airport", "demo-moment-train", "demo-moment-snow-cabin", "demo-moment-coast", "demo-moment-lisbon", "demo-moment-breakfast", "demo-moment-waterfall", "demo-moment-tokyo", "demo-moment-market", "demo-moment-desert", "demo-moment-ferry", "demo-moment-mountain", "demo-moment-lake", "demo-moment-marrakech", "demo-moment-pottery", "demo-moment-campfire", "demo-moment-terrace", "demo-moment-journal"],
-      style: "cinematic",
-      styleSource: "auto",
-      styleRationale: "Auto chose Cinematic for a long, photo-led journey across several places and seasons.",
-      createdAt: "2026-08-09T10:00:00.000Z",
-      updatedAt: "2026-08-09T10:00:00.000Z",
-    },
-    {
-      ...common,
-      id: "demo-story-postcards-rainy-cities",
-      title: "Postcards from rainy cities",
-      location: "Lisbon · Tokyo · Osaka",
-      opening: "Three cities, three kinds of rain, and the same ritual every evening: find the warmest light, order one more plate, and walk until the streets belonged to us.",
-      momentIds: ["demo-moment-train", "demo-moment-lisbon", "demo-moment-tokyo", "demo-moment-market", "demo-moment-terrace", "demo-moment-journal"],
-      style: "classic",
-      styleSource: "manual",
-      styleRationale: "Classic gives a reflective city sequence the pace of an editorial travel journal.",
-      createdAt: "2026-08-08T10:00:00.000Z",
-      updatedAt: "2026-08-08T10:00:00.000Z",
-    },
-    {
-      ...common,
-      id: "demo-story-little-things-home",
-      title: "The little things we brought home",
-      location: "Notes from everywhere",
-      opening: "Not souvenirs exactly. A train-window reflection, a recipe we never wrote down, a lopsided vase, and a page where every detour finally found its place.",
-      momentIds: ["demo-moment-train", "demo-moment-breakfast", "demo-moment-market", "demo-moment-pottery", "demo-moment-terrace", "demo-moment-journal"],
-      style: "scrapbook",
-      styleSource: "manual",
-      styleRationale: "Scrapbook makes small personal details feel collected, tactile, and kept by hand.",
-      createdAt: "2026-08-05T10:00:00.000Z",
-      updatedAt: "2026-08-05T10:00:00.000Z",
-    },
+    { ...common, id: "demo-story-year-in-motion", style: "cinematic", styleSource: "manual", styleRationale: "Cinematic turns the journey into immersive full-bleed scenes.", createdAt: "2026-08-09T10:00:00.000Z", updatedAt: "2026-08-09T10:00:00.000Z" },
+    { ...common, id: "demo-story-postcards-rainy-cities", style: "classic", styleSource: "manual", styleRationale: "Classic gives the same journey the pace of an editorial travel journal.", createdAt: "2026-08-08T10:00:00.000Z", updatedAt: "2026-08-08T10:00:00.000Z" },
+    { ...common, id: "demo-story-little-things-home", style: "scrapbook", styleSource: "manual", styleRationale: "Scrapbook presents the same journey as a tactile collection of keepsakes.", createdAt: "2026-08-05T10:00:00.000Z", updatedAt: "2026-08-05T10:00:00.000Z" },
   ];
 }
 
@@ -139,6 +123,18 @@ function normaliseStory(story: Story): Story {
     style,
     styleSource: story.styleSource ?? "auto",
     styleRationale: style !== story.style ? "Classic replaced a retired prototype format." : (story.styleRationale ?? null),
+    blueprint: story.blueprint ?? {
+      summary: story.opening,
+      chapters: Array.from({ length: Math.ceil(story.momentIds.length / 10) }, (_, index) => ({
+        id: `chapter-${index + 1}`,
+        beat: (index === 0 ? "arrival" : index === Math.ceil(story.momentIds.length / 10) - 1 ? "reflection" : "highlight") as StoryBeat,
+        title: index === 0 ? "Where it began" : index === Math.ceil(story.momentIds.length / 10) - 1 ? "What stayed with us" : "The journey",
+        narration: story.opening,
+        momentIds: story.momentIds.slice(index * 10, (index + 1) * 10),
+      })),
+      closing: "The journey ended, but this is the part we chose to keep.",
+    },
+    revisions: story.revisions ?? [],
   };
 }
 
@@ -172,7 +168,7 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
       headers: { authorization: token, "content-type": "application/json" },
       body: JSON.stringify({
         input: `Recommend one presentation style for this private memory story. Choose only classic, scrapbook, or cinematic. Base the choice on sequence, media mix, captions, and time span. Do not invent image contents.\n\nMoments:\n${JSON.stringify(inventory)}`,
-        model_name: process.env.ZO_STORY_MODEL ?? "byok:6e9e8a54-d7f5-4a81-8265-9072bf996b61",
+        model_name: process.env.ZO_STORY_MODEL ?? "gpt-5.6-luna",
         output_format: {
           type: "object",
           properties: { style: { type: "string", enum: choices }, rationale: { type: "string" } },
@@ -189,6 +185,145 @@ async function aiStoryStyle(moments: MomentObject[]): Promise<{ style: StoryStyl
     const resolvedStyle = style as StoryStyle;
     const rationale = body.output?.rationale?.trim() || storyStyleRationales[resolvedStyle];
     return { style: resolvedStyle, rationale: rationale.slice(0, 300) };
+  } catch {
+    return null;
+  }
+}
+
+function automaticStoryOpening(moments: MomentObject[], title?: string, location?: string): string {
+  const ordered = [...moments].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  const first = ordered[0]?.caption || ordered[0]?.name || "one small moment";
+  const last = ordered.at(-1)?.caption || ordered.at(-1)?.name || "something worth remembering";
+  const beginning = title ? `${title} began` : "It began";
+  const place = location ? ` in ${location}` : "";
+  return `${beginning}${place} with ${first}. Across ${ordered.length} moments, it carried us all the way to ${last}. This is the part we wanted to keep.`.slice(0, 1200);
+}
+
+async function aiStoryOpening(moments: MomentObject[], title?: string, location?: string): Promise<string | null> {
+  if (process.env.NODE_ENV === "test") return null;
+  const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
+  if (!token) return null;
+  const inventory = moments.map(({ name, caption, kind, occurredAt }) => ({ name, caption, kind, occurredAt }));
+  try {
+    const response = await fetch("https://api.zo.computer/zo/ask", {
+      method: "POST",
+      headers: { authorization: token, "content-type": "application/json" },
+      body: JSON.stringify({
+        input: `Write one warm, specific opening paragraph for a private shared memory story. Use 35 to 75 words. Sound human and personal, not promotional. Use only the supplied title, place, captions, filenames, media types, and dates. Do not invent people, events, sensory details, or image contents. Return only the opening paragraph.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nMoments:\n${JSON.stringify(inventory)}`,
+        model_name: process.env.ZO_STORY_MODEL ?? "gpt-5.6-luna",
+        output_format: {
+          type: "object",
+          properties: { opening: { type: "string" } },
+          required: ["opening"],
+          additionalProperties: false,
+        },
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as { output?: { opening?: string } };
+    const opening = body.output?.opening?.trim();
+    return opening && opening.length >= 10 ? opening.slice(0, 1200) : null;
+  } catch {
+    return null;
+  }
+}
+
+const journeyBeats: StoryBeat[] = ["arrival", "discovery", "highlight", "turning-point", "reflection"];
+
+function chapterTitle(moment: MomentObject, beat: StoryBeat): string {
+  const caption = moment.caption?.trim() || moment.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+  const fallbacks: Record<StoryBeat, string> = {
+    arrival: "Where it began",
+    discovery: "What we found",
+    highlight: "The moment that stayed",
+    "turning-point": "The unexpected turn",
+    reflection: "What we carried home",
+  };
+  return (caption || fallbacks[beat]).slice(0, 120);
+}
+
+function automaticStoryBlueprint(moments: MomentObject[], opening: string): StoryBlueprint {
+  const ordered = [...moments].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  const chapterCount = Math.min(5, Math.max(2, Math.ceil(ordered.length / 4)));
+  const chunkSize = Math.ceil(ordered.length / chapterCount);
+  const groups = Array.from({ length: chapterCount }, (_, index) => ordered.slice(index * chunkSize, (index + 1) * chunkSize)).filter((group) => group.length);
+  const chapters = groups.map((group, index) => {
+    const beat = journeyBeats[Math.round((index / Math.max(groups.length - 1, 1)) * (journeyBeats.length - 1))]!;
+    const details = group.map((moment) => moment.caption?.trim() || moment.name.replace(/\.[^.]+$/, "")).filter(Boolean);
+    return {
+      id: `chapter-${index + 1}`,
+      beat,
+      title: chapterTitle(group[0]!, beat),
+      narration: `This part of the journey brings together ${details.slice(0, 3).join(", ")}${details.length > 3 ? `, and ${details.length - 3} more moments` : ""}.`,
+      momentIds: group.map((moment) => moment.id),
+    };
+  });
+  return {
+    summary: opening,
+    chapters,
+    closing: `Across ${ordered.length} moments, the experience became more than a collection of files. This is how we remember it together.`,
+  };
+}
+
+function sanitiseStoryBlueprint(value: unknown, moments: MomentObject[]): StoryBlueprint | null {
+  const parsed = storyBlueprintSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const validIds = new Set(moments.map((moment) => moment.id));
+  const used = new Set<string>();
+  const chapters = parsed.data.chapters.map((chapter, index) => ({
+    ...chapter,
+    id: chapter.id || `chapter-${index + 1}`,
+    momentIds: chapter.momentIds.filter((momentId) => validIds.has(momentId) && !used.has(momentId) && Boolean(used.add(momentId))),
+  })).filter((chapter) => chapter.momentIds.length);
+  const missing = moments.map((moment) => moment.id).filter((momentId) => !used.has(momentId));
+  if (!chapters.length) return null;
+  if (missing.length) chapters.at(-1)!.momentIds.push(...missing);
+  return { ...parsed.data, chapters };
+}
+
+async function aiStoryBlueprint(moments: MomentObject[], title: string | undefined, location: string | undefined, opening: string): Promise<StoryBlueprint | null> {
+  if (process.env.NODE_ENV === "test") return null;
+  const token = process.env.ZO_CLIENT_IDENTITY_TOKEN;
+  if (!token) return null;
+  const inventory = moments.map(({ id, name, caption, kind, occurredAt }) => ({ id, name, caption, kind, occurredAt }));
+  try {
+    const response = await fetch("https://api.zo.computer/zo/ask", {
+      method: "POST",
+      headers: { authorization: token, "content-type": "application/json" },
+      body: JSON.stringify({
+        input: `Create a warm, truthful story blueprint for a private shared journey. Organise every supplied moment ID exactly once into 2 to 5 chronological chapters. Use the beats arrival, discovery, highlight, turning-point, and reflection where they fit. Write a specific chapter title, 25 to 70 words of narration per chapter, a concise summary, and a closing reflection. Use only the supplied title, place, opening, captions, filenames, media types, and dates. Do not invent people, events, image contents, dialogue, weather, or sensory details.\n\nTitle: ${title || "Not provided"}\nPlace or route: ${location || "Not provided"}\nOpening: ${opening}\nMoments:\n${JSON.stringify(inventory)}`,
+        model_name: process.env.ZO_STORY_MODEL ?? "gpt-5.6-luna",
+        output_format: {
+          type: "object",
+          properties: {
+            summary: { type: "string" },
+            chapters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  beat: { type: "string", enum: journeyBeats },
+                  title: { type: "string" },
+                  narration: { type: "string" },
+                  momentIds: { type: "array", items: { type: "string" } },
+                },
+                required: ["id", "beat", "title", "narration", "momentIds"],
+                additionalProperties: false,
+              },
+            },
+            closing: { type: "string" },
+          },
+          required: ["summary", "chapters", "closing"],
+          additionalProperties: false,
+        },
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as { output?: unknown };
+    return sanitiseStoryBlueprint(body.output, moments);
   } catch {
     return null;
   }
@@ -1104,6 +1239,38 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     return c.json(suggested ? { ...suggested, source: "ai" as const } : { ...recommendStoryStyle(selectedMoments), source: "auto" as const });
   });
 
+  app.post("/api/spaces/:spaceId/stories/suggest-opening", zValidator("json", suggestStoryOpeningSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const opening = await aiStoryOpening(selectedMoments, input.title, input.location);
+    return c.json(opening
+      ? { opening, source: "ai" as const }
+      : { opening: automaticStoryOpening(selectedMoments, input.title, input.location), source: "auto" as const });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/suggest-blueprint", zValidator("json", suggestStoryBlueprintSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const input = c.req.valid("json");
+    const moments = await Promise.all(input.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
+      throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
+    }
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const blueprint = await aiStoryBlueprint(selectedMoments, input.title, input.location, input.opening);
+    return c.json(blueprint
+      ? { blueprint, source: "ai" as const }
+      : { blueprint: automaticStoryBlueprint(selectedMoments, input.opening), source: "auto" as const });
+  });
+
   app.post("/api/spaces/:spaceId/stories", zValidator("json", createStorySchema), async (c) => {
     const user = c.get("user")!;
     const spaceId = c.req.param("spaceId");
@@ -1113,7 +1280,10 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (moments.some((moment) => !moment || moment.spaceId !== spaceId)) {
       throw new HTTPException(400, { message: "Every selected moment must belong to this shared space" });
     }
-    const recommended = recommendStoryStyle(moments.filter((moment): moment is MomentObject => Boolean(moment)));
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const providedBlueprint = input.blueprint ? sanitiseStoryBlueprint(input.blueprint, selectedMoments) : null;
+    if (input.blueprint && !providedBlueprint) throw new HTTPException(400, { message: "The story blueprint must use the selected moments" });
+    const recommended = recommendStoryStyle(selectedMoments);
     const style = input.style === "auto" ? recommended.style : input.style;
     const styleSource = input.style === "auto" ? "auto" : (input.styleSource ?? "manual");
     const timestamp = now();
@@ -1122,17 +1292,92 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       spaceId,
       title: input.title,
       location: input.location || null,
-      opening: input.opening,
+      opening: providedBlueprint?.summary ?? input.opening,
       momentIds: input.momentIds,
       style,
       styleSource,
       styleRationale: input.styleRationale || (input.style === "auto" ? recommended.rationale : null),
+      blueprint: providedBlueprint ?? automaticStoryBlueprint(selectedMoments, input.opening),
+      revisions: [],
       createdBy: user.id,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
     await repositories.stories.put(story);
     return c.json({ story }, 201);
+  });
+
+  app.patch("/api/spaces/:spaceId/stories/:storyId", zValidator("json", updateStorySchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const stored = await repositories.stories.get(c.req.param("storyId"));
+    if (!stored || stored.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    const current = normaliseStory(stored);
+    const input = c.req.valid("json");
+    const allowedMomentIds = new Set(current.momentIds);
+    const blueprintMomentIds = input.blueprint.chapters.flatMap((chapter) => chapter.momentIds);
+    if (blueprintMomentIds.some((momentId) => !allowedMomentIds.has(momentId)) || new Set(blueprintMomentIds).size !== allowedMomentIds.size || blueprintMomentIds.length !== allowedMomentIds.size) {
+      throw new HTTPException(400, { message: "Every story moment must appear in exactly one chapter" });
+    }
+    const changed = current.title !== input.title
+      || current.location !== input.location
+      || current.opening !== input.opening
+      || Boolean(input.style && current.style !== input.style)
+      || JSON.stringify(current.blueprint) !== JSON.stringify(input.blueprint);
+    if (!changed) return c.json({ story: current });
+    const revision = {
+      id: id(),
+      title: current.title,
+      location: current.location,
+      opening: current.opening,
+      blueprint: current.blueprint!,
+      savedAt: now(),
+      savedBy: user.id,
+    };
+    const story: Story = {
+      ...current,
+      ...input,
+      style: input.style ?? current.style,
+      ...(input.style ? { styleSource: "manual" as const, styleRationale: null } : {}),
+      revisions: [revision, ...(current.revisions ?? [])].slice(0, 20),
+      updatedAt: now(),
+    };
+    const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
+    await Promise.all([repositories.stories.put(story), ...exportKeys.map((key) => store.delete(key))]);
+    return c.json({ story });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/:storyId/restore", zValidator("json", restoreStoryRevisionSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const stored = await repositories.stories.get(c.req.param("storyId"));
+    if (!stored || stored.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    const current = normaliseStory(stored);
+    const revision = current.revisions?.find((candidate) => candidate.id === c.req.valid("json").revisionId);
+    if (!revision) throw new HTTPException(404, { message: "Story version not found" });
+    const currentSnapshot = {
+      id: id(),
+      title: current.title,
+      location: current.location,
+      opening: current.opening,
+      blueprint: current.blueprint!,
+      savedAt: now(),
+      savedBy: user.id,
+    };
+    const story: Story = {
+      ...current,
+      title: revision.title,
+      location: revision.location,
+      opening: revision.opening,
+      blueprint: revision.blueprint,
+      revisions: [currentSnapshot, ...(current.revisions ?? [])].slice(0, 20),
+      updatedAt: now(),
+    };
+    const exportKeys = await store.list(`zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(story.id)}/`);
+    await Promise.all([repositories.stories.put(story), ...exportKeys.map((key) => store.delete(key))]);
+    return c.json({ story });
   });
 
   app.get("/api/spaces/:spaceId/stories/:storyId/social-exports", async (c) => {
@@ -1347,7 +1592,11 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     await Promise.all(stories.map(async (story) => {
       const momentIds = story.momentIds.filter((momentId) => momentId !== object.id);
       if (momentIds.length === 0) return repositories.stories.delete(story.id);
-      return repositories.stories.put({ ...story, momentIds, updatedAt: now() });
+      const current = normaliseStory(story);
+      const chapters = current.blueprint!.chapters
+        .map((chapter) => ({ ...chapter, momentIds: chapter.momentIds.filter((momentId) => momentId !== object.id) }))
+        .filter((chapter) => chapter.momentIds.length);
+      return repositories.stories.put({ ...current, momentIds, blueprint: { ...current.blueprint!, chapters }, updatedAt: now() });
     }));
     return c.body(null, 204);
   });

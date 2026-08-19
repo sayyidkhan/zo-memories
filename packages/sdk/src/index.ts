@@ -19,9 +19,13 @@ import type {
   SpaceDetail,
   SpaceSummary,
   Story,
+  StoryBlueprint,
   StoryStyle,
+  SuggestStoryBlueprintInput,
+  SuggestStoryOpeningInput,
   SuggestStoryStyleInput,
   UpdateProfileInput,
+  UpdateStoryInput,
   UpdateAccountStatusInput,
   UpdateAdminRoleInput,
   UpdateDemoModeInput,
@@ -278,6 +282,34 @@ export class ZoMomentsClient {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-style`, {
       method: "POST",
       body: JSON.stringify(input),
+    });
+  }
+
+  suggestStoryOpening(spaceId: string, input: SuggestStoryOpeningInput): Promise<{ opening: string; source: "ai" | "auto" }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-opening`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  suggestStoryBlueprint(spaceId: string, input: SuggestStoryBlueprintInput): Promise<{ blueprint: StoryBlueprint; source: "ai" | "auto" }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-blueprint`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  updateStory(spaceId: string, storyId: string, input: UpdateStoryInput): Promise<{ story: Story }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  restoreStoryRevision(spaceId: string, storyId: string, revisionId: string): Promise<{ story: Story }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/restore`, {
+      method: "POST",
+      body: JSON.stringify({ revisionId }),
     });
   }
 

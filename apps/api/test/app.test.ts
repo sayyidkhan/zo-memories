@@ -205,6 +205,22 @@ describe("Zo Moments API", () => {
     expect(suggestion.body.source).toBe("auto");
     expect(suggestion.body.rationale.length).toBeGreaterThan(10);
 
+    const opening = await owner.json<{ opening: string; source: string }>(`/api/spaces/${spaceId}/stories/suggest-opening`, {
+      method: "POST",
+      body: JSON.stringify({ title: "Rainy Kyoto", location: "Kyoto", momentIds }),
+    });
+    expect(opening.response.status).toBe(200);
+    expect(opening.body.source).toBe("auto");
+    expect(opening.body.opening.length).toBeGreaterThan(10);
+
+    const blueprint = await owner.json<{ blueprint: { summary: string; chapters: Array<{ momentIds: string[] }>; closing: string }; source: string }>(`/api/spaces/${spaceId}/stories/suggest-blueprint`, {
+      method: "POST",
+      body: JSON.stringify({ title: "Rainy Kyoto", location: "Kyoto", opening: opening.body.opening, momentIds }),
+    });
+    expect(blueprint.response.status).toBe(200);
+    expect(blueprint.body.source).toBe("auto");
+    expect(blueprint.body.blueprint.chapters.flatMap((chapter) => chapter.momentIds)).toEqual(momentIds);
+
     const retired = await owner.request(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
@@ -217,7 +233,7 @@ describe("Zo Moments API", () => {
     });
     expect(retired.status).toBe(400);
 
-    const created = await owner.json<{ story: { id: string; momentIds: string[]; style: string; styleSource: string; styleRationale: string | null } }>(`/api/spaces/${spaceId}/stories`, {
+    const created = await owner.json<{ story: { id: string; momentIds: string[]; style: string; styleSource: string; styleRationale: string | null; blueprint: typeof blueprint.body.blueprint } }>(`/api/spaces/${spaceId}/stories`, {
       method: "POST",
       body: JSON.stringify({
         title: "The weekend the rain followed us",
@@ -226,6 +242,7 @@ describe("Zo Moments API", () => {
         momentIds,
         style: "scrapbook",
         styleSource: "manual",
+        blueprint: blueprint.body.blueprint,
       }),
     });
     expect(created.response.status).toBe(201);
@@ -233,6 +250,7 @@ describe("Zo Moments API", () => {
     expect(created.body.story.style).toBe("scrapbook");
     expect(created.body.story.styleSource).toBe("manual");
     expect(created.body.story.styleRationale).toBeNull();
+    expect(created.body.story.blueprint.chapters).toHaveLength(2);
 
     const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
     expect(shared.response.status).toBe(200);
@@ -267,6 +285,29 @@ describe("Zo Moments API", () => {
     const socialVideoContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/tiktok`);
     expect(socialVideoContent.headers.get("content-type")).toBe("video/mp4");
     expect(await socialVideoContent.text()).toBe("social-video");
+
+    const editedBlueprint = {
+      ...created.body.story.blueprint,
+      chapters: created.body.story.blueprint.chapters.map((chapter, index) => ({ ...chapter, title: index === 0 ? "The rainy arrival" : "Dinner after midnight" })),
+      closing: "We came home with a story that still belongs to all of us.",
+    };
+    const edited = await member.json<{ story: { title: string; style: string; revisions: Array<{ id: string; title: string }> } }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title: "Kyoto, rewritten", location: "Kyoto", opening: "We arrived with no plan and found the shape of the story together.", blueprint: editedBlueprint, style: "cinematic" }),
+    });
+    expect(edited.response.status).toBe(200);
+    expect(edited.body.story.title).toBe("Kyoto, rewritten");
+    expect(edited.body.story.style).toBe("cinematic");
+    expect(edited.body.story.revisions).toHaveLength(1);
+    expect(await store.get(`zo-moments/social-exports/${spaceId}/${created.body.story.id}/instagram-feed-01.png`)).toBeNull();
+
+    const restored = await owner.json<{ story: { title: string; revisions: unknown[] } }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/restore`, {
+      method: "POST",
+      body: JSON.stringify({ revisionId: edited.body.story.revisions[0]!.id }),
+    });
+    expect(restored.response.status).toBe(200);
+    expect(restored.body.story.title).toBe("The weekend the rain followed us");
+    expect(restored.body.story.revisions.length).toBe(2);
 
     const outsider = new BrowserSession(app);
     expect((await outsider.request("/auth/register", {
@@ -478,16 +519,16 @@ describe("Zo Moments API", () => {
       momentCounts.set(object.uploadedBy, (momentCounts.get(object.uploadedBy) ?? 0) + 1);
     }
     expect(demoDetail.body.members.map(({ userId }) => momentCounts.get(userId))).toEqual([6, 6, 6]);
-    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
+    const demoStories = await visitor.json<{ stories: { title: string; momentIds: string[]; style: string; styleSource: string; blueprint: { chapters: unknown[] } }[] }>(`/api/spaces/${demoSpace!.id}/stories`);
     expect(demoStories.body.stories).toHaveLength(3);
     expect(demoStories.body.stories.map(({ title }) => title)).toEqual([
       "The year we kept moving",
-      "Postcards from rainy cities",
-      "The little things we brought home",
+      "The year we kept moving",
+      "The year we kept moving",
     ]);
     expect(demoStories.body.stories.map(({ style }) => style)).toEqual(["cinematic", "classic", "scrapbook"]);
-    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["auto", "manual", "manual"]);
-    expect(demoStories.body.stories[0]?.momentIds).toHaveLength(18);
+    expect(demoStories.body.stories.map(({ styleSource }) => styleSource)).toEqual(["manual", "manual", "manual"]);
+    expect(demoStories.body.stories.every((story) => story.momentIds.length === 18 && story.blueprint.chapters.length === 5)).toBe(true);
 
     const secondVisitor = new BrowserSession(app);
     expect((await secondVisitor.request("/auth/demo", {
