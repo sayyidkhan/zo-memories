@@ -163,7 +163,7 @@ function brand(context: CanvasRenderingContext2D, width: number, height: number,
 
 function title(context: CanvasRenderingContext2D, value: string, x: number, y: number, width: number, colour: string, size: number, maxLines = 3) {
   context.fillStyle = colour;
-  context.font = `700 ${size}px Georgia, serif`;
+  context.font = `700 ${size}px Fraunces, Georgia, serif`;
   context.textBaseline = "top";
   return wrapText(context, value, x, y, width, size * 0.92, maxLines);
 }
@@ -298,6 +298,31 @@ function slideNumber(context: CanvasRenderingContext2D, options: SocialExportOpt
   context.restore();
 }
 
+function storyRail(context: CanvasRenderingContext2D, options: SocialExportOptions, index: number, total: number, colour: string) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const left = Math.max(54, safe.left);
+  const right = width - Math.max(54, safe.right);
+  const y = Math.max(38, safe.top * .55);
+  context.save();
+  context.globalAlpha = .32;
+  context.strokeStyle = colour;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(left, y);
+  context.lineTo(right, y);
+  context.stroke();
+  context.globalAlpha = 1;
+  context.strokeStyle = colour;
+  context.lineWidth = 5;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(left, y);
+  context.lineTo(left + ((right - left) * (index + 1)) / total, y);
+  context.stroke();
+  context.restore();
+}
+
 function photoTitle(story: Story, photo: LoadedPhoto | undefined) {
   if (!photo) return story.canvas?.title ?? story.title;
   return chapterForMoment(story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
@@ -360,6 +385,7 @@ function drawCarouselCover(context: CanvasRenderingContext2D, options: SocialExp
   context.font = "700 17px sans-serif";
   context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate), side, height - Math.max(112, safe.bottom + 64));
   brand(context, width, height, palette.cream, options.profile);
+  storyRail(context, options, index, total, palette.gold);
   slideNumber(context, options, index, total, true);
 }
 
@@ -401,20 +427,30 @@ function drawClassicCarouselMoment(context: CanvasRenderingContext2D, options: S
     clippedPhoto(context, lead, side, height * .35, width - side * 2, height * .52, 22, 1.02);
   } else {
     clippedPhoto(context, lead, 0, 0, width, height, 0, options.profile.cropScale);
-    const shade = context.createLinearGradient(0, height * .42, 0, height);
-    shade.addColorStop(0, "rgba(10,24,18,0)");
-    shade.addColorStop(1, "rgba(10,24,18,.94)");
+    const shade = context.createLinearGradient(0, 0, 0, height);
+    shade.addColorStop(0, "rgba(10,24,18,.12)");
+    shade.addColorStop(.55, "rgba(10,24,18,.02)");
+    shade.addColorStop(1, "rgba(10,24,18,.5)");
     context.fillStyle = shade;
-    context.fillRect(0, height * .38, width, height * .62);
-    context.fillStyle = palette.gold;
-    context.font = "700 17px sans-serif";
-    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? "THE JOURNEY", side, height * .69);
-    const titleLines = title(context, photoTitle(options.story, lead), side, height * .73, width - side * 2, palette.cream, 58, 2);
-    context.fillStyle = "rgba(255,248,236,.82)";
+    context.fillRect(0, 0, width, height);
+    const cardX = side;
+    const cardY = height * .61;
+    const cardWidth = width - side - Math.max(54, safe.right);
+    const cardHeight = Math.min(height * .265, height - cardY - Math.max(90, safe.bottom));
+    fillRounded(context, "rgba(255,248,236,.94)", cardX, cardY, cardWidth, cardHeight, 28);
+    fillRounded(context, palette.coral, cardX + 26, cardY + 27, 184, 36, 18);
+    context.fillStyle = palette.cream;
+    context.font = "700 14px sans-serif";
+    context.textBaseline = "middle";
+    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? "THE JOURNEY", cardX + 44, cardY + 45);
+    context.textBaseline = "alphabetic";
+    const titleLines = title(context, photoTitle(options.story, lead), cardX + 28, cardY + 82, cardWidth - 56, palette.ink, 54, 2);
+    context.fillStyle = "#655f56";
     context.font = "500 18px sans-serif";
-    wrapText(context, chapterNarration(options.story, lead?.moment.id), side, height * .73 + titleLines * 54 + 18, width - side * 2, 26, 2);
+    wrapText(context, chapterNarration(options.story, lead?.moment.id), cardX + 28, cardY + 90 + titleLines * 50, cardWidth - 56, 25, 2);
   }
   brand(context, width, height, variant === 2 ? palette.cream : palette.ink, options.profile);
+  storyRail(context, options, index, total, variant === 2 ? palette.gold : palette.coral);
   slideNumber(context, options, index, total, variant === 2);
 }
 
@@ -446,6 +482,7 @@ function drawScrapbookCarouselMoment(context: CanvasRenderingContext2D, options:
   context.font = "500 18px sans-serif";
   wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side + 22, height * .846, width - side * 2 - 44, 25, 2);
   brand(context, width, height, palette.ink, options.profile);
+  storyRail(context, options, index, total, palette.coral);
   slideNumber(context, options, index, total);
 }
 
@@ -469,6 +506,7 @@ function drawCinematicCarouselMoment(context: CanvasRenderingContext2D, options:
   context.font = "500 19px sans-serif";
   wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side, height * .72 + titleLines * 57 + 20, width - side * 2, 27, 2);
   brand(context, width, height, palette.cream, options.profile);
+  storyRail(context, options, index, total, palette.gold);
   slideNumber(context, options, index, total, true);
 }
 
@@ -488,6 +526,7 @@ function drawCarouselClosing(context: CanvasRenderingContext2D, options: SocialE
   context.font = "500 20px sans-serif";
   wrapText(context, storyClosing(options.story), side, height * .525 + titleLines * 54 + 28, width - side * 2, 29, 4);
   brand(context, width, height, light ? palette.cream : palette.ink, options.profile);
+  storyRail(context, options, index, total, light ? palette.gold : palette.coral);
   slideNumber(context, options, index, total, light);
 }
 

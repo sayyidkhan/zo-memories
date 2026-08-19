@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -43,7 +43,7 @@ const socialTargets: SocialTarget[] = [
   { id: "snapchat", platform: "Snapchat", placement: "9:16 Story or Spotlight · 10s", format: "video", preset: "snapchat", width: 1080, height: 1920, profile: { id: "snapchat", safeTop: .15, safeRight: .1, safeBottom: .17, safeLeft: .07, durationMs: 10_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.05 } },
 ];
 
-const socialExportRendererVersion = "carousel-v2";
+const socialExportRendererVersion = "carousel-v3";
 
 interface ExportAsset {
   blobs: Blob[];
@@ -109,8 +109,6 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     retry: 1,
   });
   const isBusy = phase !== "idle";
-  const imageHasExports = socialTargets.some((item) => item.format === "image" && status.data?.[item.preset]);
-  const videoHasExports = socialTargets.some((item) => item.format === "video" && status.data?.[item.preset]);
 
   useEffect(() => {
     if (!open) return;
@@ -307,34 +305,25 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="h-[100dvh] max-h-[100dvh] w-full overflow-y-auto bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-auto sm:max-h-[94dvh] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-8 sm:py-6">
-          <div>
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a9503f]"><Share2 className="size-4" />Share this story <span className="rounded-full bg-[#e8ded0] px-2.5 py-1 text-[#526158]">{styleLabel}</span></div>
-            <h2 id="social-share-title" className="font-display text-[1.7rem] leading-none text-[#26372f] sm:text-4xl">Make it fit the destination.</h2>
+        <header className="sticky top-0 z-20 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-8 sm:py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a9503f]"><Share2 className="size-4" />Share this story <span className="rounded-full bg-[#e8ded0] px-2.5 py-1 text-[#526158]">{styleLabel}</span></div>
+              <h2 id="social-share-title" className="font-display text-[1.7rem] leading-none text-[#26372f] sm:text-4xl">Turn it into something shareable.</h2>
+            </div>
+            <button type="button" onClick={onClose} disabled={isBusy} className="grid size-11 shrink-0 place-items-center rounded-full bg-[#eee5d8] text-[#526158] transition hover:bg-[#e3d8c8] disabled:opacity-40" aria-label="Close sharing"><X className="size-5" /></button>
           </div>
-          <button type="button" onClick={onClose} disabled={isBusy} className="grid size-11 shrink-0 place-items-center rounded-full bg-[#eee5d8] text-[#526158] transition hover:bg-[#e3d8c8] disabled:opacity-40" aria-label="Close sharing"><X className="size-5" /></button>
+          <div className="mt-4">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-[.18em] text-[#8c594d]">1 · Choose format</p>
+            <div className="flex items-center gap-1 rounded-[18px] border border-[#d8c9b7] bg-[#e9dfd1] p-1" aria-label="Choose export format">
+              <button type="button" onClick={() => chooseFormat("image")} aria-pressed={format === "image"} className={cn("flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-xs font-bold transition", format === "image" ? "bg-[#fffdf8] text-[#26372f] shadow-[0_5px_18px_rgba(42,48,42,.12)]" : "text-[#756d63] hover:text-[#34443a]")}><Image className="size-4" /><span>Image carousel</span><span className={cn("hidden rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[.12em] sm:inline", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#d8cbbb] text-[#6f675d]")}>JPEG</span></button>
+              <button type="button" onClick={() => chooseFormat("video")} aria-pressed={format === "video"} className={cn("flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-xs font-bold transition", format === "video" ? "bg-[#26372f] text-[#fff8ec] shadow-[0_5px_18px_rgba(22,38,30,.22)]" : "text-[#756d63] hover:text-[#34443a]")}><Film className="size-4" /><span>Motion story</span><span className={cn("hidden rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[.12em] sm:inline", format === "video" ? "bg-[#efc46f] text-[#26372f]" : "bg-[#d8cbbb] text-[#6f675d]")}>MP4</span></button>
+            </div>
+          </div>
         </header>
 
         <div className="grid gap-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-7 sm:p-8 lg:grid-cols-[1.08fr_.92fr]">
           <div className="grid content-start gap-6">
-            <section>
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">1 · Choose the output</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => chooseFormat("image")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "image" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
-                  {imageHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
-                  <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Image className="size-5" /></span>
-                  <strong className="mt-4 block text-sm text-[#26372f]">Image carousel</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">JPEG · Every photo, varied story layouts</span>
-                </button>
-                <button type="button" onClick={() => chooseFormat("video")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "video" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
-                  {videoHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
-                  <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "video" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Film className="size-5" /></span>
-                  <strong className="mt-4 block text-sm text-[#26372f]">Social video</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">MP4 · Platform-safe pacing</span>
-                </button>
-              </div>
-            </section>
-
             <section>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose what appears</p>
               <div className="overflow-hidden rounded-[20px] border border-[#ded3c3] bg-[#fffdf8]">
@@ -364,11 +353,12 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
           </div>
 
-          <aside ref={previewRef} className="relative flex min-h-[22rem] scroll-mt-24 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] bg-[#1d3027] p-4 sm:min-h-[34rem] sm:rounded-[28px] sm:p-5">
-            {asset && activePreviewUrl && !isBusy ? <button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="absolute right-3 top-3 z-10 inline-flex h-10 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" />Expand</button> : null}
+          <aside ref={previewRef} className="relative flex min-h-[22rem] scroll-mt-36 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] bg-[#15271f] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)] sm:min-h-[34rem] sm:rounded-[28px] sm:p-5">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(239,196,111,.16),transparent_28%),radial-gradient(circle_at_88%_90%,rgba(169,80,63,.13),transparent_30%)]" />
+            {asset && activePreviewUrl && !isBusy ? <><span className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-[#102019]/80 px-3 py-2 text-[9px] font-bold uppercase tracking-[.14em] text-[#efc46f] backdrop-blur-md">{target.platform} · {asset.format === "image" ? `${asset.urls.length} slides` : "Motion"}</span><button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="absolute right-3 top-3 z-10 inline-flex h-10 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" />Expand</button></> : null}
             {asset && activePreviewUrl ? asset.format === "image"
               ? <div className="relative grid place-items-center">
-                <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[32rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
+                <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[27rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.4)]" />
                 {asset.urls.length > 1 ? <>
                   <button type="button" onClick={() => setPreviewIndex((index) => (index - 1 + asset.urls.length) % asset.urls.length)} className="absolute left-2 grid size-10 place-items-center rounded-full bg-[#fff8ec]/90 text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Previous carousel slide"><ChevronLeft className="size-5" /></button>
                   <button type="button" onClick={() => setPreviewIndex((index) => (index + 1) % asset.urls.length)} className="absolute right-2 grid size-10 place-items-center rounded-full bg-[#fff8ec]/90 text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Next carousel slide"><ChevronRight className="size-5" /></button>
@@ -380,6 +370,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_22%,rgba(239,196,111,.28),transparent_28%),linear-gradient(160deg,transparent,rgba(9,25,18,.8))]" />
                 <div className="relative flex flex-col items-center justify-center p-7 text-[#fff8ec]"><span className="grid size-14 place-items-center rounded-full bg-[#fff8ec]/10">{target.format === "image" ? <Image className="size-6" /> : <Film className="size-6" />}</span><strong className="mt-5 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.platform} · {target.placement}</span><p className="mt-5 max-w-52 text-xs leading-5 text-white/65">{styleLabel} composition at {target.width} × {target.height}px.</p></div>
               </div>}
+            {asset?.format === "image" && asset.urls.length > 1 && !isBusy ? <div className="relative z-10 flex w-full gap-2 overflow-x-auto pb-1" aria-label="Carousel slides">{asset.urls.map((url, index) => <button key={url} type="button" onClick={() => setPreviewIndex(index)} aria-label={`Open slide ${index + 1}`} aria-current={previewIndex === index} className={cn("relative h-14 shrink-0 overflow-hidden rounded-[10px] border-2 transition", previewIndex === index ? "w-11 border-[#efc46f] opacity-100" : "w-9 border-transparent opacity-45 hover:opacity-80")}><img src={url} alt="" className="size-full object-cover" /><span className="absolute bottom-0 right-0 grid size-4 place-items-center rounded-tl-md bg-[#102019]/85 text-[8px] font-bold text-white">{index + 1}</span></button>)}</div> : null}
             {asset && !isBusy ? <div className="relative z-10 grid w-full gap-2 sm:grid-cols-[1fr_auto]"><Button className="h-12 bg-[#f0c681] text-[#26372f] shadow-none hover:bg-[#f6d795]" onClick={shareToApps}><Smartphone className="size-4" />{asset.format === "image" ? `Share ${asset.urls.length}-slide carousel` : "Share to apps"}</Button><Button className="text-[#fff8ec] hover:bg-white/10 hover:text-white" variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
             {isBusy ? <div className="absolute inset-0 z-10 grid place-items-center bg-[#15271f]/88 p-6 backdrop-blur-sm" role="status" aria-live="polite">
               <div className="w-full max-w-xs rounded-[24px] border border-white/10 bg-[#26372f] p-6 text-center text-[#fff8ec] shadow-[0_24px_70px_rgba(0,0,0,.35)]">
