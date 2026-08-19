@@ -28,12 +28,12 @@ interface SocialTarget {
 }
 
 const socialTargets: SocialTarget[] = [
-  { id: "instagram-feed", platform: "Instagram", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "instagram-feed", width: 1080, height: 1350, profile: { id: "instagram-feed", safeTop: .05, safeRight: .05, safeBottom: .06, safeLeft: .05, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.04 } },
-  { id: "facebook-feed", platform: "Facebook", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "facebook-feed", width: 1200, height: 1500, profile: { id: "facebook-feed", safeTop: .04, safeRight: .04, safeBottom: .09, safeLeft: .04, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.03 } },
-  { id: "linkedin-feed", platform: "LinkedIn", placement: "Square set · up to 20 images", format: "image", preset: "linkedin-feed", width: 1200, height: 1200, profile: { id: "linkedin-feed", safeTop: .06, safeRight: .07, safeBottom: .1, safeLeft: .07, durationMs: 0, maxPhotos: 18, videoBitrate: 0, cropScale: 1.02 } },
-  { id: "x-post", platform: "X", placement: "Square set · 4 images", format: "image", preset: "x-post", width: 1200, height: 1200, profile: { id: "x-post", safeTop: .05, safeRight: .06, safeBottom: .12, safeLeft: .06, durationMs: 0, maxPhotos: 2, videoBitrate: 0, cropScale: 1.05 } },
-  { id: "threads-post", platform: "Threads", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "threads-post", width: 1080, height: 1350, profile: { id: "threads-post", safeTop: .07, safeRight: .06, safeBottom: .1, safeLeft: .06, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.03 } },
-  { id: "pinterest-pin", platform: "Pinterest", placement: "2:3 story Pin set", format: "image", preset: "pinterest-pin", width: 1000, height: 1500, profile: { id: "pinterest-pin", safeTop: .08, safeRight: .08, safeBottom: .12, safeLeft: .07, durationMs: 0, maxPhotos: 8, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "instagram-feed", platform: "Instagram", placement: "4:5 carousel · up to 20 slides", format: "image", preset: "instagram-feed", width: 1080, height: 1350, profile: { id: "instagram-feed", safeTop: .05, safeRight: .05, safeBottom: .06, safeLeft: .05, durationMs: 0, maxPhotos: 8, maxSlides: 20, videoBitrate: 0, cropScale: 1.04 } },
+  { id: "facebook-feed", platform: "Facebook", placement: "4:5 carousel · up to 10 slides", format: "image", preset: "facebook-feed", width: 1200, height: 1500, profile: { id: "facebook-feed", safeTop: .04, safeRight: .04, safeBottom: .09, safeLeft: .04, durationMs: 0, maxPhotos: 8, maxSlides: 10, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "linkedin-feed", platform: "LinkedIn", placement: "Square set · up to 20 images", format: "image", preset: "linkedin-feed", width: 1200, height: 1200, profile: { id: "linkedin-feed", safeTop: .06, safeRight: .07, safeBottom: .1, safeLeft: .07, durationMs: 0, maxPhotos: 18, maxSlides: 20, videoBitrate: 0, cropScale: 1.02 } },
+  { id: "x-post", platform: "X", placement: "Square set · 4 images", format: "image", preset: "x-post", width: 1200, height: 1200, profile: { id: "x-post", safeTop: .05, safeRight: .06, safeBottom: .12, safeLeft: .06, durationMs: 0, maxPhotos: 2, maxSlides: 4, videoBitrate: 0, cropScale: 1.05 } },
+  { id: "threads-post", platform: "Threads", placement: "4:5 carousel · up to 20 slides", format: "image", preset: "threads-post", width: 1080, height: 1350, profile: { id: "threads-post", safeTop: .07, safeRight: .06, safeBottom: .1, safeLeft: .06, durationMs: 0, maxPhotos: 8, maxSlides: 20, videoBitrate: 0, cropScale: 1.03 } },
+  { id: "pinterest-pin", platform: "Pinterest", placement: "2:3 story Pin set · up to 10 slides", format: "image", preset: "pinterest-pin", width: 1000, height: 1500, profile: { id: "pinterest-pin", safeTop: .08, safeRight: .08, safeBottom: .12, safeLeft: .07, durationMs: 0, maxPhotos: 8, maxSlides: 10, videoBitrate: 0, cropScale: 1.02 } },
   { id: "instagram-reels", platform: "Instagram", placement: "9:16 Story or Reel · 9s", format: "video", preset: "instagram-reels", width: 1080, height: 1920, profile: { id: "instagram-reels", safeTop: .14, safeRight: .12, safeBottom: .19, safeLeft: .07, durationMs: 9_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.04 } },
   { id: "facebook-reels", platform: "Facebook", placement: "9:16 Story or Reel · 12s", format: "video", preset: "facebook-reels", width: 1080, height: 1920, profile: { id: "facebook-reels", safeTop: .1, safeRight: .09, safeBottom: .15, safeLeft: .07, durationMs: 12_000, maxPhotos: 9, videoBitrate: 6_000_000, cropScale: 1.03 } },
   { id: "tiktok", platform: "TikTok", placement: "9:16 UI-safe video · 15s", format: "video", preset: "tiktok", width: 1080, height: 1920, profile: { id: "tiktok", safeTop: .13, safeRight: .2, safeBottom: .25, safeLeft: .07, durationMs: 15_000, maxPhotos: 10, videoBitrate: 6_000_000, cropScale: 1.07 } },
@@ -42,6 +42,8 @@ const socialTargets: SocialTarget[] = [
   { id: "x-vertical", platform: "X", placement: "9:16 vertical video · 12s", format: "video", preset: "x-vertical", width: 1080, height: 1920, profile: { id: "x-vertical", safeTop: .07, safeRight: .08, safeBottom: .14, safeLeft: .06, durationMs: 12_000, maxPhotos: 8, videoBitrate: 7_000_000, cropScale: 1.03 } },
   { id: "snapchat", platform: "Snapchat", placement: "9:16 Story or Spotlight · 10s", format: "video", preset: "snapchat", width: 1080, height: 1920, profile: { id: "snapchat", safeTop: .15, safeRight: .1, safeBottom: .17, safeLeft: .07, durationMs: 10_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.05 } },
 ];
+
+const socialExportRendererVersion = "carousel-v2";
 
 interface ExportAsset {
   blobs: Blob[];
@@ -64,6 +66,10 @@ function initialShareCaption(story: Story) {
   const opening = (story.canvas?.opening ?? story.opening).trim().slice(0, 240);
   const location = (story.canvas?.location ?? story.location ?? "").trim();
   return [story.canvas?.title ?? story.title, opening, location ? `📍 ${location}` : "", "#ZoMoments"].filter(Boolean).join("\n\n");
+}
+
+function rendererVersionKey(story: Story, preset: SocialExportPreset) {
+  return `zo-moments:${story.id}:${preset}:renderer`;
 }
 
 export function SocialShareDialog({ story, objects, open, onClose }: { story: Story; objects: MomentObject[]; open: boolean; onClose: () => void }) {
@@ -93,6 +99,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     const overrides = new Map(story.canvas?.moments.map((moment) => [moment.momentId, moment.title]) ?? []);
     return story.momentIds.map((id) => byId.get(id)).filter((object): object is MomentObject => Boolean(object)).map((object) => ({ ...object, caption: overrides.get(object.id) ?? object.caption }));
   }, [objects, story.canvas, story.momentIds]);
+  const photoCount = moments.filter((moment) => moment.kind === "photo").length;
+  const expectedSlideCount = Math.min(Math.max(2, photoCount + 2), target.profile.maxSlides ?? 10);
   const status = useQuery({
     queryKey: ["social-exports", story.spaceId, story.id],
     queryFn: () => api.getSocialExports(story.spaceId, story.id),
@@ -203,6 +211,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       });
       await api.uploadSocialExport(story.spaceId, story.id, next.preset, uploads, controller.signal);
       if (attempt !== saveAttemptRef.current) return;
+      window.localStorage.setItem(rendererVersionKey(story, next.preset), socialExportRendererVersion);
       setSaveState("saved");
       await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
     } catch (cause) {
@@ -262,7 +271,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       return;
     }
     replaceAsset(null);
-    if (!appearanceChanged && status.data?.[next.preset]) await fetchSaved(next);
+    const savedWithCurrentRenderer = window.localStorage.getItem(rendererVersionKey(story, next.preset)) === socialExportRendererVersion;
+    if (!appearanceChanged && status.data?.[next.preset] && savedWithCurrentRenderer) await fetchSaved(next);
     else await generate(next);
   }
 
@@ -314,7 +324,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   {imageHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
                   <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Image className="size-5" /></span>
                   <strong className="mt-4 block text-sm text-[#26372f]">Image carousel</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">JPEG · Cover, chapters, closing</span>
+                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">JPEG · Every photo, varied story layouts</span>
                 </button>
                 <button type="button" onClick={() => chooseFormat("video")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "video" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
                   {videoHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
@@ -347,7 +357,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{asset?.preset === item.preset && asset.format === "image" ? `${asset.urls.length} slides ready · tap to download` : item.placement}</span>
                 </button>)}
               </div>
-              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? asset?.format === "image" ? `${asset.urls.length}-slide JPEG carousel` : "JPEG carousel" : "H.264 MP4"} · destination-safe composition</p>
+              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? asset?.format === "image" ? `${asset.urls.length}-slide JPEG carousel` : `${expectedSlideCount} slides from ${photoCount} ${photoCount === 1 ? "photo" : "photos"}` : "H.264 MP4"} · destination-safe composition</p>
             </section>
 
             <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><div><p><strong>Private until you post.</strong> Zo Moments never publishes without opening your device’s confirmation screen.</p>{saveState !== "idle" ? <p className="mt-2 flex items-center gap-2 font-semibold">{saveState === "saving" ? <><Spinner />Saving a reusable copy in the background…</> : saveState === "saved" ? <><Cloud className="size-4" />Reusable copy saved</> : <><CloudAlert className="size-4" />{saveError}</>}</p> : null}</div></div>

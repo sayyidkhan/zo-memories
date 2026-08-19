@@ -11,6 +11,7 @@ export interface SocialExportProfile {
   safeLeft: number;
   durationMs: number;
   maxPhotos: number;
+  maxSlides?: number;
   videoBitrate: number;
   cropScale: number;
 }
@@ -31,6 +32,11 @@ interface LoadedPhoto {
   image: HTMLImageElement;
   moment: MomentObject;
   release: () => void;
+}
+
+export interface CarouselPlanSlide {
+  kind: "cover" | "moment" | "closing";
+  photoIndexes: number[];
 }
 
 const palette = {
@@ -262,70 +268,237 @@ function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptio
   renderer(context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
 }
 
-function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialExportOptions, photo: LoadedPhoto | undefined, index: number, total: number, closing: boolean) {
+export function buildCarouselPlan(photoCount: number, maxSlides: number): CarouselPlanSlide[] {
+  const contentSlots = Math.max(1, maxSlides - 2);
+  const moments = Array.from({ length: Math.min(photoCount, contentSlots) }, (_, slot) => {
+    const start = Math.floor((slot * photoCount) / Math.min(photoCount, contentSlots));
+    const end = Math.floor(((slot + 1) * photoCount) / Math.min(photoCount, contentSlots));
+    return { kind: "moment" as const, photoIndexes: Array.from({ length: end - start }, (_, offset) => start + offset) };
+  });
+  return [
+    { kind: "cover", photoIndexes: photoCount ? [0] : [] },
+    ...moments,
+    { kind: "closing", photoIndexes: Array.from({ length: Math.min(3, photoCount) }, (_, index) => photoCount - Math.min(3, photoCount) + index) },
+  ];
+}
+
+function slideNumber(context: CanvasRenderingContext2D, options: SocialExportOptions, index: number, total: number, light = false) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, options.profile);
-  const side = Math.max(42, safe.left);
-  fillRounded(context, "rgba(255,248,236,.9)", width - Math.max(104, safe.right + 78), Math.max(30, safe.top * 0.55), 74, 38, 19);
+  const badgeWidth = total >= 10 ? 92 : 78;
+  const badgeX = width - Math.max(badgeWidth + 28, safe.right + badgeWidth);
+  const badgeY = Math.max(28, safe.top * 0.55);
+  fillRounded(context, light ? "rgba(18,34,27,.72)" : "rgba(255,248,236,.92)", badgeX, badgeY, badgeWidth, 40, 20);
   context.save();
-  context.fillStyle = palette.ink;
+  context.fillStyle = light ? palette.cream : palette.ink;
   context.font = "700 15px sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(`${index + 1} / ${total}`, width - Math.max(67, safe.right + 41), Math.max(49, safe.top * 0.55 + 19));
+  context.fillText(`${index + 1} / ${total}`, badgeX + badgeWidth / 2, badgeY + 20);
   context.restore();
+}
 
-  if (!photo && !closing) {
-    const panelTop = height * 0.63;
-    context.fillStyle = palette.paper;
-    context.fillRect(0, panelTop, width, height - panelTop);
-    const cardWidth = width - side - Math.max(side, safe.right);
-    const cardHeight = Math.min(285, height * 0.23);
-    const cardY = panelTop + 18;
-    fillRounded(context, palette.cream, side, cardY, cardWidth, cardHeight, 28);
-    context.save();
-    context.fillStyle = palette.coral;
-    context.font = "700 16px sans-serif";
-    context.fillText("A STORY WE SHARE", side + 28, cardY + 38);
-    const titleLines = title(context, options.story.canvas?.title ?? options.story.title, side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(48, width * 0.055), 2);
-    context.fillStyle = "#625f58";
-    context.font = "500 17px sans-serif";
-    wrapText(context, storyOpening(options.story), side + 28, cardY + 72 + titleLines * Math.min(44, width * 0.05), cardWidth - 56, 24, 3);
-    context.restore();
-    context.fillStyle = "#6f675d";
-    context.font = "600 18px sans-serif";
-    context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate), side, height - Math.max(108, safe.bottom + 58));
-    brand(context, width, height, palette.ink, options.profile);
-  } else if (photo && !closing) {
-    const caption = chapterForMoment(options.story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
-    fillRounded(context, "rgba(20,36,29,.82)", side, Math.max(34, safe.top * 0.55), Math.min(width * 0.58, width - side - safe.right - 116), 44, 22);
-    context.save();
+function photoTitle(story: Story, photo: LoadedPhoto | undefined) {
+  if (!photo) return story.canvas?.title ?? story.title;
+  return chapterForMoment(story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
+}
+
+function drawPhotoMosaic(context: CanvasRenderingContext2D, photos: LoadedPhoto[], x: number, y: number, width: number, height: number, radius: number) {
+  if (photos.length <= 1) {
+    clippedPhoto(context, photos[0], x, y, width, height, radius, 1.02);
+    return;
+  }
+  const gap = 14;
+  const leadWidth = photos.length === 2 ? (width - gap) / 2 : width * 0.62;
+  clippedPhoto(context, photos[0], x, y, leadWidth, height, radius, 1.02);
+  if (photos.length === 2) {
+    clippedPhoto(context, photos[1], x + leadWidth + gap, y, width - leadWidth - gap, height, radius, 1.02);
+    return;
+  }
+  if (photos.length > 3) {
+    const columns = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(photos.length * (width / height)))));
+    const rows = Math.ceil(photos.length / columns);
+    const cellWidth = (width - gap * (columns - 1)) / columns;
+    const cellHeight = (height - gap * (rows - 1)) / rows;
+    photos.forEach((photo, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      clippedPhoto(context, photo, x + column * (cellWidth + gap), y + row * (cellHeight + gap), cellWidth, cellHeight, Math.min(radius, 12), 1.02);
+    });
+    return;
+  }
+  const smallX = x + leadWidth + gap;
+  const smallWidth = width - leadWidth - gap;
+  const smallHeight = (height - gap) / 2;
+  clippedPhoto(context, photos[1], smallX, y, smallWidth, smallHeight, radius, 1.02);
+  clippedPhoto(context, photos[2], smallX, y + smallHeight + gap, smallWidth, smallHeight, radius, 1.02);
+}
+
+function drawCarouselCover(context: CanvasRenderingContext2D, options: SocialExportOptions, photo: LoadedPhoto | undefined, index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  if (photo) cover(context, photo.image, 0, 0, width, height, options.profile.cropScale);
+  else { context.fillStyle = palette.ink; context.fillRect(0, 0, width, height); }
+  const shade = context.createLinearGradient(0, 0, 0, height);
+  shade.addColorStop(0, "rgba(9,24,17,.08)");
+  shade.addColorStop(0.42, "rgba(9,24,17,.18)");
+  shade.addColorStop(1, "rgba(9,24,17,.95)");
+  context.fillStyle = shade;
+  context.fillRect(0, 0, width, height);
+  const side = Math.max(58, safe.left);
+  context.fillStyle = palette.gold;
+  context.font = "700 18px sans-serif";
+  context.fillText("A JOURNEY WORTH KEEPING", side, Math.max(82, safe.top + 28));
+  const heading = options.story.canvas?.title ?? options.story.title;
+  const headingSize = heading.length > 34 ? 64 : 78;
+  const titleTop = Math.min(height * 0.57, height - safe.bottom - 430);
+  const titleLines = title(context, heading, side, titleTop, width - side - Math.max(58, safe.right), palette.cream, headingSize, 3);
+  context.fillStyle = "rgba(255,248,236,.86)";
+  context.font = "500 22px sans-serif";
+  wrapText(context, storyOpening(options.story), side, titleTop + titleLines * headingSize * .92 + 30, width - side - Math.max(70, safe.right), 32, 3);
+  context.fillStyle = palette.gold;
+  context.font = "700 17px sans-serif";
+  context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate), side, height - Math.max(112, safe.bottom + 64));
+  brand(context, width, height, palette.cream, options.profile);
+  slideNumber(context, options, index, total, true);
+}
+
+function drawClassicCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const side = Math.max(54, safe.left);
+  const variant = (index - 1) % 3;
+  const lead = photos[0];
+  const chapter = chapterForMoment(options.story, lead?.moment.id);
+  context.fillStyle = variant === 2 ? palette.ink : palette.paper;
+  context.fillRect(0, 0, width, height);
+  if (photos.length > 1) {
     context.fillStyle = palette.cream;
-    context.font = "600 15px sans-serif";
-    context.textBaseline = "middle";
-    context.fillText(caption.slice(0, 52), side + 18, Math.max(56, safe.top * 0.55 + 22));
-    context.restore();
-  }
-
-  if (closing) {
-    const panelTop = height * 0.58;
-    context.fillStyle = palette.paper;
-    context.fillRect(0, panelTop, width, height - panelTop);
-    const cardWidth = width - side - Math.max(side, safe.right);
-    const cardHeight = Math.min(260, height * 0.22);
-    const cardY = Math.max(safe.top + 80, panelTop - 64);
-    fillRounded(context, palette.cream, side, cardY, cardWidth, cardHeight, 28);
-    context.save();
+    context.fillRect(0, 0, width, height);
+    drawPhotoMosaic(context, photos, side, height * .12, width - side - Math.max(side, safe.right), height * .63, 22);
     context.fillStyle = palette.coral;
-    context.font = "700 16px sans-serif";
-    context.fillText("THE STORY CONTINUES", side + 28, cardY + 38);
-    title(context, "Keep the moments moving.", side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(42, width * 0.05), 2);
-    context.fillStyle = "#625f58";
-    context.font = "500 16px sans-serif";
-    wrapText(context, storyClosing(options.story), side + 28, cardY + 150, cardWidth - 56, 23, 3);
-    context.restore();
+    context.font = "700 17px sans-serif";
+    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}  ·  ${photos.length} MOMENTS`, side, height * .79);
+    title(context, chapter?.title ?? photoTitle(options.story, lead), side, height * .82, width - side * 2, palette.ink, 48, 2);
     brand(context, width, height, palette.ink, options.profile);
+    slideNumber(context, options, index, total);
+    return;
   }
+  if (variant === 0) {
+    clippedPhoto(context, lead, 48, 48, width - 96, height * .68, 26, 1.02);
+    context.fillStyle = palette.coral;
+    context.font = "700 17px sans-serif";
+    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? `MOMENT ${String(index).padStart(2, "0")}`, side, height * .735);
+    title(context, photoTitle(options.story, lead), side, height * .77, width - side * 2, palette.ink, 52, 2);
+  } else if (variant === 1) {
+    context.fillStyle = palette.coral;
+    context.font = "700 17px sans-serif";
+    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}`, side, height * .105);
+    const titleLines = title(context, photoTitle(options.story, lead), side, height * .14, width - side * 2, palette.ink, 58, 2);
+    context.fillStyle = "#71685e";
+    context.font = "500 18px sans-serif";
+    wrapText(context, chapterNarration(options.story, lead?.moment.id), side, height * .14 + titleLines * 54 + 16, width - side * 2, 26, 2);
+    clippedPhoto(context, lead, side, height * .35, width - side * 2, height * .52, 22, 1.02);
+  } else {
+    clippedPhoto(context, lead, 0, 0, width, height, 0, options.profile.cropScale);
+    const shade = context.createLinearGradient(0, height * .42, 0, height);
+    shade.addColorStop(0, "rgba(10,24,18,0)");
+    shade.addColorStop(1, "rgba(10,24,18,.94)");
+    context.fillStyle = shade;
+    context.fillRect(0, height * .38, width, height * .62);
+    context.fillStyle = palette.gold;
+    context.font = "700 17px sans-serif";
+    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? "THE JOURNEY", side, height * .69);
+    const titleLines = title(context, photoTitle(options.story, lead), side, height * .73, width - side * 2, palette.cream, 58, 2);
+    context.fillStyle = "rgba(255,248,236,.82)";
+    context.font = "500 18px sans-serif";
+    wrapText(context, chapterNarration(options.story, lead?.moment.id), side, height * .73 + titleLines * 54 + 18, width - side * 2, 26, 2);
+  }
+  brand(context, width, height, variant === 2 ? palette.cream : palette.ink, options.profile);
+  slideNumber(context, options, index, total, variant === 2);
+}
+
+function drawScrapbookCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  context.fillStyle = "#e7dbc8";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = "rgba(74,93,79,.12)";
+  for (let x = 0; x < width; x += 38) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
+  for (let y = 0; y < height; y += 38) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
+  const side = Math.max(54, safe.left);
+  context.save();
+  context.translate(width / 2, height * .43);
+  context.rotate((((index % 2) ? 2.4 : -2.4) * Math.PI) / 180);
+  context.shadowColor = "rgba(48,39,27,.25)";
+  context.shadowBlur = 32;
+  fillRounded(context, palette.cream, -width * .41, -height * .32, width * .82, height * .64, 8);
+  drawPhotoMosaic(context, photos, -width * .38, -height * .295, width * .76, height * .49, 3);
+  context.fillStyle = palette.ink;
+  context.font = "700 26px Georgia, serif";
+  wrapText(context, photoTitle(options.story, photos[0]), -width * .36, height * .225, width * .7, 29, 2);
+  context.restore();
+  fillRounded(context, "rgba(200,108,87,.18)", side, height * .78, width - side * 2, height * .105, 4);
+  context.fillStyle = palette.coral;
+  context.font = "700 16px sans-serif";
+  context.fillText(`NOTE ${String(index).padStart(2, "0")}  ·  ${photos.length > 1 ? `${photos.length} MOMENTS` : "FROM THE JOURNEY"}`, side + 22, height * .815);
+  context.fillStyle = "#5d574e";
+  context.font = "500 18px sans-serif";
+  wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side + 22, height * .846, width - side * 2 - 44, 25, 2);
+  brand(context, width, height, palette.ink, options.profile);
+  slideNumber(context, options, index, total);
+}
+
+function drawCinematicCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  if (photos.length > 1) drawPhotoMosaic(context, photos, 0, 0, width, height, 0);
+  else if (photos[0]) cover(context, photos[0].image, 0, 0, width, height, options.profile.cropScale);
+  else { context.fillStyle = palette.ink; context.fillRect(0, 0, width, height); }
+  const shade = context.createLinearGradient(0, height * .3, 0, height);
+  shade.addColorStop(0, "rgba(7,18,12,.04)");
+  shade.addColorStop(1, "rgba(7,18,12,.96)");
+  context.fillStyle = shade;
+  context.fillRect(0, 0, width, height);
+  const side = Math.max(54, safe.left);
+  context.fillStyle = palette.gold;
+  context.font = "700 17px sans-serif";
+  context.fillText(`SCENE ${String(index).padStart(2, "0")}  ·  ${photos.length > 1 ? `${photos.length} MOMENTS` : "A SHARED STORY"}`, side, height * .68);
+  const titleLines = title(context, photoTitle(options.story, photos[0]), side, height * .72, width - side - Math.max(54, safe.right), palette.cream, 62, 2);
+  context.fillStyle = "rgba(255,248,236,.8)";
+  context.font = "500 19px sans-serif";
+  wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side, height * .72 + titleLines * 57 + 20, width - side * 2, 27, 2);
+  brand(context, width, height, palette.cream, options.profile);
+  slideNumber(context, options, index, total, true);
+}
+
+function drawCarouselClosing(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const side = Math.max(58, safe.left);
+  context.fillStyle = options.story.style === "cinematic" ? "#14271f" : palette.paper;
+  context.fillRect(0, 0, width, height);
+  if (photos.length) drawPhotoMosaic(context, photos, side, height * .08, width - side * 2, height * .3, 18);
+  context.fillStyle = palette.coral;
+  context.font = "700 17px sans-serif";
+  context.fillText("WHAT STAYED WITH US", side, height * .48);
+  const light = options.story.style === "cinematic";
+  const titleLines = title(context, "Some journeys end. The story keeps moving.", side, height * .525, width - side * 2, light ? palette.cream : palette.ink, 58, 3);
+  context.fillStyle = light ? "rgba(255,248,236,.76)" : "#655f56";
+  context.font = "500 20px sans-serif";
+  wrapText(context, storyClosing(options.story), side, height * .525 + titleLines * 54 + 28, width - side * 2, 29, 4);
+  brand(context, width, height, light ? palette.cream : palette.ink, options.profile);
+  slideNumber(context, options, index, total, light);
+}
+
+function drawCarouselSlide(context: CanvasRenderingContext2D, options: SocialExportOptions, allPhotos: LoadedPhoto[], slide: CarouselPlanSlide, index: number, total: number) {
+  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+  const photos = slide.photoIndexes.map((photoIndex) => allPhotos[photoIndex]).filter((photo): photo is LoadedPhoto => Boolean(photo));
+  if (slide.kind === "cover") drawCarouselCover(context, options, photos[0], index, total);
+  else if (slide.kind === "closing") drawCarouselClosing(context, options, photos, index, total);
+  else if (options.story.style === "scrapbook") drawScrapbookCarouselMoment(context, options, photos, index, total);
+  else if (options.story.style === "cinematic") drawCinematicCarouselMoment(context, options, photos, index, total);
+  else drawClassicCarouselMoment(context, options, photos, index, total);
 }
 
 async function loadPhotos(moments: MomentObject[], maxPhotos: number, onProgress?: (progress: number) => void): Promise<LoadedPhoto[]> {
@@ -397,7 +570,7 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
 export async function generateSocialExport(options: SocialExportOptions): Promise<Blob[]> {
   await document.fonts.ready;
   options.onProgress?.(0.04);
-  const photos = await loadPhotos(options.moments, options.profile.maxPhotos, options.onProgress);
+  const photos = await loadPhotos(options.moments, options.format === "image" ? 30 : options.profile.maxPhotos, options.onProgress);
   const renderCanvas = document.createElement("canvas");
   renderCanvas.width = options.format === "video" ? 720 : Math.min(1080, options.outputWidth);
   renderCanvas.height = Math.round(renderCanvas.width * (options.outputHeight / options.outputWidth));
@@ -409,15 +582,10 @@ export async function generateSocialExport(options: SocialExportOptions): Promis
   if (!renderContext || !outputContext) throw new Error("Your browser could not start the story renderer");
   try {
     if (options.format === "image") {
-      const slides = [
-        { progress: 0.02, photo: undefined, closing: false },
-        ...photos.map((photo, index) => ({ progress: (index + 0.5) / Math.max(photos.length, 1), photo, closing: false })),
-        { progress: 0.98, photo: undefined, closing: true },
-      ];
+      const slides = buildCarouselPlan(photos.length, options.profile.maxSlides ?? 10);
       const blobs: Blob[] = [];
       for (const [index, slide] of slides.entries()) {
-        drawFrame(renderContext, options, photos, slide.progress);
-        drawCarouselOverlay(renderContext, options, slide.photo, index, slides.length, slide.closing);
+        drawCarouselSlide(renderContext, options, photos, slide, index, slides.length);
         paintOutput(renderCanvas, outputCanvas, outputContext);
         blobs.push(await canvasBlob(outputCanvas));
         options.onProgress?.(0.3 + ((index + 1) / slides.length) * 0.6);
