@@ -300,39 +300,41 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const styleLabel = story.styleSource === "auto" ? `Auto · ${styleNames[story.style]}` : styleNames[story.style];
   const aspectRatio = `${target.width} / ${target.height}`;
   const activePreviewUrl = asset?.urls[Math.min(previewIndex, asset.urls.length - 1)];
+  const previewPhoto = moments.find((moment) => moment.kind === "photo");
+  const previewPhotoUrl = previewPhoto ? api.objectContentUrl(previewPhoto.spaceId, previewPhoto.id) : "";
   const expandedPreviewWidth = `min(${previewZoom * 92}vw, ${previewZoom * 78 * (target.width / target.height)}dvh)`;
   const zoomBy = (amount: number) => setPreviewZoom((current) => Math.min(2, Math.max(.5, Math.round((current + amount) * 4) / 4)));
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="h-[100dvh] max-h-[100dvh] w-full overflow-y-auto bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-auto sm:max-h-[94dvh] sm:max-w-[64rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="sticky top-0 z-20 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-8 sm:py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
+      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-[94dvh] sm:max-w-[76rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="relative z-20 shrink-0 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-7 sm:py-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(25rem,.82fr)_auto] lg:items-end">
+            <div className="pr-12 lg:pr-0">
               <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a9503f]"><Share2 className="size-4" />Share this story <span className="rounded-full bg-[#e8ded0] px-2.5 py-1 text-[#526158]">{styleLabel}</span></div>
-              <h2 id="social-share-title" className="font-display text-[1.7rem] leading-none text-[#26372f] sm:text-4xl">Turn it into something shareable.</h2>
+              <h2 id="social-share-title" className="font-display text-[1.7rem] leading-none text-[#26372f] sm:text-[2.35rem]">Turn it into something shareable.</h2>
             </div>
-            <button type="button" onClick={onClose} disabled={isBusy} className="grid size-11 shrink-0 place-items-center rounded-full bg-[#eee5d8] text-[#526158] transition hover:bg-[#e3d8c8] disabled:opacity-40" aria-label="Close sharing"><X className="size-5" /></button>
-          </div>
-          <div className="mt-4">
+          <div>
             <p className="mb-2 text-[9px] font-bold uppercase tracking-[.18em] text-[#8c594d]">1 · Choose format</p>
             <div className="flex items-center gap-1 rounded-[18px] border border-[#d8c9b7] bg-[#e9dfd1] p-1" aria-label="Choose export format">
               <button type="button" onClick={() => chooseFormat("image")} aria-pressed={format === "image"} className={cn("flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-xs font-bold transition", format === "image" ? "bg-[#fffdf8] text-[#26372f] shadow-[0_5px_18px_rgba(42,48,42,.12)]" : "text-[#756d63] hover:text-[#34443a]")}><Image className="size-4" /><span>Image carousel</span><span className={cn("hidden rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[.12em] sm:inline", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#d8cbbb] text-[#6f675d]")}>JPEG</span></button>
               <button type="button" onClick={() => chooseFormat("video")} aria-pressed={format === "video"} className={cn("flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-xs font-bold transition", format === "video" ? "bg-[#26372f] text-[#fff8ec] shadow-[0_5px_18px_rgba(22,38,30,.22)]" : "text-[#756d63] hover:text-[#34443a]")}><Film className="size-4" /><span>Motion story</span><span className={cn("hidden rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[.12em] sm:inline", format === "video" ? "bg-[#efc46f] text-[#26372f]" : "bg-[#d8cbbb] text-[#6f675d]")}>MP4</span></button>
             </div>
           </div>
+            <button type="button" onClick={onClose} disabled={isBusy} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] grid size-11 shrink-0 place-items-center rounded-full bg-[#eee5d8] text-[#526158] transition hover:bg-[#e3d8c8] disabled:opacity-40 sm:right-7 sm:top-5 lg:static lg:self-start" aria-label="Close sharing"><X className="size-5" /></button>
+          </div>
         </header>
 
-        <div className="grid gap-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-7 sm:p-8 lg:grid-cols-[1.08fr_.92fr]">
-          <div className="grid content-start gap-6">
+        <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:grid-cols-[.88fr_1.12fr] lg:overflow-hidden">
+          <div className="grid content-start gap-5 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
             <section>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose what appears</p>
-              <div className="overflow-hidden rounded-[20px] border border-[#ded3c3] bg-[#fffdf8]">
-                <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[#e6ddcf] px-4 py-3.5 text-sm font-semibold text-[#34443a]">Show story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
-                <label className={cn("flex items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Show place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]">Story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
+                <label className={cn("flex items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
               </div>
               <label className="mt-3 block rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
                 <span className="flex items-center justify-between gap-3 text-xs font-bold text-[#34443a]"><span>Post caption</span><span className="font-medium text-[#8a8176]">{shareCaption.length}/500</span></span>
-                <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={5} className="mt-3 w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />
+                <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={4} className="mt-3 w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />
               </label>
             </section>
 
@@ -353,9 +355,12 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
           </div>
 
-          <aside ref={previewRef} className="relative flex min-h-[22rem] scroll-mt-36 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] bg-[#15271f] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)] sm:min-h-[34rem] sm:rounded-[28px] sm:p-5">
+          <aside ref={previewRef} className="relative flex min-h-[28rem] scroll-mt-36 flex-col items-center justify-center gap-3 overflow-hidden rounded-[24px] bg-[#15271f] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)] sm:rounded-[28px] sm:p-5 lg:h-full lg:min-h-0">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(239,196,111,.16),transparent_28%),radial-gradient(circle_at_88%_90%,rgba(169,80,63,.13),transparent_30%)]" />
-            {asset && activePreviewUrl && !isBusy ? <><span className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-[#102019]/80 px-3 py-2 text-[9px] font-bold uppercase tracking-[.14em] text-[#efc46f] backdrop-blur-md">{target.platform} · {asset.format === "image" ? `${asset.urls.length} slides` : "Motion"}</span><button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="absolute right-3 top-3 z-10 inline-flex h-10 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" />Expand</button></> : null}
+            <div className="relative z-10 flex w-full items-center justify-between gap-3">
+              <div className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[.16em] text-[#efc46f]">Live preview</span><strong className="mt-0.5 block truncate text-sm text-[#fff8ec]">{target.platform} <span className="font-normal text-white/45">· {target.placement}</span></strong></div>
+              {asset && activePreviewUrl && !isBusy ? <button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" />Expand</button> : null}
+            </div>
             {asset && activePreviewUrl ? asset.format === "image"
               ? <div className="relative grid place-items-center">
                 <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[27rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.4)]" />
@@ -366,9 +371,10 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 </> : null}
               </div>
               : <video src={activePreviewUrl} controls autoPlay loop muted playsInline className="max-h-[34rem] w-auto max-w-full rounded-[18px] shadow-[0_22px_60px_rgba(0,0,0,.35)]" />
-              : <div className="relative grid max-h-[32rem] w-[72%] max-w-[19rem] overflow-hidden rounded-[18px] border border-white/15 bg-[#304a3e] text-center shadow-[0_22px_60px_rgba(0,0,0,.28)]" style={{ aspectRatio }}>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_22%,rgba(239,196,111,.28),transparent_28%),linear-gradient(160deg,transparent,rgba(9,25,18,.8))]" />
-                <div className="relative flex flex-col items-center justify-center p-7 text-[#fff8ec]"><span className="grid size-14 place-items-center rounded-full bg-[#fff8ec]/10">{target.format === "image" ? <Image className="size-6" /> : <Film className="size-6" />}</span><strong className="mt-5 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.platform} · {target.placement}</span><p className="mt-5 max-w-52 text-xs leading-5 text-white/65">{styleLabel} composition at {target.width} × {target.height}px.</p></div>
+              : <div className="relative grid max-h-[32rem] w-[74%] max-w-[22rem] overflow-hidden rounded-[20px] border border-white/15 bg-[#304a3e] text-center shadow-[0_22px_60px_rgba(0,0,0,.35)]" style={{ aspectRatio }}>
+                {previewPhotoUrl ? <img src={previewPhotoUrl} alt="" className="absolute inset-0 size-full object-cover" /> : null}
+                <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(9,25,18,.96),rgba(9,25,18,.14)_72%),radial-gradient(circle_at_65%_22%,rgba(239,196,111,.22),transparent_28%)]" />
+                <div className="relative flex flex-col items-center justify-end p-6 text-[#fff8ec]"><span className="grid size-11 place-items-center rounded-full border border-white/15 bg-[#102019]/55 backdrop-blur-md">{target.format === "image" ? <Image className="size-5" /> : <Film className="size-5" />}</span><strong className="mt-4 font-display text-3xl leading-none">{story.title}</strong><span className="mt-3 text-[9px] font-bold uppercase tracking-[.18em] text-[#efc46f]">{target.width} × {target.height}px · {styleLabel}</span><button type="button" disabled={isBusy} onClick={() => void generate(target)} className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] px-5 text-xs font-bold text-[#26372f] shadow-[0_10px_30px_rgba(0,0,0,.25)] transition hover:bg-[#f6d795] disabled:opacity-50"><Eye className="size-4" />Build {target.platform} preview</button></div>
               </div>}
             {asset?.format === "image" && asset.urls.length > 1 && !isBusy ? <div className="relative z-10 flex w-full gap-2 overflow-x-auto pb-1" aria-label="Carousel slides">{asset.urls.map((url, index) => <button key={url} type="button" onClick={() => setPreviewIndex(index)} aria-label={`Open slide ${index + 1}`} aria-current={previewIndex === index} className={cn("relative h-14 shrink-0 overflow-hidden rounded-[10px] border-2 transition", previewIndex === index ? "w-11 border-[#efc46f] opacity-100" : "w-9 border-transparent opacity-45 hover:opacity-80")}><img src={url} alt="" className="size-full object-cover" /><span className="absolute bottom-0 right-0 grid size-4 place-items-center rounded-tl-md bg-[#102019]/85 text-[8px] font-bold text-white">{index + 1}</span></button>)}</div> : null}
             {asset && !isBusy ? <div className="relative z-10 grid w-full gap-2 sm:grid-cols-[1fr_auto]"><Button className="h-12 bg-[#f0c681] text-[#26372f] shadow-none hover:bg-[#f6d795]" onClick={shareToApps}><Smartphone className="size-4" />{asset.format === "image" ? `Share ${asset.urls.length}-slide carousel` : "Share to apps"}</Button><Button className="text-[#fff8ec] hover:bg-white/10 hover:text-white" variant="ghost" onClick={() => void generate(target)}><RefreshCw className="size-4" />Regenerate</Button></div> : null}
