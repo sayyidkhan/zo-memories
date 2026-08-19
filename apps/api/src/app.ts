@@ -610,15 +610,28 @@ function isSocialExportPreset(value: unknown): value is SocialExportPreset {
   return typeof value === "string" && socialExportPresets.includes(value as SocialExportPreset);
 }
 
-function socialExportKey(spaceId: string, storyId: string, preset: SocialExportPreset, slideIndex = 0): string {
-  const filename = socialVideoPresets.has(preset) ? `${preset}.mp4` : `${preset}-${String(slideIndex + 1).padStart(2, "0")}.png`;
+type SocialImageExtension = "jpg" | "png";
+
+function socialExportKey(spaceId: string, storyId: string, preset: SocialExportPreset, slideIndex = 0, imageExtension: SocialImageExtension = "jpg"): string {
+  const filename = socialVideoPresets.has(preset) ? `${preset}.mp4` : `${preset}-${String(slideIndex + 1).padStart(2, "0")}.${imageExtension}`;
   return `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/${filename}`;
 }
 
 function socialExportCount(keys: string[], spaceId: string, storyId: string, preset: SocialExportPreset): number {
   if (socialVideoPresets.has(preset)) return keys.includes(socialExportKey(spaceId, storyId, preset)) ? 1 : 0;
-  const prefix = socialExportKey(spaceId, storyId, preset).replace(/01\.png$/, "");
-  return keys.filter((key) => key.startsWith(prefix) && key.endsWith(".png")).length;
+  const prefix = socialExportKey(spaceId, storyId, preset).replace(/01\.jpg$/, "");
+  return new Set(keys.flatMap((key) => {
+    if (!key.startsWith(prefix)) return [];
+    const match = /-(\d+)\.(?:jpg|png)$/.exec(key);
+    return match?.[1] ? [match[1]] : [];
+  })).size;
+}
+
+async function getSocialImage(store: BlobStore, spaceId: string, storyId: string, preset: SocialExportPreset, slideIndex = 0) {
+  const jpeg = await store.get(socialExportKey(spaceId, storyId, preset, slideIndex, "jpg"));
+  if (jpeg) return { blob: jpeg, contentType: "image/jpeg", extension: "jpg" } as const;
+  const png = await store.get(socialExportKey(spaceId, storyId, preset, slideIndex, "png"));
+  return png ? { blob: png, contentType: "image/png", extension: "png" } as const : null;
 }
 
 async function transcodeSocialVideo(file: File): Promise<Uint8Array> {
@@ -1551,19 +1564,21 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     if (format === "video" && files.length !== 1) throw new HTTPException(400, { message: "Video exports must contain one file" });
     if (files.some((file) => file.size <= 0)) throw new HTTPException(400, { message: "The generated export is empty" });
     if (files.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) throw new HTTPException(413, { message: "Social exports are limited to 100 MB" });
-    if (format === "image" && files.some((file) => file.type !== "image/png")) throw new HTTPException(415, { message: "Image exports must be PNG files" });
+    if (format === "image" && files.some((file) => file.type !== "image/jpeg" && file.type !== "image/png")) throw new HTTPException(415, { message: "Image exports must be JPEG or PNG files" });
+    if (format === "image" && files.some((file) => file.type !== files[0]!.type)) throw new HTTPException(415, { message: "Every carousel slide must use the same image format" });
     if (format === "video" && !files[0]!.type.startsWith("video/")) throw new HTTPException(415, { message: "Video exports must contain video" });
-    const contentType = format === "image" ? "image/png" : "video/mp4";
+    const contentType = format === "image" ? files[0]!.type : "video/mp4";
     const prefix = `zo-moments/social-exports/${safeFileName(spaceId)}/${safeFileName(storyId)}/`;
     const existing = await store.list(prefix);
     const presetPrefix = `${prefix}${preset}`;
-    await Promise.all(existing.filter((key) => key === `${presetPrefix}.mp4` || (key.startsWith(`${presetPrefix}-`) && key.endsWith(".png"))).map((key) => store.delete(key)));
+    await Promise.all(existing.filter((key) => key === `${presetPrefix}.mp4` || (key.startsWith(`${presetPrefix}-`) && /\.(?:jpg|png)$/.test(key))).map((key) => store.delete(key)));
     if (format === "video") {
       const file = files[0]!;
       const value = file.type !== "video/mp4" ? await transcodeSocialVideo(file) : file;
       await store.put(socialExportKey(spaceId, storyId, preset), value, { contentType });
     } else {
-      await Promise.all(files.map((file, index) => store.put(socialExportKey(spaceId, storyId, preset, index), file, { contentType })));
+      const imageExtension: SocialImageExtension = contentType === "image/jpeg" ? "jpg" : "png";
+      await Promise.all(files.map((file, index) => store.put(socialExportKey(spaceId, storyId, preset, index, imageExtension), file, { contentType })));
     }
     return c.json({ preset, format, contentType, count: files.length, url: `/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports/${preset}` }, 201);
   });
@@ -1577,15 +1592,16 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
     if (!isSocialExportPreset(preset)) throw new HTTPException(404, { message: "Social export not found" });
-    const blob = await store.get(socialExportKey(spaceId, storyId, preset));
-    if (!blob) throw new HTTPException(404, { message: "Social export not found" });
     const format = socialVideoPresets.has(preset) ? "video" : "image";
-    const extension = format === "image" ? "png" : "mp4";
+    const image = format === "image" ? await getSocialImage(store, spaceId, storyId, preset) : null;
+    const blob = format === "image" ? image?.blob : await store.get(socialExportKey(spaceId, storyId, preset));
+    if (!blob) throw new HTTPException(404, { message: "Social export not found" });
+    const extension = format === "image" ? image!.extension : "mp4";
     return new Response(blob, { headers: {
       "Cache-Control": "private, no-store",
       "Content-Disposition": contentDisposition(`${story.title}-social.${extension}`, c.req.query("download") === "1"),
       "Content-Length": String(blob.size),
-      "Content-Type": format === "image" ? "image/png" : "video/mp4",
+      "Content-Type": format === "image" ? image!.contentType : "video/mp4",
     } });
   });
 
@@ -1599,13 +1615,13 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     const story = await repositories.stories.get(storyId);
     if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
     if (!isSocialExportPreset(preset) || socialVideoPresets.has(preset) || !Number.isInteger(slideIndex) || slideIndex < 0 || slideIndex > 19) throw new HTTPException(404, { message: "Social export slide not found" });
-    const blob = await store.get(socialExportKey(spaceId, storyId, preset, slideIndex));
-    if (!blob) throw new HTTPException(404, { message: "Social export slide not found" });
-    return new Response(blob, { headers: {
+    const image = await getSocialImage(store, spaceId, storyId, preset as SocialExportPreset, slideIndex);
+    if (!image) throw new HTTPException(404, { message: "Social export slide not found" });
+    return new Response(image.blob, { headers: {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": contentDisposition(`${story.title}-social-${String(slideIndex + 1).padStart(2, "0")}.png`, c.req.query("download") === "1"),
-      "Content-Length": String(blob.size),
-      "Content-Type": "image/png",
+      "Content-Disposition": contentDisposition(`${story.title}-social-${String(slideIndex + 1).padStart(2, "0")}.${image.extension}`, c.req.query("download") === "1"),
+      "Content-Length": String(image.blob.size),
+      "Content-Type": image.contentType,
     } });
   });
 

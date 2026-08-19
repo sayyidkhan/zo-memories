@@ -334,11 +334,11 @@ export class ZoMomentsClient {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`);
   }
 
-  uploadSocialExport(spaceId: string, storyId: string, preset: SocialExportPreset, files: File[]): Promise<{ preset: SocialExportPreset; format: "image" | "video"; contentType: string; count: number; url: string }> {
+  uploadSocialExport(spaceId: string, storyId: string, preset: SocialExportPreset, files: File[], signal?: AbortSignal): Promise<{ preset: SocialExportPreset; format: "image" | "video"; contentType: string; count: number; url: string }> {
     const body = new FormData();
     body.set("preset", preset);
     files.forEach((file, index) => body.set(`file-${index}`, file));
-    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`, { method: "POST", body });
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/social-exports`, { method: "POST", body, ...(signal ? { signal } : {}) });
   }
 
   socialExportUrl(spaceId: string, storyId: string, preset: SocialExportPreset, download = false, slideIndex?: number): string {

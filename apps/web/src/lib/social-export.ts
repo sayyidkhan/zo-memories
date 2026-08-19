@@ -116,7 +116,19 @@ function metadata(story: Story, moments: MomentObject[], includeLocation: boolea
 
 function chapterForMoment(story: Story, momentId: string | undefined) {
   if (!momentId) return undefined;
-  return story.blueprint?.chapters.find((chapter) => chapter.momentIds.includes(momentId));
+  return (story.canvas?.blueprint ?? story.blueprint)?.chapters.find((chapter) => chapter.momentIds.includes(momentId));
+}
+
+function storyOpening(story: Story) {
+  return story.canvas?.opening ?? story.opening;
+}
+
+function storyClosing(story: Story) {
+  return story.canvas?.blueprint?.closing ?? story.blueprint?.closing ?? storyOpening(story);
+}
+
+function chapterNarration(story: Story, momentId: string | undefined) {
+  return chapterForMoment(story, momentId)?.narration ?? storyOpening(story);
 }
 
 function safeArea(width: number, height: number, profile: SocialExportProfile) {
@@ -162,7 +174,11 @@ function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: M
   context.fillStyle = palette.coral;
   context.font = "700 19px sans-serif";
   context.fillText("A STORY WE SHARE", side, height * 0.68);
-  title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side, Math.min(height * 0.705, height - safe.bottom - 245), width - side - Math.max(62, safe.right), palette.ink, 67, 2);
+  const titleTop = Math.min(height * 0.705, height - safe.bottom - 245);
+  const titleLines = title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(62, safe.right), palette.ink, 67, 2);
+  context.fillStyle = "#6f675d";
+  context.font = "500 19px sans-serif";
+  wrapText(context, chapterNarration(story, photo?.moment.id), side, titleTop + titleLines * 62 + 18, width - side - Math.max(62, safe.right), 27, 2);
   context.fillStyle = "#6f675d";
   context.font = "600 18px sans-serif";
   context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(108, safe.bottom + 58));
@@ -200,6 +216,9 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   context.fillRect(0, 0, width * 0.88, height * 0.17);
   title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, width * 0.025, height * 0.022, width * 0.82, palette.coral, Math.min(64, width * 0.075), 2);
   context.restore();
+  context.fillStyle = "#5f594f";
+  context.font = "500 18px sans-serif";
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), Math.max(54, safe.left), height * 0.885, width - Math.max(108, safe.left + safe.right), 25, 2);
   context.fillStyle = "#70675c";
   context.font = "600 18px sans-serif";
   context.fillText(metadata(story, moments, showLocation, showDate), Math.max(54, safe.left), height - Math.max(105, safe.bottom + 56));
@@ -227,7 +246,10 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   context.font = "700 19px sans-serif";
   const titleTop = Math.min(height * 0.72, height - safe.bottom - 300);
   context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 50);
-  title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
+  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
+  context.fillStyle = "#e8ddcd";
+  context.font = "500 19px sans-serif";
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side, titleTop + titleLines * 67 + 20, width - side - Math.max(54, safe.right), 27, 2);
   context.fillStyle = "#e8ddcd";
   context.font = "600 18px sans-serif";
   context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(105, safe.bottom + 56));
@@ -253,7 +275,28 @@ function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialE
   context.fillText(`${index + 1} / ${total}`, width - Math.max(67, safe.right + 41), Math.max(49, safe.top * 0.55 + 19));
   context.restore();
 
-  if (photo && !closing) {
+  if (!photo && !closing) {
+    const panelTop = height * 0.63;
+    context.fillStyle = palette.paper;
+    context.fillRect(0, panelTop, width, height - panelTop);
+    const cardWidth = width - side - Math.max(side, safe.right);
+    const cardHeight = Math.min(285, height * 0.23);
+    const cardY = panelTop + 18;
+    fillRounded(context, palette.cream, side, cardY, cardWidth, cardHeight, 28);
+    context.save();
+    context.fillStyle = palette.coral;
+    context.font = "700 16px sans-serif";
+    context.fillText("A STORY WE SHARE", side + 28, cardY + 38);
+    const titleLines = title(context, options.story.canvas?.title ?? options.story.title, side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(48, width * 0.055), 2);
+    context.fillStyle = "#625f58";
+    context.font = "500 17px sans-serif";
+    wrapText(context, storyOpening(options.story), side + 28, cardY + 72 + titleLines * Math.min(44, width * 0.05), cardWidth - 56, 24, 3);
+    context.restore();
+    context.fillStyle = "#6f675d";
+    context.font = "600 18px sans-serif";
+    context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate), side, height - Math.max(108, safe.bottom + 58));
+    brand(context, width, height, palette.ink, options.profile);
+  } else if (photo && !closing) {
     const caption = chapterForMoment(options.story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
     fillRounded(context, "rgba(20,36,29,.82)", side, Math.max(34, safe.top * 0.55), Math.min(width * 0.58, width - side - safe.right - 116), 44, 22);
     context.save();
@@ -265,10 +308,13 @@ function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialE
   }
 
   if (closing) {
+    const panelTop = height * 0.58;
+    context.fillStyle = palette.paper;
+    context.fillRect(0, panelTop, width, height - panelTop);
     const cardWidth = width - side - Math.max(side, safe.right);
     const cardHeight = Math.min(260, height * 0.22);
-    const cardY = Math.max(safe.top + 80, (height - cardHeight) / 2);
-    fillRounded(context, "rgba(255,248,236,.94)", side, cardY, cardWidth, cardHeight, 28);
+    const cardY = Math.max(safe.top + 80, panelTop - 64);
+    fillRounded(context, palette.cream, side, cardY, cardWidth, cardHeight, 28);
     context.save();
     context.fillStyle = palette.coral;
     context.font = "700 16px sans-serif";
@@ -276,8 +322,9 @@ function drawCarouselOverlay(context: CanvasRenderingContext2D, options: SocialE
     title(context, "Keep the moments moving.", side + 28, cardY + 62, cardWidth - 56, palette.ink, Math.min(42, width * 0.05), 2);
     context.fillStyle = "#625f58";
     context.font = "500 16px sans-serif";
-    wrapText(context, options.story.blueprint?.closing ?? options.story.opening, side + 28, cardY + 150, cardWidth - 56, 23, 3);
+    wrapText(context, storyClosing(options.story), side + 28, cardY + 150, cardWidth - 56, 23, 3);
     context.restore();
+    brand(context, width, height, palette.ink, options.profile);
   }
 }
 
@@ -303,7 +350,7 @@ async function loadPhotos(moments: MomentObject[], maxPhotos: number, onProgress
 }
 
 function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The image could not be rendered")), "image/png", 0.96));
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The image could not be rendered")), "image/jpeg", 0.9));
 }
 
 function videoMimeType() {

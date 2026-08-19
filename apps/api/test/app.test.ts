@@ -268,6 +268,14 @@ describe("Zo Moments API", () => {
       body: socialImage,
     });
     expect(socialUpload.status).toBe(201);
+    const socialJpeg = new FormData();
+    socialJpeg.set("preset", "facebook-feed");
+    socialJpeg.set("file-0", new File(["jpeg-cover"], "story-01.jpg", { type: "image/jpeg" }));
+    socialJpeg.set("file-1", new File(["jpeg-moment"], "story-02.jpg", { type: "image/jpeg" }));
+    expect((await owner.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`, {
+      method: "POST",
+      body: socialJpeg,
+    })).status).toBe(201);
     const socialVideo = new FormData();
     socialVideo.set("preset", "tiktok");
     socialVideo.set("file-0", new File(["social-video"], "story.mp4", { type: "video/mp4" }));
@@ -277,7 +285,7 @@ describe("Zo Moments API", () => {
     })).status).toBe(201);
     const socialStatus = await member.json<Record<string, number>>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports`);
     expect(socialStatus.body["instagram-feed"]).toBe(2);
-    expect(socialStatus.body["facebook-feed"]).toBe(0);
+    expect(socialStatus.body["facebook-feed"]).toBe(2);
     expect(socialStatus.body.tiktok).toBe(1);
     const socialContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/instagram-feed`);
     expect(socialContent.headers.get("content-type")).toBe("image/png");
@@ -285,6 +293,9 @@ describe("Zo Moments API", () => {
     const socialSlide = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/instagram-feed/slides/1`);
     expect(socialSlide.headers.get("content-type")).toBe("image/png");
     expect(await socialSlide.text()).toBe("social-moment");
+    const socialJpegContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/facebook-feed`);
+    expect(socialJpegContent.headers.get("content-type")).toBe("image/jpeg");
+    expect(await socialJpegContent.text()).toBe("jpeg-cover");
     const socialVideoContent = await member.request(`/api/spaces/${spaceId}/stories/${created.body.story.id}/social-exports/tiktok`);
     expect(socialVideoContent.headers.get("content-type")).toBe("video/mp4");
     expect(await socialVideoContent.text()).toBe("social-video");

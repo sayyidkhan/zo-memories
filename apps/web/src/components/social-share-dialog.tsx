@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -57,7 +57,13 @@ function safeName(value: string) {
 
 function filename(story: Story, target: SocialTarget, index = 0, total = 1) {
   const slide = total > 1 ? `-${String(index + 1).padStart(2, "0")}` : "";
-  return `${safeName(story.title)}-${target.id}${slide}.${target.format === "image" ? "png" : "mp4"}`;
+  return `${safeName(story.title)}-${target.id}${slide}.${target.format === "image" ? "jpg" : "mp4"}`;
+}
+
+function initialShareCaption(story: Story) {
+  const opening = (story.canvas?.opening ?? story.opening).trim().slice(0, 240);
+  const location = (story.canvas?.location ?? story.location ?? "").trim();
+  return [story.canvas?.title ?? story.title, opening, location ? `📍 ${location}` : "", "#ZoMoments"].filter(Boolean).join("\n\n");
 }
 
 export function SocialShareDialog({ story, objects, open, onClose }: { story: Story; objects: MomentObject[]; open: boolean; onClose: () => void }) {
@@ -66,15 +72,20 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [targetId, setTargetId] = useState("instagram-feed");
   const [includeLocation, setIncludeLocation] = useState(Boolean(story.location));
   const [includeDate, setIncludeDate] = useState(true);
+  const [shareCaption, setShareCaption] = useState(() => initialShareCaption(story));
   const [appearanceChanged, setAppearanceChanged] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "rendering" | "saving" | "loading">("idle");
+  const [phase, setPhase] = useState<"idle" | "rendering" | "loading">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [saveError, setSaveError] = useState("");
   const [asset, setAsset] = useState<ExportAsset | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [error, setError] = useState("");
   const previewRef = useRef<HTMLElement>(null);
+  const saveControllerRef = useRef<AbortController | null>(null);
+  const saveAttemptRef = useRef(0);
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
   const availableTargets = socialTargets.filter((item) => item.format === format);
   const moments = useMemo(() => {
@@ -109,8 +120,11 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   useEffect(() => {
     setIncludeLocation(Boolean(story.location));
     setIncludeDate(true);
+    setShareCaption(initialShareCaption(story));
     setAppearanceChanged(false);
     setError("");
+    setSaveError("");
+    setSaveState("idle");
   }, [story.id, story.location]);
 
   useEffect(() => {
@@ -136,6 +150,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     replaceAsset(null);
     setError("");
     setProgress(0);
+    setSaveError("");
+    setSaveState("idle");
   }
 
   function downloadForTarget(next: SocialTarget, source: ExportAsset) {
@@ -164,6 +180,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       const nextAsset = { blobs, format: next.format, preset: next.preset, urls: blobs.map((blob) => URL.createObjectURL(blob)) } satisfies ExportAsset;
       replaceAsset(nextAsset);
       setProgress(1);
+      setSaveState("saved");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The saved export could not be opened");
     } finally {
@@ -171,8 +188,41 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     }
   }
 
+  async function saveRendered(next: SocialTarget, rendered: Blob[]) {
+    saveControllerRef.current?.abort();
+    const controller = new AbortController();
+    const attempt = ++saveAttemptRef.current;
+    saveControllerRef.current = controller;
+    setSaveState("saving");
+    setSaveError("");
+    const timeout = window.setTimeout(() => controller.abort(), 60_000);
+    try {
+      const uploads = rendered.map((blob, index) => {
+        const sourceExtension = blob.type.includes("mp4") ? "mp4" : blob.type.includes("jpeg") ? "jpg" : next.format === "video" ? "webm" : "png";
+        return new File([blob], `story-${String(index + 1).padStart(2, "0")}.${sourceExtension}`, { type: blob.type });
+      });
+      await api.uploadSocialExport(story.spaceId, story.id, next.preset, uploads, controller.signal);
+      if (attempt !== saveAttemptRef.current) return;
+      setSaveState("saved");
+      await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
+    } catch (cause) {
+      if (attempt !== saveAttemptRef.current) return;
+      setSaveState("failed");
+      setSaveError(cause instanceof DOMException && cause.name === "AbortError"
+        ? "The reusable copy took too long to save. Your preview is still ready to share or download."
+        : "The reusable copy could not be saved. Your preview is still ready to share or download.");
+    } finally {
+      window.clearTimeout(timeout);
+      if (attempt === saveAttemptRef.current) saveControllerRef.current = null;
+    }
+  }
+
   async function generate(next: SocialTarget) {
+    saveControllerRef.current?.abort();
+    saveAttemptRef.current += 1;
     setError("");
+    setSaveError("");
+    setSaveState("idle");
     replaceAsset(null);
     setProgress(0);
     setPhase("rendering");
@@ -188,24 +238,11 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
         profile: next.profile,
         onProgress: setProgress,
       });
-      setPhase("saving");
-      setProgress(0.92);
-      const uploads = rendered.map((blob, index) => {
-        const sourceExtension = blob.type.includes("mp4") ? "mp4" : next.format === "video" ? "webm" : "png";
-        return new File([blob], `story-${String(index + 1).padStart(2, "0")}.${sourceExtension}`, { type: blob.type });
-      });
-      await api.uploadSocialExport(story.spaceId, story.id, next.preset, uploads);
-      const responses = await Promise.all(rendered.map((_, index) => fetch(
-        api.socialExportUrl(story.spaceId, story.id, next.preset, false, next.format === "image" ? index : undefined),
-        { credentials: "include" },
-      )));
-      if (responses.some((response) => !response.ok)) throw new Error("The export was saved but could not be previewed");
-      const blobs = await Promise.all(responses.map((response) => response.blob()));
-      const nextAsset = { blobs, format: next.format, preset: next.preset, urls: blobs.map((blob) => URL.createObjectURL(blob)) } satisfies ExportAsset;
+      const nextAsset = { blobs: rendered, format: next.format, preset: next.preset, urls: rendered.map((blob) => URL.createObjectURL(blob)) } satisfies ExportAsset;
       replaceAsset(nextAsset);
       setProgress(1);
-      await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
       toast.success(`${next.platform} preview ready`);
+      void saveRendered(next, rendered);
     } catch (cause) {
       const message = cause instanceof ZoMomentsApiError || cause instanceof Error ? cause.message : "The social export could not be created";
       setError(message);
@@ -233,11 +270,17 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     if (!asset) return;
     const files = asset.blobs.map((blob, index) => new File([blob], filename(story, target, index, asset.blobs.length), { type: blob.type }));
     if (!navigator.share || (navigator.canShare && !navigator.canShare({ files }))) {
-      toast.error("This browser cannot send files directly. Select the destination again to download.");
+      downloadForTarget(target, asset);
+      try {
+        await navigator.clipboard.writeText(shareCaption);
+        toast.success("Files downloaded and post caption copied");
+      } catch {
+        toast.success("Files downloaded. Copy the post caption before publishing.");
+      }
       return;
     }
     try {
-      await navigator.share({ files, title: story.title, text: `${story.title} · shared from Zo Moments` });
+      await navigator.share({ files, title: story.title, text: shareCaption });
       toast.success("Shared from Zo Moments");
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") return;
@@ -271,7 +314,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   {imageHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
                   <span className={cn("grid size-11 place-items-center rounded-[15px]", format === "image" ? "bg-[#a9503f] text-white" : "bg-[#ded3c3] text-[#526158]")}><Image className="size-5" /></span>
                   <strong className="mt-4 block text-sm text-[#26372f]">Image carousel</strong>
-                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">PNG · One slide per moment</span>
+                  <span className="mt-1 block text-xs leading-5 text-[#756d63]">JPEG · Cover, chapters, closing</span>
                 </button>
                 <button type="button" onClick={() => chooseFormat("video")} className={cn("relative rounded-[22px] border-2 p-4 text-left transition", format === "video" ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_14px_35px_rgba(169,80,63,.12)]" : "border-[#ded3c3] bg-[#f1e9dc] hover:border-[#b9aa96]")}>
                   {videoHasExports ? <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#3e6651] text-white"><Check className="size-3.5" /></span> : null}
@@ -288,11 +331,15 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[#e6ddcf] px-4 py-3.5 text-sm font-semibold text-[#34443a]">Show story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
                 <label className={cn("flex items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Show place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
               </div>
+              <label className="mt-3 block rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
+                <span className="flex items-center justify-between gap-3 text-xs font-bold text-[#34443a]"><span>Post caption</span><span className="font-medium text-[#8a8176]">{shareCaption.length}/500</span></span>
+                <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={5} className="mt-3 w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />
+              </label>
             </section>
 
             <section>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Preview and export</p>
-              <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to preview its crop, safe area and pacing. Select it again when you are ready to download.</p>
+              <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to build its crop, safe area and pacing. The preview appears first; select it again to download.</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
                   {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
@@ -300,10 +347,10 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{asset?.preset === item.preset && asset.format === "image" ? `${asset.urls.length} slides ready · tap to download` : item.placement}</span>
                 </button>)}
               </div>
-              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? asset?.format === "image" ? `${asset.urls.length}-slide PNG carousel` : "PNG carousel" : "H.264 MP4"} · destination-safe composition</p>
+              <p className="mt-3 text-[11px] text-[#827a70]">Selected: {target.width} × {target.height}px · {target.format === "image" ? asset?.format === "image" ? `${asset.urls.length}-slide JPEG carousel` : "JPEG carousel" : "H.264 MP4"} · destination-safe composition</p>
             </section>
 
-            <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><p><strong>Private until you post.</strong> The reusable master stays inside this shared space. Zo Moments never publishes without opening your device’s confirmation screen.</p></div>
+            <div className="flex gap-3 rounded-[20px] bg-[#e8efe8] p-4 text-xs leading-5 text-[#496052]"><LockKeyhole className="mt-0.5 size-4 shrink-0" /><div><p><strong>Private until you post.</strong> Zo Moments never publishes without opening your device’s confirmation screen.</p>{saveState !== "idle" ? <p className="mt-2 flex items-center gap-2 font-semibold">{saveState === "saving" ? <><Spinner />Saving a reusable copy in the background…</> : saveState === "saved" ? <><Cloud className="size-4" />Reusable copy saved</> : <><CloudAlert className="size-4" />{saveError}</>}</p> : null}</div></div>
             {error ? <p className="rounded-[18px] bg-[#f6dfd8] px-4 py-3 text-sm text-[#8a372b]">{error}</p> : null}
           </div>
 
@@ -327,8 +374,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             {isBusy ? <div className="absolute inset-0 z-10 grid place-items-center bg-[#15271f]/88 p-6 backdrop-blur-sm" role="status" aria-live="polite">
               <div className="w-full max-w-xs rounded-[24px] border border-white/10 bg-[#26372f] p-6 text-center text-[#fff8ec] shadow-[0_24px_70px_rgba(0,0,0,.35)]">
                 <span className="mx-auto grid size-14 place-items-center rounded-full bg-white/10"><Spinner /></span>
-                <strong className="mt-5 block font-display text-2xl leading-tight">{phase === "rendering" ? `Rendering for ${target.platform}` : phase === "saving" ? "Saving your export" : "Opening saved export"}</strong>
-                <p className="mt-2 text-xs leading-5 text-white/60">{phase === "rendering" ? "Composing your moments into the selected story format." : phase === "saving" ? "Keeping the reusable master private in this shared space." : "Preparing the existing master for preview."}</p>
+                <strong className="mt-5 block font-display text-2xl leading-tight">{phase === "rendering" ? `Rendering for ${target.platform}` : "Opening saved export"}</strong>
+                <p className="mt-2 text-xs leading-5 text-white/60">{phase === "rendering" ? "Building the cover, chapter slides and closing card." : "Preparing the existing master for preview."}</p>
                 <div className="mt-6 flex items-center justify-between text-xs font-bold uppercase tracking-[.14em] text-[#efc46f]"><span>Progress</span><span>{Math.round(progress * 100)}%</span></div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full w-full origin-left rounded-full bg-[#efc46f]" style={{ transform: `scaleX(${Math.max(0.05, progress)})` }} /></div>
               </div>
