@@ -1308,7 +1308,21 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
           await repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id);
         }));
         await Promise.all(seeded.map(async (story) => {
-          if (!(await repositories.stories.get(story.id))) await repositories.stories.put(story);
+          const current = await repositories.stories.get(story.id);
+          const signature = (value: Story | null) => value ? JSON.stringify({
+            title: value.title,
+            location: value.location,
+            opening: value.opening,
+            momentIds: value.momentIds,
+            style: value.style,
+            blueprint: value.blueprint,
+          }) : "";
+          if (signature(current) === signature(story)) return;
+          await Promise.all([
+            repositories.stories.put(story),
+            repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
+            ...(current ? [clearStoryExports(store, current)] : []),
+          ]);
         }));
         stories = await repositories.stories.find((story) => story.spaceId === spaceId);
       }
