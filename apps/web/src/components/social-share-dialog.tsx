@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, RefreshCw, Share2, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -43,7 +43,10 @@ const socialTargets: SocialTarget[] = [
   { id: "snapchat", platform: "Snapchat", placement: "9:16 Story or Spotlight · 10s", format: "video", preset: "snapchat", width: 1080, height: 1920, profile: { id: "snapchat", safeTop: .15, safeRight: .1, safeBottom: .17, safeLeft: .07, durationMs: 10_000, maxPhotos: 8, videoBitrate: 6_000_000, cropScale: 1.05 } },
 ];
 
-const socialExportRendererVersion = "carousel-v3";
+const socialExportRendererVersion: Record<SocialExportFormat, string> = {
+  image: "carousel-v3",
+  video: "motion-v5",
+};
 
 interface ExportAsset {
   blobs: Blob[];
@@ -72,6 +75,12 @@ function rendererVersionKey(story: Story, preset: SocialExportPreset) {
   return `zo-moments:${story.id}:${preset}:renderer`;
 }
 
+function videoTime(seconds: number) {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
 export function SocialShareDialog({ story, objects, open, onClose }: { story: Story; objects: MomentObject[]; open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [format, setFormat] = useState<SocialExportFormat>("image");
@@ -90,8 +99,12 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [previewZoom, setPreviewZoom] = useState(1);
   const [error, setError] = useState("");
   const previewRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const saveControllerRef = useRef<AbortController | null>(null);
   const saveAttemptRef = useRef(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
   const availableTargets = socialTargets.filter((item) => item.format === format);
   const moments = useMemo(() => {
@@ -142,6 +155,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setPreviewIndex(0);
     setPreviewExpanded(false);
     setPreviewZoom(1);
+    setVideoPlaying(false);
+    setVideoProgress(0);
+    setVideoDuration(0);
     setAsset((current) => {
       current?.urls.forEach((url) => URL.revokeObjectURL(url));
       return next;
@@ -209,7 +225,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       });
       await api.uploadSocialExport(story.spaceId, story.id, next.preset, uploads, controller.signal);
       if (attempt !== saveAttemptRef.current) return;
-      window.localStorage.setItem(rendererVersionKey(story, next.preset), socialExportRendererVersion);
+      window.localStorage.setItem(rendererVersionKey(story, next.preset), socialExportRendererVersion[next.format]);
       setSaveState("saved");
       await queryClient.invalidateQueries({ queryKey: ["social-exports", story.spaceId, story.id] });
     } catch (cause) {
@@ -269,7 +285,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       return;
     }
     replaceAsset(null);
-    const savedWithCurrentRenderer = window.localStorage.getItem(rendererVersionKey(story, next.preset)) === socialExportRendererVersion;
+    const savedWithCurrentRenderer = window.localStorage.getItem(rendererVersionKey(story, next.preset)) === socialExportRendererVersion[next.format];
     if (!appearanceChanged && status.data?.[next.preset] && savedWithCurrentRenderer) await fetchSaved(next);
     else await generate(next);
   }
@@ -294,6 +310,13 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
       if (cause instanceof DOMException && cause.name === "AbortError") return;
       toast.error("The share sheet could not be opened. Select the destination again to download.");
     }
+  }
+
+  async function toggleVideoPlayback() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) await video.play();
+    else video.pause();
   }
 
   if (!open) return null;
@@ -370,7 +393,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   <div className="absolute bottom-3 rounded-full bg-[#14271f]/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-[#fff8ec]">Slide {previewIndex + 1} of {asset.urls.length}</div>
                 </> : null}
               </div>
-              : <video src={activePreviewUrl} controls autoPlay loop muted playsInline className="max-h-[min(58dvh,34rem)] w-auto max-w-full rounded-[14px] shadow-[0_22px_60px_rgba(0,0,0,.35)] sm:rounded-[18px]" />
+              : <div className="group relative max-h-[min(58dvh,34rem)] max-w-full shrink-0 overflow-hidden rounded-[14px] bg-black shadow-[0_22px_60px_rgba(0,0,0,.35)] sm:rounded-[18px]">
+                <video ref={videoRef} src={activePreviewUrl} autoPlay loop muted playsInline onLoadedMetadata={(event) => setVideoDuration(event.currentTarget.duration)} onTimeUpdate={(event) => setVideoProgress(event.currentTarget.duration ? event.currentTarget.currentTime / event.currentTarget.duration : 0)} onPlay={() => setVideoPlaying(true)} onPause={() => setVideoPlaying(false)} className="max-h-[min(58dvh,34rem)] w-auto max-w-full" />
+                <button type="button" onClick={() => void toggleVideoPlayback()} className="absolute inset-0 grid place-items-center" aria-label={videoPlaying ? "Pause motion story" : "Play motion story"} aria-pressed={videoPlaying}>
+                  {!videoPlaying ? <span className="grid size-14 place-items-center rounded-full border border-white/25 bg-[#102019]/75 text-white shadow-xl backdrop-blur-md"><Play className="ml-0.5 size-6 fill-current" /></span> : null}
+                </button>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(0deg,rgba(7,18,12,.88),transparent)] px-3 pb-3 pt-12 text-white">
+                  <div className="h-1 overflow-hidden rounded-full bg-white/25"><div className="h-full origin-left rounded-full bg-[#efc46f]" style={{ transform: `scaleX(${videoProgress})` }} /></div>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[.12em]"><span className="flex items-center gap-1.5">{videoPlaying ? <Pause className="size-3" /> : <Play className="size-3 fill-current" />}{videoTime((videoDuration || target.profile.durationMs / 1000) * videoProgress)} / {videoTime(videoDuration || target.profile.durationMs / 1000)}</span><span className="flex items-center gap-1.5 text-white/70"><VolumeX className="size-3" />Muted preview</span></div>
+                </div>
+              </div>
               : <div className="relative grid max-h-[32rem] w-[88%] max-w-[22rem] overflow-hidden rounded-[18px] border border-white/15 bg-[#304a3e] text-center shadow-[0_22px_60px_rgba(0,0,0,.35)] sm:w-[74%] sm:rounded-[20px]" style={{ aspectRatio }}>
                 {previewPhotoUrl ? <img src={previewPhotoUrl} alt="" className="absolute inset-0 size-full object-cover" /> : null}
                 <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(9,25,18,.96),rgba(9,25,18,.14)_72%),radial-gradient(circle_at_65%_22%,rgba(239,196,111,.22),transparent_28%)]" />

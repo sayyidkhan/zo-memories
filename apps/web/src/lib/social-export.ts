@@ -168,27 +168,86 @@ function title(context: CanvasRenderingContext2D, value: string, x: number, y: n
   return wrapText(context, value, x, y, width, size * 0.92, maxLines);
 }
 
+function motionProgress(context: CanvasRenderingContext2D, profile: SocialExportProfile, progress: number, scene: number, total: number, colour: string) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, profile);
+  const left = Math.max(40, safe.left);
+  const right = width - Math.max(40, safe.right);
+  const y = Math.max(32, safe.top * .53);
+  context.save();
+  context.lineCap = "round";
+  context.strokeStyle = "rgba(255,255,255,.38)";
+  context.lineWidth = 5;
+  context.beginPath();
+  context.moveTo(left, y);
+  context.lineTo(right, y);
+  context.stroke();
+  context.strokeStyle = colour;
+  context.beginPath();
+  context.moveTo(left, y);
+  context.lineTo(left + (right - left) * progress, y);
+  context.stroke();
+  context.fillStyle = palette.cream;
+  context.shadowColor = "rgba(8,20,14,.65)";
+  context.shadowBlur = 8;
+  context.font = "700 15px sans-serif";
+  context.textBaseline = "top";
+  context.fillText(`MOTION STORY  ·  ${String(scene).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, left, y + 18);
+  context.restore();
+}
+
 function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, profile);
-  const side = Math.max(62, safe.left);
-  context.fillStyle = palette.paper;
+  const side = Math.max(48, safe.left);
+  const total = Math.max(photos.length, 1);
+  const exactIndex = progress * total;
+  const index = Math.min(total - 1, Math.floor(exactIndex));
+  const localProgress = exactIndex - Math.floor(exactIndex);
+  const photo = photos[index];
+  const nextPhoto = photos[(index + 1) % total];
+  context.fillStyle = palette.ink;
   context.fillRect(0, 0, width, height);
-  const drift = Math.sin(progress * Math.PI * 2) * 6;
-  const photo = photos[Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1)];
-  clippedPhoto(context, photo, 58, 58, width - 116, height * 0.58, 24, 1.04, drift);
-  context.fillStyle = palette.coral;
-  context.font = "700 19px sans-serif";
-  context.fillText("A STORY WE SHARE", side, height * 0.68);
-  const titleTop = Math.min(height * 0.705, height - safe.bottom - 245);
-  const titleLines = title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(62, safe.right), palette.ink, 67, 2);
+  if (photo) cover(context, photo.image, 0, 0, width, height, profile.cropScale + localProgress * .055, (localProgress - .5) * 16);
+  if (nextPhoto && nextPhoto !== photo && localProgress > .84) {
+    const blend = (localProgress - .84) / .16;
+    context.save();
+    context.globalAlpha = blend * blend * (3 - 2 * blend);
+    cover(context, nextPhoto.image, 0, 0, width, height, profile.cropScale, -8);
+    context.restore();
+  }
+  const wash = context.createLinearGradient(0, 0, 0, height);
+  wash.addColorStop(0, "rgba(8,20,14,.25)");
+  wash.addColorStop(.45, "rgba(8,20,14,.02)");
+  wash.addColorStop(1, "rgba(8,20,14,.78)");
+  context.fillStyle = wash;
+  context.fillRect(0, 0, width, height);
+
+  const cardBottom = height - Math.max(84, safe.bottom + 32);
+  const cardTop = Math.min(height * .58, cardBottom - 245);
+  const cardWidth = width - side - Math.max(48, safe.right);
+  const cardHeight = cardBottom - cardTop;
+  context.shadowColor = "rgba(8,20,14,.28)";
+  context.shadowBlur = 34;
+  fillRounded(context, "rgba(255,248,236,.95)", side, cardTop, cardWidth, cardHeight, 28);
+  context.shadowBlur = 0;
+  fillRounded(context, palette.coral, side + 26, cardTop + 25, 174, 34, 17);
+  context.fillStyle = palette.cream;
+  context.font = "700 14px sans-serif";
+  context.textBaseline = "middle";
+  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}`, side + 46, cardTop + 42);
+  context.textBaseline = "alphabetic";
+  const headingSize = Math.min(46, width * .065);
+  const titleTop = cardTop + 76;
+  const titleLines = title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side + 26, titleTop, cardWidth - 52, palette.ink, headingSize, 2);
   context.fillStyle = "#6f675d";
-  context.font = "500 19px sans-serif";
-  wrapText(context, chapterNarration(story, photo?.moment.id), side, titleTop + titleLines * 62 + 18, width - side - Math.max(62, safe.right), 27, 2);
+  context.font = "500 17px sans-serif";
+  wrapText(context, chapterNarration(story, photo?.moment.id), side + 26, titleTop + titleLines * headingSize * .92 + 12, cardWidth - 52, 23, 2);
   context.fillStyle = "#6f675d";
-  context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(108, safe.bottom + 58));
-  brand(context, width, height, palette.ink, profile);
+  context.font = "600 15px sans-serif";
+  context.fillText(metadata(story, moments, showLocation, showDate), side + 26, cardBottom - 22);
+  motionProgress(context, profile, progress, index + 1, total, palette.gold);
+  brand(context, width, height, palette.cream, profile);
 }
 
 function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments: MomentObject[], photos: LoadedPhoto[], progress: number, showLocation: boolean, showDate: boolean, profile: SocialExportProfile) {
@@ -202,8 +261,8 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   for (let y = 0; y < height; y += 38) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
   const index = Math.floor(progress * Math.max(photos.length, 1)) % Math.max(photos.length, 1);
   const cards = [
-    { x: width * 0.08, y: height * 0.07, w: width * 0.58, h: height * 0.42, angle: -5 },
-    { x: width * 0.43, y: height * 0.36, w: width * 0.48, h: height * 0.34, angle: 6 },
+    { x: width * 0.08, y: height * 0.1, w: width * 0.58, h: height * 0.36, angle: -5 },
+    { x: width * 0.43, y: height * 0.32, w: width * 0.48, h: height * 0.29, angle: 6 },
   ];
   cards.forEach((card, cardIndex) => {
     context.save();
@@ -215,19 +274,21 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
     clippedPhoto(context, photos[(index + cardIndex) % Math.max(photos.length, 1)], -card.w / 2 + 18, -card.h / 2 + 18, card.w - 36, card.h - 90, 2, 1.03);
     context.restore();
   });
-  context.save();
-  context.translate(width * 0.06, height * 0.71);
-  context.rotate((-2 * Math.PI) / 180);
-  context.fillStyle = "rgba(200,108,87,.2)";
-  context.fillRect(0, 0, width * 0.88, height * 0.17);
-  title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, width * 0.025, height * 0.022, width * 0.82, palette.coral, Math.min(64, width * 0.075), 2);
-  context.restore();
+  const side = Math.max(48, safe.left);
+  const noteBottom = height - Math.max(84, safe.bottom + 32);
+  const noteTop = noteBottom - 190;
+  fillRounded(context, "rgba(255,248,236,.9)", side, noteTop, width - side - Math.max(48, safe.right), 190, 8);
+  fillRounded(context, "rgba(200,108,87,.18)", side + 18, noteTop + 18, 178, 30, 4);
+  context.fillStyle = palette.coral;
+  context.font = "700 13px sans-serif";
+  context.fillText(`FIELD NOTE  ·  ${String(index + 1).padStart(2, "0")}`, side + 31, noteTop + 38);
+  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side + 20, noteTop + 56, width - side - Math.max(48, safe.right) - 40, palette.coral, 42, 2);
   context.fillStyle = "#5f594f";
-  context.font = "500 18px sans-serif";
-  wrapText(context, chapterNarration(story, photos[index]?.moment.id), Math.max(54, safe.left), height * 0.885, width - Math.max(108, safe.left + safe.right), 25, 2);
+  context.font = "500 15px sans-serif";
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side + 20, noteTop + 60 + titleLines * 39, width - side - Math.max(48, safe.right) - 40, 20, 1);
   context.fillStyle = "#70675c";
-  context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), Math.max(54, safe.left), height - Math.max(105, safe.bottom + 56));
+  context.font = "600 14px sans-serif";
+  context.fillText(metadata(story, moments, showLocation, showDate), side + 20, noteBottom - 18);
   brand(context, width, height, palette.ink, profile);
 }
 
@@ -250,15 +311,16 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   context.fillRect(0, 0, width, height);
   context.fillStyle = palette.gold;
   context.font = "700 19px sans-serif";
-  const titleTop = Math.min(height * 0.72, height - safe.bottom - 300);
-  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 50);
-  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 72, 3);
+  const contentBottom = height - Math.max(84, safe.bottom + 32);
+  const titleTop = Math.min(height * .68, contentBottom - 235);
+  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 42);
+  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 58, 2);
   context.fillStyle = "#e8ddcd";
-  context.font = "500 19px sans-serif";
-  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side, titleTop + titleLines * 67 + 20, width - side - Math.max(54, safe.right), 27, 2);
+  context.font = "500 18px sans-serif";
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side, titleTop + titleLines * 54 + 16, width - side - Math.max(54, safe.right), 25, 2);
   context.fillStyle = "#e8ddcd";
-  context.font = "600 18px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), side, height - Math.max(105, safe.bottom + 56));
+  context.font = "600 16px sans-serif";
+  context.fillText(metadata(story, moments, showLocation, showDate), side, contentBottom - 16);
   brand(context, width, height, palette.cream, profile);
 }
 
@@ -266,6 +328,10 @@ function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptio
   context.clearRect(0, 0, context.canvas.width, context.canvas.height);
   const renderer = options.story.style === "scrapbook" ? drawScrapbook : options.story.style === "cinematic" ? drawCinematic : drawClassic;
   renderer(context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
+  if (options.story.style !== "classic") {
+    const total = Math.max(photos.length, 1);
+    motionProgress(context, options.profile, progress, Math.min(total, Math.floor(progress * total) + 1), total, palette.gold);
+  }
 }
 
 export function buildCarouselPlan(photoCount: number, maxSlides: number): CarouselPlanSlide[] {
