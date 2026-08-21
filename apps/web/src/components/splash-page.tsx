@@ -39,7 +39,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                 <span className="flex -space-x-1.5" aria-hidden="true">
                   {['MC', 'LT', 'SR'].map((initials, index) => <span key={initials} className={`grid size-6 place-items-center rounded-full border border-[#e8aa90] text-[7px] font-bold text-white ${['bg-[#a95c47]', 'bg-[#608074]', 'bg-[#b58b4c]'][index]}`}>{initials}</span>)}
                 </span>
-                Live judge demo
+                Try live demo
               </button>
               <button onClick={onSignIn} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-5 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12]">
               Sign in <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -68,7 +68,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                   onClick={() => setDemoOpen(true)}
                   className="demo-sparkle-border demo-sparkle-button h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
                 >
-                  <span className="inline-flex items-center gap-2"><Eye className="size-4 text-[#a8513f]" /> Explore live demo</span>
+                  <span className="inline-flex items-center gap-2"><Eye className="size-4 text-[#a8513f]" /> Try live demo</span>
                 </button>
               </div>
               <div className="landing-intro landing-intro--5 mt-5 lg:hidden">

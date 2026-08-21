@@ -32,7 +32,7 @@ export function DemoAccess({ tone = "light", showHeader = true }: { tone?: "ligh
 
   return (
     <section
-      aria-label="Judge demo accounts"
+      aria-label="Live demo accounts"
       className={dark
         ? "demo-sparkle-border rounded-[24px] border border-[#e8aa90]/35 bg-[#fff8ed]/[.09] p-4 shadow-[0_20px_50px_rgba(0,0,0,.18)] backdrop-blur-xl sm:p-5"
         : "demo-sparkle-border rounded-[24px] border border-[#d8b38f] bg-[#f9ead5] p-4 shadow-[0_14px_40px_rgba(106,71,36,.1)] sm:p-5"}
@@ -44,7 +44,7 @@ export function DemoAccess({ tone = "light", showHeader = true }: { tone?: "ligh
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className={dark ? "text-sm font-bold text-[#fff8ed]" : "text-sm font-bold text-[#3f382f]"}>Explore the live judge demo</p>
+              <p className={dark ? "text-sm font-bold text-[#fff8ed]" : "text-sm font-bold text-[#3f382f]"}>Try live demo</p>
               <span className={dark ? "rounded-full bg-[#e8aa90]/15 px-2 py-1 text-[9px] font-bold uppercase tracking-[.16em] text-[#f2bba5]" : "rounded-full bg-[#a8513f]/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[.16em] text-[#914536]"}>No password</span>
             </div>
             <p className={dark ? "mt-1 text-xs leading-5 text-[#c7d3cc]" : "mt-1 text-xs leading-5 text-[#756b5e]"}>
