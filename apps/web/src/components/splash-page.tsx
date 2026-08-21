@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowRight, Check, CircleCheck, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Send, Sparkles, Star, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
+import { DemoAccess } from "./demo-access";
 import { Button } from "./ui";
 
 const momentImages = {
@@ -62,7 +63,10 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                   I already have one
                 </button>
               </div>
-              <div className="landing-intro landing-intro--5 mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-bold uppercase tracking-[.16em] text-[#91a499]">
+              <div className="landing-intro landing-intro--5 mt-5">
+                <DemoAccess tone="dark" />
+              </div>
+              <div className="landing-intro landing-intro--5 mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-bold uppercase tracking-[.16em] text-[#91a499]">
                 <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Invite by link</span>
                 <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Everyone contributes</span>
                 <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Private by design</span>

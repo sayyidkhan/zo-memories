@@ -1,20 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Images, LockKeyhole, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { ShareInvitationPreview } from "@zo-moments/types";
 import { Button, Field, Input, Spinner } from "./ui";
 import { BrandMark } from "./brand-mark";
+import { DemoAccess } from "./demo-access";
 
 export function AuthPage({ invitation, initialMode = "register", onBack }: { invitation?: ShareInvitationPreview; initialMode?: "register" | "login"; onBack?: () => void }) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"register" | "login">(initialMode);
   const [error, setError] = useState("");
-  const demoMode = useQuery({
-    queryKey: ["demo-mode"],
-    queryFn: () => api.getDemoMode(),
-    retry: false,
-  });
   const mutation = useMutation({
     mutationFn: (form: { name: string; email: string; password: string }) =>
       mode === "register" ? api.register(form) : api.login(form),
@@ -22,13 +18,6 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (cause) => setError(cause instanceof ZoMomentsApiError ? cause.message : "Could not sign you in"),
-  });
-  const demo = useMutation({
-    mutationFn: (personaId: string) => api.demoLogin({ personaId }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-    onError: (cause) => setError(cause instanceof ZoMomentsApiError ? cause.message : "Could not start the demo"),
   });
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -96,6 +85,8 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
             {invitation ? `${invitation.inviterName} invited you to a shared space. Create an account or sign in to continue.` : mode === "register" ? "Create a home, invite someone important, and add your first memory." : "Sign in to return to your shared spaces."}
           </p>
 
+          {!invitation ? <div className="mt-7"><DemoAccess /></div> : null}
+
           <div className="mt-8 grid grid-cols-2 rounded-full bg-[#eee5d8] p-1">
             <button className={`h-10 rounded-full text-sm font-semibold transition ${mode === "register" ? "bg-[#fffaf2] shadow-sm" : "text-[#777067]"}`} onClick={() => { setMode("register"); setError(""); }}>Create account</button>
             <button className={`h-10 rounded-full text-sm font-semibold transition ${mode === "login" ? "bg-[#fffaf2] shadow-sm" : "text-[#777067]"}`} onClick={() => { setMode("login"); setError(""); }}>Sign in</button>
@@ -110,32 +101,6 @@ export function AuthPage({ invitation, initialMode = "register", onBack }: { inv
               {mutation.isPending ? <Spinner /> : <>{mode === "register" ? "Create my account" : "Sign in"}<ArrowRight className="size-4" /></>}
             </Button>
           </form>
-          {!invitation && mode === "login" && demoMode.data?.enabled ? (
-            <div className="mt-6">
-              <div className="mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.18em] text-[#9a9185] before:h-px before:flex-1 before:bg-[#ddd2c2] after:h-px after:flex-1 after:bg-[#ddd2c2]">or explore first</div>
-              <p className="mb-3 text-center text-sm font-semibold text-[#5f574c]">Choose who you want to explore as</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {demoMode.data.personas.map((persona, index) => (
-                  <button
-                    key={persona.id}
-                    type="button"
-                    disabled={demo.isPending}
-                    onClick={() => {
-                      setError("");
-                      demo.mutate(persona.id);
-                    }}
-                    className="group rounded-[20px] border border-[#d2c3aa] bg-[#f8edda] p-3 text-left shadow-[0_8px_24px_rgba(115,82,31,.08)] transition hover:-translate-y-0.5 hover:border-[#aa8359] hover:bg-[#f1dfc2] disabled:pointer-events-none disabled:opacity-55"
-                  >
-                    <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${["bg-[#a95c47]", "bg-[#537267]", "bg-[#b08549]"][index % 3]}`}>{persona.name.split(" ").map((part) => part[0]).join("")}</span>
-                    <strong className="mt-3 block text-sm text-[#3f382f]">{persona.name.split(" ")[0]}</strong>
-                    <span className="mt-0.5 block text-[10px] leading-4 text-[#817564]">{persona.description}</span>
-                  </button>
-                ))}
-              </div>
-              {demo.isPending ? <div className="mt-3 flex items-center justify-center gap-2 text-xs text-[#756b5e]"><Spinner />Opening the shared story…</div> : null}
-              <p className="mt-3 text-center text-xs leading-5 text-[#8c857b]">Three people, one shared travel journal. No password needed.</p>
-            </div>
-          ) : null}
           <p className="mt-7 text-center text-xs leading-5 text-[#8c857b]">Private by design. Only members can see what lives inside a shared space.</p>
         </div>
       </section>
