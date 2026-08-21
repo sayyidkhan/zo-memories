@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, Film, Image, ImagePlus, Link2, LockKeyhole, Maximize2, MessageCircle, MoreHorizontal, ShieldCheck, Sparkles, Trash2, UserPlus, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Film, Image, ImagePlus, Link2, LockKeyhole, Maximize2, MessageCircle, MoreHorizontal, ShieldCheck, Sparkles, Trash2, UserPlus, UsersRound } from "lucide-react";
+import { useEffect, useState } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { Invitation, Member, MomentObject } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ function StoryIllustration() {
 }
 
 export function HowItWorksDialog({ open, onClose, members, momentCount, storyCount, canInvite, onAction }: { open: boolean; onClose: () => void; members: Member[]; momentCount: number; storyCount: number; canInvite: boolean; onAction: (action: GuideAction) => void }) {
+  const [activeStep, setActiveStep] = useState(0);
   const steps = [
     { number: "01", title: "Create a home", summary: "Start one space for one relationship, family, trip, or chapter.", detail: "Every space has its own people, moments, albums, and stories. Content never spills into another shared space.", done: true, action: null, actionLabel: null, illustration: <PeopleIllustration /> },
     { number: "02", title: "Bring in your people", summary: "Share a private link through WhatsApp, Telegram, SMS, or any messaging app.", detail: "The first person who accepts joins this space. Owners can see who belongs here and remove members later.", done: members.length > 1, action: canInvite ? "invite" as const : null, actionLabel: "Invite someone", illustration: <InviteIllustration /> },
@@ -62,17 +64,23 @@ export function HowItWorksDialog({ open, onClose, members, momentCount, storyCou
     { number: "04", title: "Choose the story and output", summary: "Pick Classic, Scrapbook, or Cinematic, then preview it as an image carousel or social video.", detail: "Choose the moments and opening, or let Auto select the style. Every export adapts its crop, safe area, dimensions, and pacing to the destination.", done: storyCount > 0, action: momentCount >= 2 ? "story" as const : null, actionLabel: momentCount >= 2 ? "Craft a story" : "Add two moments first", illustration: <StoryIllustration /> },
   ];
   const complete = steps.filter((step) => step.done).length;
+  const currentStep = steps[activeStep] ?? steps[0]!;
+  useEffect(() => {
+    if (!open) return;
+    const firstIncomplete = steps.findIndex((step) => !step.done);
+    setActiveStep(firstIncomplete < 0 ? 0 : firstIncomplete);
+  }, [open]);
   return (
     <Modal open={open} onClose={onClose} title="How Zo Moments works" description="From a private shared space to a story shaped for every destination." size="xl">
-      <div className="mb-6 rounded-[24px] bg-[#20372d] px-5 py-4 text-[#fffaf2] sm:flex sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">Your space progress</p><p className="mt-1 text-sm text-[#d7dfda]">{complete} of 4 stages complete · {members.length} people · {momentCount} moments · {storyCount} {storyCount === 1 ? "story" : "stories"}</p></div><div className="mt-4 flex gap-2 sm:mt-0">{steps.map((step) => <span key={step.number} className={`grid size-8 place-items-center rounded-full border text-[9px] font-bold ${step.done ? "border-[#f0c681] bg-[#f0c681] text-[#20372d]" : "border-white/20 bg-white/5 text-white/55"}`}>{step.number}</span>)}</div></div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {steps.map((step) => <article key={step.number} className="rounded-[26px] border border-[#ded2c2] bg-[#f8f1e7] p-4 sm:p-5">
-          {step.illustration}
-          <div className="mt-5 flex items-center justify-between gap-3"><span className="inline-flex items-baseline gap-1.5 rounded-full bg-[#26372f] px-3 py-1.5 text-[#fffaf2]"><span className="text-[9px] font-bold uppercase tracking-[.16em] text-[#f0c681]">Step</span><strong className="font-display text-lg leading-none">{step.number}</strong></span><span className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.12em] ${step.done ? "text-[#587164]" : "text-[#9a5747]"}`}>{step.done ? <><Check className="size-3.5" /> Complete</> : "Up next"}</span></div>
-          <div className="mt-4"><h3 className="font-display text-2xl leading-none text-[#26372f]">{step.title}</h3><p className="mt-2 text-sm font-semibold leading-5 text-[#526158]">{step.summary}</p><p className="mt-2 text-xs leading-5 text-[#7a7267]">{step.detail}</p>{step.actionLabel ? <button type="button" disabled={!step.action} onClick={() => step.action && onAction(step.action)} className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-[#9a5747] disabled:text-[#9c958a]">{step.actionLabel}<ArrowRight className="size-3" /></button> : null}</div>
-        </article>)}
+      <div className="relative z-20 mb-6 rounded-[24px] bg-[#20372d] px-5 py-4 text-[#fffaf2] sm:flex sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">Your space progress</p><p className="mt-1 text-sm text-[#d7dfda]">{complete} of 4 stages complete · {members.length} people · {momentCount} moments · {storyCount} {storyCount === 1 ? "story" : "stories"}</p></div><div className="mt-4 flex gap-2 sm:mt-0">{steps.map((step, index) => <button key={step.number} type="button" onClick={() => setActiveStep(index)} aria-label={`Open step ${step.number}: ${step.title}`} aria-current={index === activeStep ? "step" : undefined} className={`group relative grid size-9 place-items-center rounded-full border text-[9px] font-bold transition ${index === activeStep ? "border-white bg-white text-[#20372d] shadow-[0_0_0_3px_rgba(240,198,129,.28)]" : step.done ? "border-[#f0c681] bg-[#f0c681] text-[#20372d]" : "border-white/20 bg-white/5 text-white/55"}`}><span role="tooltip" className={`pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#fffaf2] px-2.5 py-1.5 text-[8px] font-bold text-[#26372f] shadow-[0_8px_24px_rgba(0,0,0,.22)] transition-opacity ${index === activeStep ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{step.title}</span>{step.number}</button>)}</div></div>
+      <div className="overflow-hidden rounded-[26px] border border-[#ded2c2] bg-[#f8f1e7]">
+        <article key={currentStep.number} className="onboarding-guide grid gap-5 p-4 sm:p-6 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:gap-8">
+          <div>{currentStep.illustration}</div>
+          <div><div className="flex items-center justify-between gap-3"><span className="inline-flex items-baseline gap-1.5 rounded-full bg-[#26372f] px-3 py-1.5 text-[#fffaf2]"><span className="text-[9px] font-bold uppercase tracking-[.16em] text-[#f0c681]">Step</span><strong className="font-display text-lg leading-none">{currentStep.number}</strong></span><span className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.12em] ${currentStep.done ? "text-[#587164]" : "text-[#9a5747]"}`}>{currentStep.done ? <><Check className="size-3.5" /> Complete</> : "Up next"}</span></div><h3 className="mt-4 font-display text-3xl leading-none text-[#26372f]">{currentStep.title}</h3><p className="mt-3 text-sm font-semibold leading-5 text-[#526158]">{currentStep.summary}</p><p className="mt-2 text-xs leading-5 text-[#7a7267]">{currentStep.detail}</p>{currentStep.actionLabel ? <button type="button" disabled={!currentStep.action} onClick={() => currentStep.action && onAction(currentStep.action)} className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-[#9a5747] disabled:text-[#9c958a]">{currentStep.actionLabel}<ArrowRight className="size-3" /></button> : null}</div>
+        </article>
+        <div className="flex items-center justify-between gap-3 border-t border-[#ded2c2] bg-[#fffaf2] px-4 py-3 sm:px-6"><Button variant="ghost" className="px-3" disabled={activeStep === 0} onClick={() => setActiveStep((step) => Math.max(0, step - 1))}><ArrowLeft className="size-4" />Back</Button><span className="text-[10px] font-bold uppercase tracking-[.14em] text-[#837a6e]">{activeStep + 1} of {steps.length}</span><Button className="px-4" onClick={() => activeStep === steps.length - 1 ? onClose() : setActiveStep((step) => Math.min(steps.length - 1, step + 1))}>{activeStep === steps.length - 1 ? "Finish" : <><span className="sm:hidden">Next</span><span className="hidden sm:inline">Next: {steps[activeStep + 1]?.title}</span></>}<ArrowRight className="size-4" /></Button></div>
       </div>
-      <section className="mt-5 overflow-hidden rounded-[24px] bg-[#20372d] p-5 text-[#fffaf2] sm:p-6">
+      {activeStep === steps.length - 1 ? <section className="onboarding-guide mt-5 overflow-hidden rounded-[24px] bg-[#20372d] p-5 text-[#fffaf2] sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr] lg:items-center">
           <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#f0c681]">One story · Different outputs</p><h3 className="mt-2 font-display text-3xl leading-none">Make it fit where you share it.</h3><p className="mt-3 max-w-lg text-xs leading-5 text-[#cbd6d0]">Choose the format first, select what appears, then preview the destination-specific result at 50–200% before sharing or downloading.</p></div>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -81,7 +89,7 @@ export function HowItWorksDialog({ open, onClose, members, momentCount, storyCou
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[9px] font-bold uppercase tracking-[.1em]"><span className="flex items-center gap-1.5 text-[#f0c681]"><Maximize2 className="size-3" />Preview first</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">Instagram · 4:5</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">TikTok · 9:16</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">LinkedIn · 1:1</span><span className="rounded-full bg-white/10 px-2.5 py-1.5">Pinterest · 2:3</span></div>
-      </section>
+      </section> : null}
       <div className="mt-5 flex items-start gap-3 rounded-[20px] border border-[#d6dfd6] bg-[#edf3ed] p-4 text-xs leading-5 text-[#526158]"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#496151]" /><p><strong className="text-[#34443a]">Private by design.</strong> Only members of this shared space can see its moments and stories. Application administrators do not gain access to the space.</p></div>
     </Modal>
   );
