@@ -33,10 +33,10 @@ function InviteIllustration() {
 
 function MomentsIllustration() {
   return (
-    <div className="relative h-32 overflow-hidden rounded-[22px] bg-[#d8c7ad]">
-      <div className="absolute -bottom-6 left-5 h-28 w-24 -rotate-6 overflow-hidden rounded-[16px] border-4 border-[#fffaf2] bg-[#789083] shadow-lg"><img src={`${import.meta.env.BASE_URL}images/moments/lisbon-tram.webp`} alt="" className="size-full object-cover" /></div>
-      <div className="absolute -bottom-5 left-[42%] h-28 w-24 rotate-3 overflow-hidden rounded-[16px] border-4 border-[#fffaf2] bg-[#b1604c] shadow-lg"><img src={`${import.meta.env.BASE_URL}images/moments/iceland-waterfall.webp`} alt="" className="size-full object-cover" /></div>
-      <div className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-[#26372f] text-[#fffaf2] shadow-lg"><ImagePlus className="size-4" /></div>
+    <div className="relative h-48 overflow-hidden rounded-[22px] bg-[#d8c7ad] sm:h-56">
+      <div className="absolute bottom-4 left-6 h-40 w-32 -rotate-6 overflow-hidden rounded-[20px] border-4 border-[#fffaf2] bg-[#789083] shadow-xl sm:left-10 sm:h-48 sm:w-40"><img src={`${import.meta.env.BASE_URL}images/moments/lisbon-tram.webp`} alt="" className="size-full object-cover" /></div>
+      <div className="absolute bottom-3 left-[44%] h-40 w-32 rotate-3 overflow-hidden rounded-[20px] border-4 border-[#fffaf2] bg-[#b1604c] shadow-xl sm:h-48 sm:w-40"><img src={`${import.meta.env.BASE_URL}images/moments/iceland-waterfall.webp`} alt="" className="size-full object-cover" /></div>
+      <div className="absolute right-4 top-4 grid size-12 place-items-center rounded-full bg-[#26372f] text-[#fffaf2] shadow-lg sm:right-5 sm:top-5"><ImagePlus className="size-5" /></div>
     </div>
   );
 }
