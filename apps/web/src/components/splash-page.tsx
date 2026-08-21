@@ -35,7 +35,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
             </div>
             <div className="flex items-center gap-5">
               <span className="hidden text-[9px] font-bold uppercase tracking-[.2em] text-[#91a499] md:inline">Private shared journals</span>
-              <button onClick={() => setDemoOpen(true)} className="hidden h-11 items-center gap-2 rounded-full bg-[#e8aa90] px-5 text-sm font-bold text-[#20342b] shadow-[0_10px_30px_rgba(0,0,0,.2)] transition hover:-translate-y-0.5 hover:bg-[#f4c5b1] sm:inline-flex">
+              <button onClick={() => setDemoOpen(true)} className="demo-sparkle-border demo-sparkle-button hidden h-11 items-center gap-2 rounded-full bg-[#e8aa90] px-5 text-sm font-bold text-[#20342b] shadow-[0_10px_30px_rgba(0,0,0,.2)] transition hover:-translate-y-0.5 hover:bg-[#f4c5b1] sm:inline-flex">
                 <span className="flex -space-x-1.5" aria-hidden="true">
                   {['MC', 'LT', 'SR'].map((initials, index) => <span key={initials} className={`grid size-6 place-items-center rounded-full border border-[#e8aa90] text-[7px] font-bold text-white ${['bg-[#a95c47]', 'bg-[#608074]', 'bg-[#b58b4c]'][index]}`}>{initials}</span>)}
                 </span>
@@ -66,7 +66,7 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
                 <button
                   type="button"
                   onClick={() => setDemoOpen(true)}
-                  className="h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
+                  className="demo-sparkle-border demo-sparkle-button h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
                 >
                   <span className="inline-flex items-center gap-2"><Eye className="size-4 text-[#a8513f]" /> Explore live demo</span>
                 </button>

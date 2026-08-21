@@ -34,8 +34,8 @@ export function DemoAccess({ tone = "light", showHeader = true }: { tone?: "ligh
     <section
       aria-label="Judge demo accounts"
       className={dark
-        ? "rounded-[24px] border border-[#e8aa90]/35 bg-[#fff8ed]/[.09] p-4 shadow-[0_20px_50px_rgba(0,0,0,.18)] backdrop-blur-xl sm:p-5"
-        : "rounded-[24px] border border-[#d8b38f] bg-[#f9ead5] p-4 shadow-[0_14px_40px_rgba(106,71,36,.1)] sm:p-5"}
+        ? "demo-sparkle-border rounded-[24px] border border-[#e8aa90]/35 bg-[#fff8ed]/[.09] p-4 shadow-[0_20px_50px_rgba(0,0,0,.18)] backdrop-blur-xl sm:p-5"
+        : "demo-sparkle-border rounded-[24px] border border-[#d8b38f] bg-[#f9ead5] p-4 shadow-[0_14px_40px_rgba(106,71,36,.1)] sm:p-5"}
     >
       {showHeader ? (
         <div className="flex items-start gap-3">
