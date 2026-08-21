@@ -35,12 +35,6 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
             </div>
             <div className="flex items-center gap-5">
               <span className="hidden text-[9px] font-bold uppercase tracking-[.2em] text-[#91a499] md:inline">Private shared journals</span>
-              <button onClick={() => setDemoOpen(true)} className="demo-sparkle-border demo-sparkle-button hidden h-11 items-center gap-2 rounded-full bg-[#e8aa90] px-5 text-sm font-bold text-[#20342b] shadow-[0_10px_30px_rgba(0,0,0,.2)] transition hover:-translate-y-0.5 hover:bg-[#f4c5b1] sm:inline-flex">
-                <span className="flex -space-x-1.5" aria-hidden="true">
-                  {['MC', 'LT', 'SR'].map((initials, index) => <span key={initials} className={`grid size-6 place-items-center rounded-full border border-[#e8aa90] text-[7px] font-bold text-white ${['bg-[#a95c47]', 'bg-[#608074]', 'bg-[#b58b4c]'][index]}`}>{initials}</span>)}
-                </span>
-                Try live demo
-              </button>
               <button onClick={onSignIn} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-5 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12]">
               Sign in <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </button>
@@ -59,20 +53,22 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
               <p className="landing-intro landing-intro--3 mt-7 max-w-xl text-base leading-7 text-[#c7d3cc] sm:text-lg sm:leading-8">
                 Everyone remembers a different part. Zo Moments brings every photo, video and voice note into one living journal with the people who were there.
               </p>
-              <div className="landing-intro landing-intro--4 relative z-30 mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="landing-intro landing-intro--4 relative z-30 mt-8 flex flex-col gap-3 sm:mt-14 sm:flex-row">
                 <Button className="h-14 w-full bg-[#e8aa90] px-7 text-base text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28)] hover:bg-[#f4c5b1] sm:w-auto" onClick={onGetStarted}>
                   Start your first story <ArrowRight className="size-4" />
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => setDemoOpen(true)}
-                  className="demo-sparkle-border demo-sparkle-button h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
-                >
-                  <span className="inline-flex items-center gap-2"><Eye className="size-4 text-[#a8513f]" /> Try live demo</span>
-                </button>
-              </div>
-              <div className="landing-intro landing-intro--5 mt-5 lg:hidden">
-                <DemoAccess tone="dark" />
+                <div className="relative w-full pt-9 sm:w-auto sm:pt-0">
+                  <span className="demo-guide-tooltip absolute right-2 top-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#f4d695] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.1em] text-[#493a24] shadow-[0_10px_26px_rgba(0,0,0,.2)] sm:-top-11 sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
+                    <Sparkles className="size-3.5 text-[#a8513f]" /> Click here to demo the app
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDemoOpen(true)}
+                    className="demo-sparkle-border demo-sparkle-button h-14 w-full rounded-full border border-[#f4e8d7] bg-[#fff8ed] px-7 text-base font-semibold text-[#20342b] shadow-[0_18px_50px_rgba(0,0,0,.28),0_0_0_1px_rgba(32,52,43,.08)] transition hover:border-white hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8aa90] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20342b] sm:w-auto"
+                  >
+                    <span className="inline-flex items-center gap-2"><Eye className="size-4 text-[#a8513f]" /> Try live demo</span>
+                  </button>
+                </div>
               </div>
               <div className="landing-intro landing-intro--5 mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-bold uppercase tracking-[.16em] text-[#91a499]">
                 <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-[#e8aa90]" /> Invite by link</span>
