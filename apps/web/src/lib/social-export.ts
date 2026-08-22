@@ -421,6 +421,10 @@ function photoTitle(story: Story, photo: LoadedPhoto | undefined) {
   return chapterForMoment(story, photo.moment.id)?.title ?? photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
 }
 
+function photoCaption(photo: LoadedPhoto) {
+  return photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
+}
+
 function drawPhotoMosaic(context: CanvasRenderingContext2D, photos: LoadedPhoto[], x: number, y: number, width: number, height: number, radius: number) {
   if (photos.length <= 1) {
     clippedPhoto(context, photos[0], x, y, width, height, radius, 1.02);
@@ -450,6 +454,33 @@ function drawPhotoMosaic(context: CanvasRenderingContext2D, photos: LoadedPhoto[
   const smallHeight = (height - gap) / 2;
   clippedPhoto(context, photos[1], smallX, y, smallWidth, smallHeight, radius, 1.02);
   clippedPhoto(context, photos[2], smallX, y + smallHeight + gap, smallWidth, smallHeight, radius, 1.02);
+}
+
+function drawScrapbookPrint(context: CanvasRenderingContext2D, photo: LoadedPhoto | undefined, x: number, y: number, width: number, height: number, angle: number, caption: string, compact = false) {
+  const border = compact ? 16 : 22;
+  const captionHeight = compact ? 68 : 96;
+  context.save();
+  context.translate(x + width / 2, y + height / 2);
+  context.rotate((angle * Math.PI) / 180);
+  context.shadowColor = "rgba(48,39,27,.28)";
+  context.shadowBlur = compact ? 22 : 38;
+  context.shadowOffsetY = compact ? 10 : 16;
+  fillRounded(context, palette.cream, -width / 2, -height / 2, width, height, compact ? 6 : 10);
+  context.shadowColor = "transparent";
+  clippedPhoto(context, photo, -width / 2 + border, -height / 2 + border, width - border * 2, height - captionHeight - border, compact ? 3 : 5, 1.025);
+  context.fillStyle = palette.ink;
+  context.font = compact ? "700 18px Georgia, serif" : "700 34px Georgia, serif";
+  context.textBaseline = "top";
+  wrapText(context, caption, -width / 2 + border, height / 2 - captionHeight + (compact ? 17 : 22), width - border * 2, compact ? 21 : 37, 2);
+  context.restore();
+}
+
+function drawTape(context: CanvasRenderingContext2D, x: number, y: number, width: number, angle: number) {
+  context.save();
+  context.translate(x + width / 2, y + 13);
+  context.rotate((angle * Math.PI) / 180);
+  fillRounded(context, "rgba(239,196,111,.72)", -width / 2, -13, width, 26, 3);
+  context.restore();
 }
 
 function drawCarouselCover(context: CanvasRenderingContext2D, options: SocialExportOptions, photo: LoadedPhoto | undefined, index: number, total: number) {
@@ -547,33 +578,68 @@ function drawClassicCarouselMoment(context: CanvasRenderingContext2D, options: S
   slideNumber(context, options, index, total, variant === 2);
 }
 
-function drawScrapbookCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], index: number, total: number) {
+function drawScrapbookCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], relatedPhoto: LoadedPhoto | undefined, index: number, total: number) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, options.profile);
   context.fillStyle = "#e7dbc8";
   context.fillRect(0, 0, width, height);
-  context.strokeStyle = "rgba(74,93,79,.12)";
-  for (let x = 0; x < width; x += 38) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
-  for (let y = 0; y < height; y += 38) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
+  context.strokeStyle = "rgba(74,93,79,.1)";
+  for (let x = 0; x < width; x += 54) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
+  for (let y = 0; y < height; y += 54) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
   const side = Math.max(54, safe.left);
+  const variant = (index - 1) % 3;
+  const lead = photos[0];
+  const secondary = photos[1] ?? relatedPhoto;
+  const chapter = chapterForMoment(options.story, lead?.moment.id);
   context.save();
-  context.translate(width / 2, height * .43);
-  context.rotate((((index % 2) ? 2.4 : -2.4) * Math.PI) / 180);
-  context.shadowColor = "rgba(48,39,27,.25)";
-  context.shadowBlur = 32;
-  fillRounded(context, palette.cream, -width * .41, -height * .32, width * .82, height * .64, 8);
-  drawPhotoMosaic(context, photos, -width * .38, -height * .295, width * .76, height * .49, 3);
+  context.globalAlpha = .075;
   context.fillStyle = palette.ink;
-  context.font = "700 26px Georgia, serif";
-  wrapText(context, photoTitle(options.story, photos[0]), -width * .36, height * .225, width * .7, 29, 2);
+  context.font = "italic 700 190px Georgia, serif";
+  context.textAlign = "right";
+  context.textBaseline = "top";
+  context.fillText(String(index).padStart(2, "0"), width - side, height * .085);
   context.restore();
-  fillRounded(context, "rgba(200,108,87,.18)", side, height * .78, width - side * 2, height * .105, 4);
+
+  fillRounded(context, "rgba(200,108,87,.16)", side, height * .092, 250, 38, 19);
   context.fillStyle = palette.coral;
   context.font = "700 16px sans-serif";
-  context.fillText(`NOTE ${String(index).padStart(2, "0")}  ·  ${photos.length > 1 ? `${photos.length} MOMENTS` : "FROM THE JOURNEY"}`, side + 22, height * .815);
-  context.fillStyle = "#5d574e";
-  context.font = "500 18px sans-serif";
-  wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side + 22, height * .846, width - side * 2 - 44, 25, 2);
+  context.textBaseline = "middle";
+  context.fillText(`${chapter?.beat.toUpperCase().replace("-", " ") ?? "TRAVEL NOTE"}  ·  ${String(index).padStart(2, "0")}`, side + 20, height * .092 + 19);
+
+  const main = variant === 0
+    ? { x: side + 6, y: height * .15, width: width * .69, height: height * .515, angle: -2.6 }
+    : variant === 1
+      ? { x: width * .27, y: height * .15, width: width * .67, height: height * .515, angle: 2.4 }
+      : { x: side + 16, y: height * .145, width: width - side * 2 - 32, height: height * .495, angle: -1.2 };
+  drawScrapbookPrint(context, lead, main.x, main.y, main.width, main.height, main.angle, photoTitle(options.story, lead));
+  drawTape(context, main.x + main.width * .31, main.y - 4, main.width * .32, -main.angle * .7);
+
+  if (secondary && secondary !== lead) {
+    const inset = variant === 0
+      ? { x: width * .69, y: height * .36, angle: 5.8 }
+      : variant === 1
+        ? { x: width * .045, y: height * .37, angle: -6.2 }
+        : { x: width * .68, y: height * .37, angle: 5.2 };
+    const insetWidth = width * .255;
+    const insetHeight = height * .205;
+    drawScrapbookPrint(context, secondary, inset.x, inset.y, insetWidth, insetHeight, inset.angle, photoCaption(secondary), true);
+    drawTape(context, inset.x + insetWidth * .28, inset.y - 4, insetWidth * .44, -inset.angle * .55);
+  }
+
+  const noteTop = height * .735;
+  const noteHeight = Math.min(230, height * .17);
+  context.shadowColor = "rgba(48,39,27,.12)";
+  context.shadowBlur = 20;
+  fillRounded(context, "rgba(255,248,236,.94)", side, noteTop, width - side * 2, noteHeight, 18);
+  context.shadowColor = "transparent";
+  fillRounded(context, palette.coral, side, noteTop, 8, noteHeight, 4);
+  context.fillStyle = palette.coral;
+  context.font = "700 17px sans-serif";
+  context.textBaseline = "top";
+  context.fillText(`FIELD NOTE  ·  ${photos.length > 1 ? `${photos.length} MOMENTS` : "FROM THE JOURNEY"}`, side + 30, noteTop + 27);
+  context.fillStyle = "#514e46";
+  context.font = "500 24px sans-serif";
+  wrapText(context, chapterNarration(options.story, lead?.moment.id), side + 30, noteTop + 66, width - side * 2 - 60, 33, 3);
   brand(context, width, height, palette.ink, options.profile);
   storyRail(context, options, index, total, palette.coral);
   slideNumber(context, options, index, total);
@@ -628,7 +694,10 @@ function drawCarouselSlide(context: CanvasRenderingContext2D, options: SocialExp
   const photos = slide.photoIndexes.map((photoIndex) => allPhotos[photoIndex]).filter((photo): photo is LoadedPhoto => Boolean(photo));
   if (slide.kind === "cover") drawCarouselCover(context, options, photos[0], index, total);
   else if (slide.kind === "closing") drawCarouselClosing(context, options, photos, index, total);
-  else if (options.story.style === "scrapbook") drawScrapbookCarouselMoment(context, options, photos, index, total);
+  else if (options.story.style === "scrapbook") {
+    const relatedIndex = slide.photoIndexes.length && allPhotos.length ? (slide.photoIndexes.at(-1)! + 1) % allPhotos.length : 0;
+    drawScrapbookCarouselMoment(context, options, photos, allPhotos[relatedIndex], index, total);
+  }
   else if (options.story.style === "cinematic") drawCinematicCarouselMoment(context, options, photos, index, total);
   else drawClassicCarouselMoment(context, options, photos, index, total);
 }
