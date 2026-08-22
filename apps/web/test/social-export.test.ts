@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildCarouselPlan } from "../src/lib/social-export";
+import { buildCarouselPlan, isShareCancellation } from "../src/lib/social-export";
 
 describe("buildCarouselPlan", () => {
   test("adds a cover and closing card around one slide per photo", () => {
@@ -21,5 +21,17 @@ describe("buildCarouselPlan", () => {
     const plan = buildCarouselPlan(10, 4);
     expect(plan).toHaveLength(4);
     expect(plan.filter((slide) => slide.kind === "moment").flatMap((slide) => slide.photoIndexes)).toEqual(Array.from({ length: 10 }, (_, index) => index));
+  });
+});
+
+describe("isShareCancellation", () => {
+  test("recognises explicit share-sheet cancellation", () => {
+    expect(isShareCancellation(new DOMException("Share cancelled", "AbortError"))).toBe(true);
+    expect(isShareCancellation(new DOMException("Permission dismissed", "NotAllowedError"))).toBe(true);
+  });
+
+  test("allows browser share failures to fall back to downloads", () => {
+    expect(isShareCancellation(new DOMException("Too many files", "DataError"))).toBe(false);
+    expect(isShareCancellation(new Error("Share service unavailable"))).toBe(false);
   });
 });

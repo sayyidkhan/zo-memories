@@ -3,6 +3,10 @@ import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 
 export type SocialExportFormat = "image" | "video";
 
+export function isShareCancellation(cause: unknown) {
+  return cause instanceof DOMException && (cause.name === "AbortError" || cause.name === "NotAllowedError");
+}
+
 export interface SocialExportProfile {
   id: string;
   safeTop: number;

@@ -5,7 +5,7 @@ import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { generateSocialExport, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
+import { generateSocialExport, isShareCancellation, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
 import { Button, Spinner } from "./ui";
 
 const styleNames: Record<StoryStyle, string> = {
@@ -187,6 +187,17 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     });
   }
 
+  async function downloadWithCaption() {
+    if (!asset) return;
+    downloadForTarget(target, asset);
+    try {
+      await navigator.clipboard.writeText(shareCaption);
+      toast.success(asset.format === "image" ? `${asset.urls.length} slides downloaded and caption copied` : "Video downloaded and caption copied");
+    } catch {
+      toast.success(asset.format === "image" ? `${asset.urls.length} slides downloaded` : "Video downloaded");
+    }
+  }
+
   async function fetchSaved(next: SocialTarget) {
     setError("");
     setPhase("loading");
@@ -294,21 +305,15 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     if (!asset) return;
     const files = asset.blobs.map((blob, index) => new File([blob], filename(story, target, index, asset.blobs.length), { type: blob.type }));
     if (!navigator.share || (navigator.canShare && !navigator.canShare({ files }))) {
-      downloadForTarget(target, asset);
-      try {
-        await navigator.clipboard.writeText(shareCaption);
-        toast.success("Files downloaded and post caption copied");
-      } catch {
-        toast.success("Files downloaded. Copy the post caption before publishing.");
-      }
+      await downloadWithCaption();
       return;
     }
     try {
       await navigator.share({ files, title: story.title, text: shareCaption });
       toast.success("Shared from Zo Moments");
     } catch (cause) {
-      if (cause instanceof DOMException && cause.name === "AbortError") return;
-      toast.error("The share sheet could not be opened. Select the destination again to download.");
+      if (isShareCancellation(cause)) return;
+      await downloadWithCaption();
     }
   }
 
