@@ -27,10 +27,10 @@ describe("buildCarouselPlan", () => {
 describe("isShareCancellation", () => {
   test("recognises explicit share-sheet cancellation", () => {
     expect(isShareCancellation(new DOMException("Share cancelled", "AbortError"))).toBe(true);
-    expect(isShareCancellation(new DOMException("Permission dismissed", "NotAllowedError"))).toBe(true);
   });
 
   test("allows browser share failures to fall back to downloads", () => {
+    expect(isShareCancellation(new DOMException("Sharing is not permitted", "NotAllowedError"))).toBe(false);
     expect(isShareCancellation(new DOMException("Too many files", "DataError"))).toBe(false);
     expect(isShareCancellation(new Error("Share service unavailable"))).toBe(false);
   });
