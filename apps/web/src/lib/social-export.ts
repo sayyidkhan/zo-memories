@@ -168,6 +168,16 @@ function title(context: CanvasRenderingContext2D, value: string, x: number, y: n
   return wrapText(context, value, x, y, width, size * 0.92, maxLines);
 }
 
+function motionMetadata(context: CanvasRenderingContext2D, value: string, x: number, y: number, width: number, colour: string) {
+  if (!value) return;
+  context.save();
+  context.fillStyle = colour;
+  context.font = "700 14px sans-serif";
+  context.textBaseline = "top";
+  wrapText(context, value, x, y, width, 20, 2);
+  context.restore();
+}
+
 function motionProgress(context: CanvasRenderingContext2D, profile: SocialExportProfile, progress: number, scene: number, total: number, colour: string) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, profile);
@@ -224,7 +234,7 @@ function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: M
   context.fillRect(0, 0, width, height);
 
   const cardBottom = height - Math.max(84, safe.bottom + 32);
-  const cardTop = Math.min(height * .58, cardBottom - 245);
+  const cardTop = Math.min(height * .56, cardBottom - 300);
   const cardWidth = width - side - Math.max(48, safe.right);
   const cardHeight = cardBottom - cardTop;
   context.shadowColor = "rgba(8,20,14,.28)";
@@ -238,14 +248,18 @@ function drawClassic(context: CanvasRenderingContext2D, story: Story, moments: M
   context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}`, side + 46, cardTop + 42);
   context.textBaseline = "alphabetic";
   const headingSize = Math.min(46, width * .065);
-  const titleTop = cardTop + 76;
+  const titleTop = cardTop + 82;
   const titleLines = title(context, chapterForMoment(story, photo?.moment.id)?.title ?? story.title, side + 26, titleTop, cardWidth - 52, palette.ink, headingSize, 2);
   context.fillStyle = "#6f675d";
-  context.font = "500 17px sans-serif";
-  wrapText(context, chapterNarration(story, photo?.moment.id), side + 26, titleTop + titleLines * headingSize * .92 + 12, cardWidth - 52, 23, 2);
-  context.fillStyle = "#6f675d";
-  context.font = "600 15px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), side + 26, cardBottom - 22);
+  context.font = "500 18px sans-serif";
+  const narrationTop = titleTop + titleLines * headingSize * .92 + 22;
+  wrapText(context, chapterNarration(story, photo?.moment.id), side + 26, narrationTop, cardWidth - 52, 27, 3);
+  context.strokeStyle = "rgba(111,103,93,.24)";
+  context.beginPath();
+  context.moveTo(side + 26, cardBottom - 58);
+  context.lineTo(side + cardWidth - 26, cardBottom - 58);
+  context.stroke();
+  motionMetadata(context, metadata(story, moments, showLocation, showDate), side + 26, cardBottom - 43, cardWidth - 52, "#6f675d");
   motionProgress(context, profile, progress, index + 1, total, palette.gold);
   brand(context, width, height, palette.cream, profile);
 }
@@ -276,19 +290,29 @@ function drawScrapbook(context: CanvasRenderingContext2D, story: Story, moments:
   });
   const side = Math.max(48, safe.left);
   const noteBottom = height - Math.max(84, safe.bottom + 32);
-  const noteTop = noteBottom - 190;
-  fillRounded(context, "rgba(255,248,236,.9)", side, noteTop, width - side - Math.max(48, safe.right), 190, 8);
-  fillRounded(context, "rgba(200,108,87,.18)", side + 18, noteTop + 18, 178, 30, 4);
+  const noteHeight = Math.min(310, height * .25);
+  const noteTop = noteBottom - noteHeight;
+  const noteWidth = width - side - Math.max(48, safe.right);
+  const notePadding = 28;
+  fillRounded(context, "rgba(255,248,236,.94)", side, noteTop, noteWidth, noteHeight, 12);
+  fillRounded(context, "rgba(200,108,87,.18)", side + notePadding, noteTop + 24, 184, 32, 4);
   context.fillStyle = palette.coral;
-  context.font = "700 13px sans-serif";
-  context.fillText(`FIELD NOTE  ·  ${String(index + 1).padStart(2, "0")}`, side + 31, noteTop + 38);
-  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side + 20, noteTop + 56, width - side - Math.max(48, safe.right) - 40, palette.coral, 42, 2);
+  context.font = "700 14px sans-serif";
+  context.textBaseline = "middle";
+  context.fillText(`FIELD NOTE  ·  ${String(index + 1).padStart(2, "0")}`, side + notePadding + 14, noteTop + 40);
+  const contentWidth = noteWidth - notePadding * 2;
+  const titleTop = noteTop + 72;
+  const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side + notePadding, titleTop, contentWidth, palette.coral, 44, 2);
   context.fillStyle = "#5f594f";
-  context.font = "500 15px sans-serif";
-  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side + 20, noteTop + 60 + titleLines * 39, width - side - Math.max(48, safe.right) - 40, 20, 1);
-  context.fillStyle = "#70675c";
-  context.font = "600 14px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), side + 20, noteBottom - 18);
+  context.font = "500 17px sans-serif";
+  const narrationTop = titleTop + titleLines * 40.5 + 20;
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side + notePadding, narrationTop, contentWidth, 26, 3);
+  context.strokeStyle = "rgba(112,103,92,.24)";
+  context.beginPath();
+  context.moveTo(side + notePadding, noteBottom - 58);
+  context.lineTo(side + noteWidth - notePadding, noteBottom - 58);
+  context.stroke();
+  motionMetadata(context, metadata(story, moments, showLocation, showDate), side + notePadding, noteBottom - 43, contentWidth, "#70675c");
   brand(context, width, height, palette.ink, profile);
 }
 
@@ -312,15 +336,18 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   context.fillStyle = palette.gold;
   context.font = "700 19px sans-serif";
   const contentBottom = height - Math.max(84, safe.bottom + 32);
-  const titleTop = Math.min(height * .68, contentBottom - 235);
-  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 42);
+  const titleTop = Math.min(height * .64, contentBottom - 300);
+  context.fillText(`SCENE ${String(index + 1).padStart(2, "0")}  ·  A SHARED STORY`, side, titleTop - 46);
   const titleLines = title(context, chapterForMoment(story, photos[index]?.moment.id)?.title ?? story.title, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, 58, 2);
   context.fillStyle = "#e8ddcd";
-  context.font = "500 18px sans-serif";
-  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side, titleTop + titleLines * 54 + 16, width - side - Math.max(54, safe.right), 25, 2);
-  context.fillStyle = "#e8ddcd";
-  context.font = "600 16px sans-serif";
-  context.fillText(metadata(story, moments, showLocation, showDate), side, contentBottom - 16);
+  context.font = "500 19px sans-serif";
+  wrapText(context, chapterNarration(story, photos[index]?.moment.id), side, titleTop + titleLines * 54 + 26, width - side - Math.max(54, safe.right), 29, 3);
+  context.strokeStyle = "rgba(255,248,236,.28)";
+  context.beginPath();
+  context.moveTo(side, contentBottom - 62);
+  context.lineTo(width - Math.max(54, safe.right), contentBottom - 62);
+  context.stroke();
+  motionMetadata(context, metadata(story, moments, showLocation, showDate), side, contentBottom - 45, width - side - Math.max(54, safe.right), "#e8ddcd");
   brand(context, width, height, palette.cream, profile);
 }
 
