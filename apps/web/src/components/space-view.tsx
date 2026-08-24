@@ -38,10 +38,10 @@ function MemberAvatarStack({ members, objects, onOpen }: { members: Member[]; ob
             className={`group relative grid size-9 place-items-center rounded-full border-2 border-[#f4ede1] text-[10px] font-bold shadow-sm transition hover:z-20 hover:-translate-y-1 hover:scale-110 focus-visible:z-20 focus-visible:-translate-y-1 focus-visible:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a9503f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4ede1] ${memberColours[index % memberColours.length]}`}
           >
             {initials(member.name)}
-            <span id={tooltipId} role="tooltip" className={`pointer-events-none absolute bottom-full z-30 mb-3 w-44 translate-y-1 rounded-[16px] border border-white/10 bg-[#20372d] px-3.5 py-3 text-left font-normal text-[#fffaf2] opacity-0 shadow-[0_14px_36px_rgba(32,55,45,.28)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${tooltipPosition}`}>
+            <span id={tooltipId} role="tooltip" className={`pointer-events-none absolute top-full z-30 mt-3 w-44 -translate-y-1 rounded-[16px] border border-white/10 bg-[#20372d] px-3.5 py-3 text-left font-normal text-[#fffaf2] opacity-0 shadow-[0_14px_36px_rgba(32,55,45,.28)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${tooltipPosition}`}>
               <span className="block truncate text-xs font-bold">{member.name}</span>
               <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[.1em] text-[#efc46f]">{member.role === "owner" ? "Space owner" : "Member"} · {contributions} {contributions === 1 ? "moment" : "moments"}</span>
-              <span aria-hidden="true" className={`absolute top-full size-2 -translate-y-1/2 rotate-45 border-b border-r border-white/10 bg-[#20372d] ${arrowPosition}`} />
+              <span aria-hidden="true" className={`absolute bottom-full size-2 translate-y-1/2 rotate-45 border-l border-t border-white/10 bg-[#20372d] ${arrowPosition}`} />
             </span>
           </button>
         );
