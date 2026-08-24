@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Album as AlbumIcon, BookOpen, CircleHelp, ImagePlus, Images, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { api } from "@zo-moments/sdk";
-import type { MomentObject, Story } from "@zo-moments/types";
+import type { Member, MomentObject, Story } from "@zo-moments/types";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
 import { initials, monthLabel } from "@/lib/utils";
@@ -11,6 +11,45 @@ import { MemoryCard, MemoryPreview } from "./memory-card";
 import { StoryDialog, StoryReader, StoryShelf } from "./story-experience";
 import { HowItWorksDialog, MembersDialog } from "./space-dialogs";
 import { Button, EmptyState, Spinner } from "./ui";
+
+const memberColours = [
+  "bg-[#789083] text-white",
+  "bg-[#b1604c] text-white",
+  "bg-[#d7bd96] text-[#34443a]",
+  "bg-[#526c60] text-white",
+  "bg-[#c28b6e] text-white",
+];
+
+function MemberAvatarStack({ members, objects, onOpen }: { members: Member[]; objects: MomentObject[]; onOpen: () => void }) {
+  return (
+    <div className="flex items-center -space-x-2" aria-label={`${members.length} people share this space`}>
+      {members.slice(0, 5).map((member, index) => {
+        const contributions = objects.filter((object) => object.uploadedBy === member.userId).length;
+        const tooltipId = `member-tooltip-${member.id}`;
+        const tooltipPosition = index === 0 ? "left-0" : "left-1/2 -translate-x-1/2";
+        const arrowPosition = index === 0 ? "left-4" : "left-1/2 -translate-x-1/2";
+        return (
+          <button
+            key={member.id}
+            type="button"
+            onClick={onOpen}
+            aria-label={`View ${member.name}, ${member.role === "owner" ? "space owner" : "member"}, ${contributions} ${contributions === 1 ? "moment" : "moments"}`}
+            aria-describedby={tooltipId}
+            className={`group relative grid size-9 place-items-center rounded-full border-2 border-[#f4ede1] text-[10px] font-bold shadow-sm transition hover:z-20 hover:-translate-y-1 hover:scale-110 focus-visible:z-20 focus-visible:-translate-y-1 focus-visible:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a9503f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4ede1] ${memberColours[index % memberColours.length]}`}
+          >
+            {initials(member.name)}
+            <span id={tooltipId} role="tooltip" className={`pointer-events-none absolute bottom-full z-30 mb-3 w-44 translate-y-1 rounded-[16px] border border-white/10 bg-[#20372d] px-3.5 py-3 text-left font-normal text-[#fffaf2] opacity-0 shadow-[0_14px_36px_rgba(32,55,45,.28)] transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${tooltipPosition}`}>
+              <span className="block truncate text-xs font-bold">{member.name}</span>
+              <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[.1em] text-[#efc46f]">{member.role === "owner" ? "Space owner" : "Member"} · {contributions} {contributions === 1 ? "moment" : "moments"}</span>
+              <span aria-hidden="true" className={`absolute top-full size-2 -translate-y-1/2 rotate-45 border-b border-r border-white/10 bg-[#20372d] ${arrowPosition}`} />
+            </span>
+          </button>
+        );
+      })}
+      {members.length > 5 ? <button type="button" onClick={onOpen} className="relative z-10 grid size-9 place-items-center rounded-full border-2 border-[#f4ede1] bg-[#e1d5c5] text-[9px] font-bold text-[#526158] shadow-sm transition hover:-translate-y-1" aria-label={`View ${members.length - 5} more members`}>+{members.length - 5}</button> : null}
+    </div>
+  );
+}
 
 export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolean }) {
   const queryClient = useQueryClient();
@@ -119,7 +158,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
                 {albums.map((album) => <button key={album.id} onClick={() => setSelectedAlbumId(album.id)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${selectedAlbumId === album.id ? "bg-[#a9503f] text-white" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}>{album.name}</button>)}
                 <button onClick={() => setDialog("album")} className="flex shrink-0 items-center gap-2 rounded-full border border-dashed border-[#b8a995] px-4 py-2 text-sm font-semibold text-[#677168]"><AlbumIcon className="size-4" />New album</button>
               </div>
-              <div className="flex items-center justify-between gap-5 lg:justify-end"><div className="flex items-center -space-x-2">{members.slice(0, 5).map((member) => <span key={member.id} title={member.name} className="grid size-9 place-items-center rounded-full border-2 border-[#f4ede1] bg-[#789083] text-[10px] font-bold text-white">{initials(member.name)}</span>)}</div><p className="text-xs font-medium text-[#837b71]">{filteredObjects.length} {filteredObjects.length === 1 ? "memory" : "memories"}</p></div>
+              <div className="flex items-center justify-between gap-5 lg:justify-end"><MemberAvatarStack members={members} objects={objectList} onOpen={() => setDialog("members")} /><p className="text-xs font-medium text-[#837b71]">{filteredObjects.length} {filteredObjects.length === 1 ? "memory" : "memories"}</p></div>
             </div>
 
             {timelineObjects.isPending ? <div className="grid min-h-80 place-items-center text-[#607066]"><Spinner /></div> : null}
