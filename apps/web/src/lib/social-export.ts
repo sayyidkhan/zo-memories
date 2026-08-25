@@ -24,6 +24,7 @@ interface SocialExportOptions {
   story: Story;
   moments: MomentObject[];
   format: SocialExportFormat;
+  heroMomentId?: string | undefined;
   includeLocation: boolean;
   includeDate: boolean;
   outputWidth: number;
@@ -51,6 +52,13 @@ export interface MotionPlanShot {
   camera: "push-in" | "pan-left" | "pan-right" | "pull-back";
   transitionIn: "cut" | "dissolve" | "dip-to-ink";
   purpose: "recognition" | "journey" | "build" | "payoff" | "resolution";
+}
+
+export interface MotionPlanCheck {
+  id: "coverage" | "arc" | "camera" | "payoff";
+  label: string;
+  detail: string;
+  status: "pass" | "warn";
 }
 
 const palette = {
@@ -387,12 +395,13 @@ function clamp(value: number) {
  * A deterministic director's plan. The same arc drives camera movement, cut energy,
  * the visual payoff and the generated soundtrack so an export reads as one film.
  */
-export function buildMotionPlan(photoCount: number): MotionPlanShot[] {
+export function buildMotionPlan(photoCount: number, requestedHeroPhotoIndex?: number): MotionPlanShot[] {
   const count = Math.max(1, photoCount);
   const shots: Array<Omit<MotionPlanShot, "start" | "end"> & { duration: number }> = [
     { kind: "opening", photoIndexes: [0], duration: .15, camera: "push-in", transitionIn: "cut", purpose: "recognition" },
   ];
-  const payoffIndex = count === 1 ? 0 : Math.min(count - 1, Math.max(1, Math.round((count - 1) * .62)));
+  const defaultPayoffIndex = count === 1 ? 0 : Math.min(count - 1, Math.max(1, Math.round((count - 1) * .62)));
+  const payoffIndex = requestedHeroPhotoIndex === undefined ? defaultPayoffIndex : Math.min(count - 1, Math.max(0, requestedHeroPhotoIndex));
   const weights = Array.from({ length: count }, (_, index) => {
     if (index === payoffIndex) return 1.8;
     if (index === count - 1) return .9;
@@ -419,6 +428,24 @@ export function buildMotionPlan(photoCount: number): MotionPlanShot[] {
     cursor += duration;
     return { ...shot, start, end: cursor };
   });
+}
+
+/**
+ * A deterministic preflight. It checks plan properties we can prove before
+ * rendering rather than making an ungrounded claim about the finished video.
+ */
+export function assessMotionPlan(plan: MotionPlanShot[], photoCount: number): MotionPlanCheck[] {
+  const sourceShots = plan.filter((shot) => shot.kind === "moment");
+  const used = new Set(sourceShots.flatMap((shot) => shot.photoIndexes));
+  const cameraChanges = sourceShots.slice(1).filter((shot, index) => shot.camera !== sourceShots[index]?.camera).length;
+  const payoff = plan.find((shot) => shot.purpose === "payoff");
+  const journey = plan.find((shot) => shot.purpose === "journey");
+  return [
+    { id: "coverage", label: "Every selected photo has a scene", detail: `${used.size} of ${Math.max(1, photoCount)} source photos are assigned.`, status: used.size >= Math.max(1, photoCount) ? "pass" : "warn" },
+    { id: "arc", label: "The story has a beginning, build and closing", detail: `${plan.length} timed scenes follow one shared arc.`, status: plan[0]?.kind === "opening" && plan.at(-1)?.kind === "closing" && Boolean(journey) ? "pass" : "warn" },
+    { id: "camera", label: "Camera moves vary by scene", detail: `${new Set(sourceShots.map((shot) => shot.camera)).size} camera treatments with ${cameraChanges} deliberate changes.`, status: new Set(sourceShots.map((shot) => shot.camera)).size >= Math.min(2, sourceShots.length) ? "pass" : "warn" },
+    { id: "payoff", label: "One chosen image receives the payoff", detail: payoff ? `Scene ${plan.indexOf(payoff) + 1} gets the longest hold, gold bloom and an impact cue.` : "Choose a hero image to set the payoff.", status: payoff ? "pass" : "warn" },
+  ];
 }
 
 function motionCamera(shot: MotionPlanShot, progress: number) {
@@ -979,7 +1006,8 @@ function paintOutput(renderCanvas: HTMLCanvasElement, outputCanvas: HTMLCanvasEl
 async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: CanvasRenderingContext2D, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[]) {
   if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
   const stream = outputCanvas.captureStream(30);
-  const plan = buildMotionPlan(photos.length);
+  const heroPhotoIndex = options.heroMomentId ? photos.findIndex((photo) => photo.moment.id === options.heroMomentId) : undefined;
+  const plan = buildMotionPlan(photos.length, heroPhotoIndex === -1 ? undefined : heroPhotoIndex);
   const stopSoundtrack = await addAmbientSoundtrack(stream, plan, options.profile.durationMs);
   const mimeType = videoMimeType();
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: options.profile.videoBitrate });

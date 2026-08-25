@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clapperboard, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { generateSocialExport, isShareCancellation, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
+import { assessMotionPlan, buildMotionPlan, generateSocialExport, isShareCancellation, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
 import { Button, Spinner } from "./ui";
 
 const styleNames: Record<StoryStyle, string> = {
@@ -45,7 +45,7 @@ const socialTargets: SocialTarget[] = [
 
 const socialExportRendererVersion: Record<SocialExportFormat, string> = {
   image: "carousel-v3",
-  video: "motion-v9-directed",
+  video: "motion-v10-directors-cut",
 };
 
 interface ExportAsset {
@@ -87,6 +87,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [targetId, setTargetId] = useState("instagram-feed");
   const [includeLocation, setIncludeLocation] = useState(Boolean(story.location));
   const [includeDate, setIncludeDate] = useState(true);
+  const [heroMomentSelection, setHeroMomentSelection] = useState("");
   const [shareCaption, setShareCaption] = useState(() => initialShareCaption(story));
   const [appearanceChanged, setAppearanceChanged] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -114,6 +115,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     return story.momentIds.map((id) => byId.get(id)).filter((object): object is MomentObject => Boolean(object)).map((object) => ({ ...object, caption: overrides.get(object.id) ?? object.caption }));
   }, [objects, story.canvas, story.momentIds]);
   const photoCount = moments.filter((moment) => moment.kind === "photo").length;
+  const photos = moments.filter((moment) => moment.kind === "photo");
+  const suggestedHeroMoment = useMemo(() => {
+    const chapters = story.canvas?.blueprint?.chapters ?? story.blueprint?.chapters ?? [];
+    const heroChapter = chapters.find((chapter) => chapter.beat === "turning-point") ?? chapters.find((chapter) => chapter.beat === "highlight");
+    return photos.find((photo) => heroChapter?.momentIds.includes(photo.id)) ?? photos[Math.min(photos.length - 1, Math.max(0, Math.round((photos.length - 1) * .62)))];
+  }, [photos, story.blueprint?.chapters, story.canvas?.blueprint?.chapters]);
+  const heroMomentId = heroMomentSelection || suggestedHeroMoment?.id || "";
+  const heroPhotoIndex = photos.findIndex((photo) => photo.id === heroMomentId);
+  const directorPlan = useMemo(() => buildMotionPlan(photoCount, heroPhotoIndex < 0 ? undefined : heroPhotoIndex), [heroPhotoIndex, photoCount]);
+  const directorChecks = useMemo(() => assessMotionPlan(directorPlan, photoCount), [directorPlan, photoCount]);
   const expectedSlideCount = Math.min(Math.max(2, photoCount + 2), target.profile.maxSlides ?? 10);
   const status = useQuery({
     queryKey: ["social-exports", story.spaceId, story.id],
@@ -140,6 +151,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   useEffect(() => {
     setIncludeLocation(Boolean(story.location));
     setIncludeDate(true);
+    setHeroMomentSelection("");
     setShareCaption(initialShareCaption(story));
     setAppearanceChanged(false);
     setError("");
@@ -267,6 +279,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
         story,
         moments,
         format: next.format,
+        heroMomentId: next.format === "video" ? heroMomentId || undefined : undefined,
         includeLocation,
         includeDate,
         outputWidth: next.width,
@@ -362,6 +375,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]">Story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
                 <label className={cn("flex items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
               </div>
+              {format === "video" ? <div className="mt-3 rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
+                <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><Clapperboard className="size-4" /></span><div><p className="text-xs font-bold text-[#26372f]">Director's cut</p><p className="mt-0.5 text-[11px] leading-4 text-[#756d63]">Choose the image where the film should peak. Everything else leads into it, then resolves into the closing card.</p></div></div>
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Choose payoff moment">
+                  {photos.map((photo, index) => <button key={photo.id} type="button" disabled={isBusy} onClick={() => { setHeroMomentSelection(photo.id); setAppearanceChanged(true); replaceAsset(null); }} aria-pressed={photo.id === heroMomentId} className={cn("relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition", photo.id === heroMomentId ? "border-[#a9503f] shadow-[0_0_0_3px_rgba(169,80,63,.13)]" : "border-transparent opacity-65 hover:opacity-100")}>
+                    <img src={api.objectContentUrl(photo.spaceId, photo.id)} alt={`Set ${photo.caption || photo.name} as the payoff`} className="size-full object-cover" />
+                    <span className={cn("absolute inset-x-1 bottom-1 rounded-md px-1 py-0.5 text-[8px] font-bold uppercase tracking-[.1em]", photo.id === heroMomentId ? "bg-[#a9503f] text-white" : "bg-[#14271f]/78 text-white")}>{photo.id === heroMomentId ? "Payoff" : `Scene ${index + 1}`}</span>
+                  </button>)}
+                </div>
+                <div className="mt-3 grid gap-1.5 border-t border-[#ddcfbc] pt-3">{directorChecks.map((check) => <div key={check.id} className="flex gap-2 text-[10px] leading-4 text-[#625d54]"><Check className={cn("mt-0.5 size-3 shrink-0", check.status === "pass" ? "text-[#3f7658]" : "text-[#a9503f]")} /><span><strong className="text-[#3d493f]">{check.label}.</strong> {check.detail}</span></div>)}</div>
+              </div> : null}
               <label className="mt-3 block rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
                 <span className="flex items-center justify-between gap-3 text-xs font-bold text-[#34443a]"><span>Post caption</span><span className="font-medium text-[#8a8176]">{shareCaption.length}/500</span></span>
                 <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={4} className="mt-3 w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />

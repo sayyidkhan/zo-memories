@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildCarouselPlan, buildMotionPlan, isShareCancellation } from "../src/lib/social-export";
+import { assessMotionPlan, buildCarouselPlan, buildMotionPlan, isShareCancellation } from "../src/lib/social-export";
 
 describe("buildCarouselPlan", () => {
   test("adds a cover and closing card around one slide per photo", () => {
@@ -44,6 +44,12 @@ describe("buildMotionPlan", () => {
     expect(plan).toHaveLength(3);
     expect(plan[1]?.photoIndexes).toEqual([0]);
     expect(plan[2]?.photoIndexes).toEqual([0]);
+  });
+
+  test("respects the selected payoff image and proves its renderable plan", () => {
+    const plan = buildMotionPlan(5, 4);
+    expect(plan.find((shot) => shot.purpose === "payoff")?.photoIndexes).toEqual([4]);
+    expect(assessMotionPlan(plan, 5).every((check) => check.status === "pass")).toBe(true);
   });
 });
 
