@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -45,7 +45,7 @@ const socialTargets: SocialTarget[] = [
 
 const socialExportRendererVersion: Record<SocialExportFormat, string> = {
   image: "carousel-v3",
-  video: "motion-v6",
+  video: "motion-v7",
 };
 
 interface ExportAsset {
@@ -103,6 +103,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const saveControllerRef = useRef<AbortController | null>(null);
   const saveAttemptRef = useRef(0);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(true);
   const [videoProgress, setVideoProgress] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const target = socialTargets.find((item) => item.id === targetId) ?? socialTargets[0]!;
@@ -156,6 +157,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setPreviewExpanded(false);
     setPreviewZoom(1);
     setVideoPlaying(false);
+    setVideoMuted(true);
     setVideoProgress(0);
     setVideoDuration(0);
     setAsset((current) => {
@@ -399,13 +401,13 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 </> : null}
               </div>
               : <div className="group relative max-h-[min(58dvh,34rem)] max-w-full shrink-0 overflow-hidden rounded-[14px] bg-black shadow-[0_22px_60px_rgba(0,0,0,.35)] sm:rounded-[18px]">
-                <video ref={videoRef} src={activePreviewUrl} autoPlay loop muted playsInline onLoadedMetadata={(event) => setVideoDuration(event.currentTarget.duration)} onTimeUpdate={(event) => setVideoProgress(event.currentTarget.duration ? event.currentTarget.currentTime / event.currentTarget.duration : 0)} onPlay={() => setVideoPlaying(true)} onPause={() => setVideoPlaying(false)} className="max-h-[min(58dvh,34rem)] w-auto max-w-full" />
+                <video ref={videoRef} src={activePreviewUrl} autoPlay loop muted={videoMuted} playsInline onLoadedMetadata={(event) => setVideoDuration(event.currentTarget.duration)} onTimeUpdate={(event) => setVideoProgress(event.currentTarget.duration ? event.currentTarget.currentTime / event.currentTarget.duration : 0)} onPlay={() => setVideoPlaying(true)} onPause={() => setVideoPlaying(false)} className="max-h-[min(58dvh,34rem)] w-auto max-w-full" />
                 <button type="button" onClick={() => void toggleVideoPlayback()} className="absolute inset-0 grid place-items-center" aria-label={videoPlaying ? "Pause motion story" : "Play motion story"} aria-pressed={videoPlaying}>
                   {!videoPlaying ? <span className="grid size-14 place-items-center rounded-full border border-white/25 bg-[#102019]/75 text-white shadow-xl backdrop-blur-md"><Play className="ml-0.5 size-6 fill-current" /></span> : null}
                 </button>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(0deg,rgba(7,18,12,.88),transparent)] px-3 pb-3 pt-12 text-white">
                   <div className="h-1 overflow-hidden rounded-full bg-white/25"><div className="h-full origin-left rounded-full bg-[#efc46f]" style={{ transform: `scaleX(${videoProgress})` }} /></div>
-                  <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[.12em]"><span className="flex items-center gap-1.5">{videoPlaying ? <Pause className="size-3" /> : <Play className="size-3 fill-current" />}{videoTime((videoDuration || target.profile.durationMs / 1000) * videoProgress)} / {videoTime(videoDuration || target.profile.durationMs / 1000)}</span><span className="flex items-center gap-1.5 text-white/70"><VolumeX className="size-3" />Muted preview</span></div>
+                  <div className="pointer-events-auto mt-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[.12em]"><span className="flex items-center gap-1.5">{videoPlaying ? <Pause className="size-3" /> : <Play className="size-3 fill-current" />}{videoTime((videoDuration || target.profile.durationMs / 1000) * videoProgress)} / {videoTime(videoDuration || target.profile.durationMs / 1000)}</span><button type="button" onClick={() => setVideoMuted((muted) => !muted)} className="flex items-center gap-1.5 text-white/80 transition hover:text-white">{videoMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}{videoMuted ? "Tap for sound" : "Sound on"}</button></div>
                 </div>
               </div>
               : <div className="relative grid max-h-[32rem] w-[88%] max-w-[22rem] overflow-hidden rounded-[18px] border border-white/15 bg-[#304a3e] text-center shadow-[0_22px_60px_rgba(0,0,0,.35)] sm:w-[74%] sm:rounded-[20px]" style={{ aspectRatio }}>

@@ -749,8 +749,44 @@ function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 function videoMimeType() {
-  const types = ["video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  const types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
   return types.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
+}
+
+async function addAmbientSoundtrack(stream: MediaStream) {
+  if (!window.AudioContext) return () => {};
+  const context = new AudioContext();
+  const destination = context.createMediaStreamDestination();
+  const master = context.createGain();
+  const lfo = context.createOscillator();
+  const lfoGain = context.createGain();
+  const tones = [164.81, 220, 246.94].map((frequency) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = frequency;
+    gain.gain.value = 0.018;
+    oscillator.connect(gain).connect(master);
+    return oscillator;
+  });
+  master.gain.value = 0.0001;
+  lfo.frequency.value = 0.08;
+  lfoGain.gain.value = 0.014;
+  lfo.connect(lfoGain).connect(master.gain);
+  master.connect(destination);
+  try { await context.resume(); } catch { /* Exports remain usable without preview audio. */ }
+  const start = context.currentTime;
+  master.gain.exponentialRampToValueAtTime(0.06, start + 0.7);
+  lfo.start(start);
+  tones.forEach((tone) => tone.start(start));
+  const audioTrack = destination.stream.getAudioTracks()[0];
+  if (audioTrack) stream.addTrack(audioTrack);
+  return () => {
+    tones.forEach((tone) => tone.stop());
+    lfo.stop();
+    audioTrack?.stop();
+    void context.close();
+  };
 }
 
 function paintOutput(renderCanvas: HTMLCanvasElement, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D) {
@@ -761,6 +797,7 @@ function paintOutput(renderCanvas: HTMLCanvasElement, outputCanvas: HTMLCanvasEl
 async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: CanvasRenderingContext2D, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[]) {
   if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
   const stream = outputCanvas.captureStream(30);
+  const stopSoundtrack = await addAmbientSoundtrack(stream);
   const mimeType = videoMimeType();
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: options.profile.videoBitrate });
   const chunks: BlobPart[] = [];
@@ -771,22 +808,26 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
   });
   const duration = options.profile.durationMs;
   const startedAt = performance.now();
-  recorder.start(250);
-  await new Promise<void>((resolve) => {
-    const animate = (now: number) => {
-      const elapsed = now - startedAt;
-      const progress = Math.min(elapsed / duration, 1);
-      drawFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
-      paintOutput(renderCanvas, outputCanvas, outputContext);
-      options.onProgress?.(0.3 + progress * 0.55);
-      if (progress < 1) requestAnimationFrame(animate);
-      else resolve();
-    };
-    requestAnimationFrame(animate);
-  });
-  recorder.stop();
-  stream.getTracks().forEach((track) => track.stop());
-  return result;
+  try {
+    recorder.start(250);
+    await new Promise<void>((resolve) => {
+      const animate = (now: number) => {
+        const elapsed = now - startedAt;
+        const progress = Math.min(elapsed / duration, 1);
+        drawFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
+        paintOutput(renderCanvas, outputCanvas, outputContext);
+        options.onProgress?.(0.3 + progress * 0.55);
+        if (progress < 1) requestAnimationFrame(animate);
+        else resolve();
+      };
+      requestAnimationFrame(animate);
+    });
+    recorder.stop();
+    return await result;
+  } finally {
+    stopSoundtrack();
+    stream.getTracks().forEach((track) => track.stop());
+  }
 }
 
 export async function generateSocialExport(options: SocialExportOptions): Promise<Blob[]> {

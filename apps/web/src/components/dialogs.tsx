@@ -170,7 +170,7 @@ function UploadFileIcon({ file }: { file: File }) {
   return <FileText className="size-5" />;
 }
 
-export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean; onClose: () => void; spaceId: string; albums: Album[] }) {
+export function UploadDialog({ open, onClose, spaceId, albums, onUploaded }: { open: boolean; onClose: () => void; spaceId: string; albums: Album[]; onUploaded?: (summary: { photoCount: number }) => void }) {
   const queryClient = useQueryClient();
   const [files, setFiles] = useState<PendingUpload[]>([]);
   const mutation = useMutation({
@@ -192,7 +192,7 @@ export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean
       }
       return { succeeded, failed };
     },
-    onSuccess: async ({ succeeded, failed }) => {
+    onSuccess: async ({ succeeded, failed }, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["objects", spaceId] }),
         queryClient.invalidateQueries({ queryKey: ["spaces"] }),
@@ -202,6 +202,7 @@ export function UploadDialog({ open, onClose, spaceId, albums }: { open: boolean
         return;
       }
       toast.success(`${succeeded} ${succeeded === 1 ? "moment" : "moments"} added to your timeline`);
+      onUploaded?.({ photoCount: variables.uploads.filter((upload) => upload.file.type.startsWith("image/")).length });
       setFiles([]);
       onClose();
     },

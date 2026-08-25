@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Album as AlbumIcon, BookOpen, Check, CircleHelp, ImagePlus, Images, Search, Sparkles, UserPlus, X } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -97,6 +97,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
   const [openStory, setOpenStory] = useState<Story | null>(null);
   const [revealStoryId, setRevealStoryId] = useState<string | null>(null);
   const [view, setView] = useState<"stories" | "moments">("stories");
+  const demoOpened = useRef(false);
   const { selectedAlbumId, setSelectedAlbumId, search, setSearch } = useAppStore();
   const deferredSearch = useDeferredValue(search);
   const detail = useQuery({ queryKey: ["space", spaceId], queryFn: () => api.getSpace(spaceId) });
@@ -107,6 +108,9 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
     enabled: view === "moments",
   });
   const stories = useQuery({ queryKey: ["stories", spaceId], queryFn: () => api.listStories(spaceId) });
+  const storyList = stories.data?.stories ?? [];
+  const objectList = allObjects.data?.objects ?? [];
+  const filteredObjects = timelineObjects.data?.objects ?? [];
   const removeObject = useMutation({
     mutationFn: (object: MomentObject) => api.deleteObject(spaceId, object.id),
     onSuccess: async () => {
@@ -127,14 +131,39 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       toast.success("Story deleted");
     },
   });
+  const createFirstStory = useMutation({
+    mutationFn: async () => {
+      const { objects } = await api.listObjects(spaceId);
+      const selected = objects.filter((object) => object.kind === "photo").sort((left, right) => left.occurredAt.localeCompare(right.occurredAt)).slice(0, 5);
+      if (selected.length < 3) throw new Error("Add at least three photos before creating the first story");
+      const momentIds = selected.map((object) => object.id);
+      const title = "Our first story";
+      const { opening } = await api.suggestStoryOpening(spaceId, { title, momentIds });
+      const { blueprint } = await api.suggestStoryBlueprint(spaceId, { title, opening, momentIds });
+      return api.createStory(spaceId, { title, opening, blueprint, momentIds, style: "auto" });
+    },
+    onSuccess: async ({ story }) => {
+      await queryClient.invalidateQueries({ queryKey: ["stories", spaceId] });
+      setRevealStoryId(story.id);
+      setOpenStory(story);
+      setView("stories");
+      toast.success("Your first story is ready to make your own");
+    },
+    onError: () => toast.error("Your moments are safe. We could not draft the first story yet."),
+  });
+
+  useEffect(() => {
+    if (!isDemo || demoOpened.current || !storyList.length || allObjects.isPending) return;
+    demoOpened.current = true;
+    const featured = storyList.find((story) => story.style === "cinematic") ?? storyList[0]!;
+    setOpenStory(featured);
+    setRevealStoryId(featured.id);
+  }, [allObjects.isPending, isDemo, storyList]);
 
   if (detail.isPending) return <div className="grid min-h-[70vh] place-items-center text-[#607066]"><Spinner /></div>;
   if (detail.isError || !detail.data) return <EmptyState icon={<Images className="size-7" />} title="This space could not open" body="Refresh the page and try again." />;
 
   const { space, membership, members, invitations, albums } = detail.data;
-  const storyList = stories.data?.stories ?? [];
-  const objectList = allObjects.data?.objects ?? [];
-  const filteredObjects = timelineObjects.data?.objects ?? [];
   const grouped = filteredObjects.reduce<Record<string, MomentObject[]>>((groups, object) => {
     const month = monthLabel(object.occurredAt);
     (groups[month] ??= []).push(object);
@@ -216,7 +245,10 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
         </div>
       </div>
 
-      <UploadDialog open={dialog === "upload"} onClose={() => setDialog(null)} spaceId={spaceId} albums={albums} />
+      <UploadDialog open={dialog === "upload"} onClose={() => setDialog(null)} spaceId={spaceId} albums={albums} onUploaded={({ photoCount }) => {
+        const existingPhotos = objectList.filter((object) => object.kind === "photo").length;
+        if (!isDemo && !storyList.length && photoCount && existingPhotos < 3 && existingPhotos + photoCount >= 3 && existingPhotos + photoCount <= 5) createFirstStory.mutate();
+      }} />
       <InviteDialog open={dialog === "invite"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <AlbumDialog open={dialog === "album"} onClose={() => setDialog(null)} spaceId={spaceId} />
       <StoryDialog
