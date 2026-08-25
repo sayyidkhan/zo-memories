@@ -45,7 +45,7 @@ const socialTargets: SocialTarget[] = [
 
 const socialExportRendererVersion: Record<SocialExportFormat, string> = {
   image: "carousel-v3",
-  video: "motion-v7",
+  video: "motion-v8",
 };
 
 interface ExportAsset {

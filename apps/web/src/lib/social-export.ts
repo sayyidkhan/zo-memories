@@ -43,6 +43,15 @@ export interface CarouselPlanSlide {
   photoIndexes: number[];
 }
 
+export interface MotionPlanShot {
+  kind: "opening" | "moment" | "closing";
+  photoIndexes: number[];
+  start: number;
+  end: number;
+  camera: "push-in" | "pan-left" | "pan-right" | "pull-back";
+  transitionIn: "cut" | "dissolve" | "dip-to-ink";
+}
+
 const palette = {
   ink: "#20372d",
   cream: "#fff8ec",
@@ -65,12 +74,12 @@ function fillRounded(context: CanvasRenderingContext2D, colour: string, x: numbe
   context.restore();
 }
 
-function cover(context: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number, scale = 1, offsetX = 0) {
+function cover(context: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number, scale = 1, offsetX = 0, offsetY = 0) {
   const ratio = Math.max(width / image.naturalWidth, height / image.naturalHeight) * scale;
   const sourceWidth = width / ratio;
   const sourceHeight = height / ratio;
   const sourceX = Math.max(0, (image.naturalWidth - sourceWidth) / 2 + offsetX);
-  const sourceY = Math.max(0, (image.naturalHeight - sourceHeight) / 2);
+  const sourceY = Math.max(0, (image.naturalHeight - sourceHeight) / 2 + offsetY);
   context.drawImage(image, sourceX, sourceY, Math.min(sourceWidth, image.naturalWidth - sourceX), Math.min(sourceHeight, image.naturalHeight - sourceY), x, y, width, height);
 }
 
@@ -365,14 +374,140 @@ function drawCinematic(context: CanvasRenderingContext2D, story: Story, moments:
   brand(context, width, height, palette.cream, profile);
 }
 
-function drawFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], progress: number) {
-  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-  const renderer = options.story.style === "scrapbook" ? drawScrapbook : options.story.style === "cinematic" ? drawCinematic : drawClassic;
-  renderer(context, options.story, options.moments, photos, progress, options.includeLocation, options.includeDate, options.profile);
-  if (options.story.style !== "classic") {
-    const total = Math.max(photos.length, 1);
-    motionProgress(context, options.profile, progress, Math.min(total, Math.floor(progress * total) + 1), total, palette.gold);
+function easeInOut(value: number) {
+  return value < .5 ? 2 * value * value : 1 - ((-2 * value + 2) ** 2) / 2;
+}
+
+function clamp(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+/** A fixed shot list makes short exports read as a film instead of a wallpaper loop. */
+export function buildMotionPlan(photoCount: number): MotionPlanShot[] {
+  const count = Math.max(1, photoCount);
+  const shots: Array<Omit<MotionPlanShot, "start" | "end"> & { duration: number }> = [
+    { kind: "opening", photoIndexes: [0], duration: .17, camera: "push-in", transitionIn: "cut" },
+  ];
+  const sceneDuration = .65 / count;
+  for (let index = 0; index < count; index += 1) {
+    shots.push({
+      kind: "moment",
+      photoIndexes: [index],
+      duration: sceneDuration,
+      camera: ["pan-left", "push-in", "pan-right", "pull-back"][index % 4] as MotionPlanShot["camera"],
+      transitionIn: index === count - 1 ? "dip-to-ink" : "dissolve",
+    });
   }
+  shots.push({ kind: "closing", photoIndexes: Array.from({ length: Math.min(3, count) }, (_, index) => Math.max(0, count - 3 + index)), duration: .18, camera: "pull-back", transitionIn: "dissolve" });
+  let cursor = 0;
+  return shots.map(({ duration, ...shot }) => {
+    const start = cursor;
+    cursor += duration;
+    return { ...shot, start, end: cursor };
+  });
+}
+
+function motionCamera(shot: MotionPlanShot, progress: number) {
+  const eased = easeInOut(progress);
+  switch (shot.camera) {
+    case "pan-left": return { scale: 1.1, offsetX: 24 - eased * 48, offsetY: -8 + eased * 16 };
+    case "pan-right": return { scale: 1.1, offsetX: -24 + eased * 48, offsetY: 8 - eased * 16 };
+    case "pull-back": return { scale: 1.14 - eased * .1, offsetX: 0, offsetY: 10 - eased * 18 };
+    default: return { scale: 1.03 + eased * .1, offsetX: -8 + eased * 16, offsetY: 7 - eased * 14 };
+  }
+}
+
+function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], shot: MotionPlanShot, localProgress: number, index: number, total: number) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const side = Math.max(54, safe.left);
+  const firstPhotoIndex = shot.photoIndexes[0];
+  const photo = firstPhotoIndex === undefined ? undefined : photos[firstPhotoIndex];
+  const camera = motionCamera(shot, localProgress);
+  context.fillStyle = palette.ink;
+  context.fillRect(0, 0, width, height);
+
+  if (shot.kind === "closing") {
+    const mosaic = shot.photoIndexes.map((photoIndex) => photos[photoIndex]).filter((item): item is LoadedPhoto => Boolean(item));
+    if (mosaic.length) drawPhotoMosaic(context, mosaic, side, height * .105, width - side * 2, height * .32, 22);
+    const glow = context.createRadialGradient(width * .5, height * .74, 0, width * .5, height * .74, width * .7);
+    glow.addColorStop(0, "rgba(239,196,111,.15)");
+    glow.addColorStop(1, "rgba(20,39,31,0)");
+    context.fillStyle = glow;
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = palette.gold;
+    context.font = "700 17px sans-serif";
+    context.fillText("THE PART WE KEEP", side, height * .54);
+    const closingLines = title(context, "Some journeys end. The story keeps moving.", side, height * .58, width - side * 2, palette.cream, 58, 3);
+    context.fillStyle = "rgba(255,248,236,.76)";
+    context.font = "500 20px sans-serif";
+    wrapText(context, storyClosing(options.story), side, height * .58 + closingLines * 54 + 28, width - side * 2, 29, 3);
+    context.fillStyle = palette.gold;
+    context.font = "700 17px sans-serif";
+    context.fillText(storySignature(options.story, options.moments).toUpperCase(), side, height - Math.max(112, safe.bottom + 66));
+    motionProgress(context, options.profile, .995, index + 1, total, palette.gold);
+    brand(context, width, height, palette.cream, options.profile);
+    return;
+  }
+
+  if (photo) cover(context, photo.image, 0, 0, width, height, camera.scale * options.profile.cropScale, camera.offsetX, camera.offsetY);
+  const shade = context.createLinearGradient(0, 0, 0, height);
+  shade.addColorStop(0, shot.kind === "opening" ? "rgba(7,18,12,.26)" : "rgba(7,18,12,.15)");
+  shade.addColorStop(.5, "rgba(7,18,12,.05)");
+  shade.addColorStop(1, "rgba(7,18,12,.92)");
+  context.fillStyle = shade;
+  context.fillRect(0, 0, width, height);
+
+  if (shot.kind === "opening") {
+    const intro = easeInOut(clamp(localProgress / .5));
+    context.save();
+    context.globalAlpha = intro;
+    context.fillStyle = palette.gold;
+    context.font = "700 17px sans-serif";
+    context.fillText("A SHARED STORY", side, Math.max(92, safe.top + 42));
+    const heading = options.story.canvas?.title ?? options.story.title;
+    const headingSize = heading.length > 34 ? 62 : 76;
+    const titleTop = Math.min(height * .54, height - safe.bottom - 420);
+    const lines = title(context, heading, side, titleTop, width - side * 2, palette.cream, headingSize, 3);
+    context.fillStyle = "rgba(255,248,236,.83)";
+    context.font = "500 21px sans-serif";
+    wrapText(context, storyOpening(options.story), side, titleTop + lines * headingSize * .92 + 28, width - side * 2, 30, 2);
+    context.restore();
+  } else {
+    const chapter = chapterForMoment(options.story, photo?.moment.id);
+    context.fillStyle = palette.gold;
+    context.font = "700 17px sans-serif";
+    context.fillText(`${chapter?.beat.toUpperCase().replace("-", " ") ?? "MOMENT"}  ·  ${String(index).padStart(2, "0")}`, side, height * .63);
+    const lines = title(context, chapter?.title ?? photoTitle(options.story, photo), side, height * .675, width - side - Math.max(54, safe.right), palette.cream, 56, 2);
+    context.fillStyle = "rgba(255,248,236,.78)";
+    context.font = "500 19px sans-serif";
+    wrapText(context, chapterNarration(options.story, photo?.moment.id), side, height * .675 + lines * 52 + 20, width - side * 2, 27, 2);
+  }
+  motionProgress(context, options.profile, clamp((localProgress + index) / total), index + 1, total, palette.gold);
+  brand(context, width, height, palette.cream, options.profile);
+}
+
+function drawMotionFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], progress: number) {
+  const plan = buildMotionPlan(photos.length);
+  const position = clamp(progress);
+  const index = Math.min(plan.length - 1, plan.findIndex((shot) => position < shot.end));
+  const shot = plan[index]!;
+  const localProgress = clamp((position - shot.start) / (shot.end - shot.start));
+  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+  const transitionStart = .86;
+  if (index < plan.length - 1 && localProgress > transitionStart) {
+    const blend = easeInOut((localProgress - transitionStart) / (1 - transitionStart));
+    context.save();
+    context.globalAlpha = 1 - blend;
+    drawMotionShot(context, options, photos, shot, localProgress, index, plan.length);
+    context.restore();
+    context.save();
+    context.globalAlpha = blend;
+    drawMotionShot(context, options, photos, plan[index + 1]!, 0, index + 1, plan.length);
+    context.restore();
+    return;
+  }
+  drawMotionShot(context, options, photos, shot, localProgress, index, plan.length);
 }
 
 export function buildCarouselPlan(photoCount: number, maxSlides: number): CarouselPlanSlide[] {
@@ -814,7 +949,7 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
       const animate = (now: number) => {
         const elapsed = now - startedAt;
         const progress = Math.min(elapsed / duration, 1);
-        drawFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
+        drawMotionFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
         paintOutput(renderCanvas, outputCanvas, outputContext);
         options.onProgress?.(0.3 + progress * 0.55);
         if (progress < 1) requestAnimationFrame(animate);
