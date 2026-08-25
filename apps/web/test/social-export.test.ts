@@ -30,8 +30,13 @@ describe("buildMotionPlan", () => {
     expect(plan.map((shot) => shot.kind)).toEqual(["opening", "moment", "moment", "moment", "moment", "closing"]);
     expect(plan[0]?.start).toBe(0);
     expect(plan.at(-1)?.end).toBe(1);
-    expect(plan.slice(1, -1).map((shot) => shot.camera)).toEqual(["pan-left", "push-in", "pan-right", "pull-back"]);
-    expect(plan.slice(1).every((shot) => shot.transitionIn !== "cut")).toBe(true);
+    expect(plan.filter((shot) => shot.purpose === "payoff")).toHaveLength(1);
+    expect(plan.find((shot) => shot.purpose === "payoff")?.camera).toBe("push-in");
+    expect(plan.find((shot) => shot.purpose === "payoff")?.transitionIn).toBe("dip-to-ink");
+    expect(plan.find((shot) => shot.purpose === "payoff")!.end - plan.find((shot) => shot.purpose === "payoff")!.start).toBeGreaterThan(
+      plan.find((shot) => shot.purpose === "journey")!.end - plan.find((shot) => shot.purpose === "journey")!.start,
+    );
+    expect(plan.map((shot) => shot.end).at(-1)).toBeCloseTo(1, 10);
   });
 
   test("still makes a complete film when there is only one source photo", () => {

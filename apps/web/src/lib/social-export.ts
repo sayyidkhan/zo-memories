@@ -50,6 +50,7 @@ export interface MotionPlanShot {
   end: number;
   camera: "push-in" | "pan-left" | "pan-right" | "pull-back";
   transitionIn: "cut" | "dissolve" | "dip-to-ink";
+  purpose: "recognition" | "journey" | "build" | "payoff" | "resolution";
 }
 
 const palette = {
@@ -382,23 +383,36 @@ function clamp(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
-/** A fixed shot list makes short exports read as a film instead of a wallpaper loop. */
+/**
+ * A deterministic director's plan. The same arc drives camera movement, cut energy,
+ * the visual payoff and the generated soundtrack so an export reads as one film.
+ */
 export function buildMotionPlan(photoCount: number): MotionPlanShot[] {
   const count = Math.max(1, photoCount);
   const shots: Array<Omit<MotionPlanShot, "start" | "end"> & { duration: number }> = [
-    { kind: "opening", photoIndexes: [0], duration: .17, camera: "push-in", transitionIn: "cut" },
+    { kind: "opening", photoIndexes: [0], duration: .15, camera: "push-in", transitionIn: "cut", purpose: "recognition" },
   ];
-  const sceneDuration = .65 / count;
+  const payoffIndex = count === 1 ? 0 : Math.min(count - 1, Math.max(1, Math.round((count - 1) * .62)));
+  const weights = Array.from({ length: count }, (_, index) => {
+    if (index === payoffIndex) return 1.8;
+    if (index === count - 1) return .9;
+    if (index < payoffIndex) return .95 + index * .08;
+    return 1.08;
+  });
+  const availableDuration = .68;
+  const weightTotal = weights.reduce((total, weight) => total + weight, 0);
   for (let index = 0; index < count; index += 1) {
+    const purpose = index === payoffIndex ? "payoff" : index === count - 1 ? "resolution" : index === 0 ? "journey" : index < payoffIndex ? "build" : "journey";
     shots.push({
       kind: "moment",
       photoIndexes: [index],
-      duration: sceneDuration,
-      camera: ["pan-left", "push-in", "pan-right", "pull-back"][index % 4] as MotionPlanShot["camera"],
-      transitionIn: index === count - 1 ? "dip-to-ink" : "dissolve",
+      duration: availableDuration * (weights[index] ?? 1) / weightTotal,
+      camera: purpose === "payoff" ? "push-in" : ["pan-left", "pull-back", "pan-right", "push-in"][index % 4] as MotionPlanShot["camera"],
+      transitionIn: purpose === "payoff" ? "dip-to-ink" : purpose === "build" ? "cut" : "dissolve",
+      purpose,
     });
   }
-  shots.push({ kind: "closing", photoIndexes: Array.from({ length: Math.min(3, count) }, (_, index) => Math.max(0, count - 3 + index)), duration: .18, camera: "pull-back", transitionIn: "dissolve" });
+  shots.push({ kind: "closing", photoIndexes: Array.from({ length: Math.min(3, count) }, (_, index) => Math.max(0, count - 3 + index)), duration: .17, camera: "pull-back", transitionIn: "dissolve", purpose: "resolution" });
   let cursor = 0;
   return shots.map(({ duration, ...shot }) => {
     const start = cursor;
@@ -458,6 +472,14 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
   context.fillStyle = shade;
   context.fillRect(0, 0, width, height);
 
+  if (shot.purpose === "payoff") {
+    const flare = context.createRadialGradient(width * .5, height * .42, 0, width * .5, height * .42, width * .68);
+    flare.addColorStop(0, `rgba(239,196,111,${.2 * Math.sin(localProgress * Math.PI)})`);
+    flare.addColorStop(1, "rgba(239,196,111,0)");
+    context.fillStyle = flare;
+    context.fillRect(0, 0, width, height);
+  }
+
   if (shot.kind === "opening") {
     const intro = easeInOut(clamp(localProgress / .5));
     context.save();
@@ -477,7 +499,8 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     const chapter = chapterForMoment(options.story, photo?.moment.id);
     context.fillStyle = palette.gold;
     context.font = "700 17px sans-serif";
-    context.fillText(`${chapter?.beat.toUpperCase().replace("-", " ") ?? "MOMENT"}  ·  ${String(index).padStart(2, "0")}`, side, height * .63);
+    const sceneLabel = shot.purpose === "payoff" ? "THE MOMENT IT ALL LANDED" : chapter?.beat.toUpperCase().replace("-", " ") ?? "MOMENT";
+    context.fillText(`${sceneLabel}  ·  ${String(index).padStart(2, "0")}`, side, height * .63);
     const lines = title(context, chapter?.title ?? photoTitle(options.story, photo), side, height * .675, width - side - Math.max(54, safe.right), palette.cream, 56, 2);
     context.fillStyle = "rgba(255,248,236,.78)";
     context.font = "500 19px sans-serif";
@@ -487,16 +510,27 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
   brand(context, width, height, palette.cream, options.profile);
 }
 
-function drawMotionFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], progress: number) {
-  const plan = buildMotionPlan(photos.length);
+function drawMotionFrame(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], plan: MotionPlanShot[], progress: number) {
   const position = clamp(progress);
   const index = Math.min(plan.length - 1, plan.findIndex((shot) => position < shot.end));
   const shot = plan[index]!;
   const localProgress = clamp((position - shot.start) / (shot.end - shot.start));
   context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-  const transitionStart = .86;
+  const nextShot = plan[index + 1];
+  const transition = nextShot?.transitionIn ?? "cut";
+  const transitionStart = transition === "cut" ? 1 : transition === "dip-to-ink" ? .78 : .86;
   if (index < plan.length - 1 && localProgress > transitionStart) {
     const blend = easeInOut((localProgress - transitionStart) / (1 - transitionStart));
+    if (transition === "dip-to-ink") {
+      const ink = blend < .5 ? blend * 2 : (1 - blend) * 2;
+      drawMotionShot(context, options, photos, blend < .5 ? shot : plan[index + 1]!, blend < .5 ? localProgress : 0, blend < .5 ? index : index + 1, plan.length);
+      context.save();
+      context.globalAlpha = ink;
+      context.fillStyle = palette.ink;
+      context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+      context.restore();
+      return;
+    }
     context.save();
     context.globalAlpha = 1 - blend;
     drawMotionShot(context, options, photos, shot, localProgress, index, plan.length);
@@ -888,7 +922,7 @@ function videoMimeType() {
   return types.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
-async function addAmbientSoundtrack(stream: MediaStream) {
+async function addAmbientSoundtrack(stream: MediaStream, plan: MotionPlanShot[], durationMs: number) {
   if (!window.AudioContext) return () => {};
   const context = new AudioContext();
   const destination = context.createMediaStreamDestination();
@@ -914,6 +948,19 @@ async function addAmbientSoundtrack(stream: MediaStream) {
   master.gain.exponentialRampToValueAtTime(0.06, start + 0.7);
   lfo.start(start);
   tones.forEach((tone) => tone.start(start));
+  for (const shot of plan.filter((item) => item.purpose === "build" || item.purpose === "payoff")) {
+    const accent = context.createOscillator();
+    const accentGain = context.createGain();
+    const at = start + durationMs / 1000 * shot.start;
+    accent.type = shot.purpose === "payoff" ? "triangle" : "sine";
+    accent.frequency.setValueAtTime(shot.purpose === "payoff" ? 440 : 329.63, at);
+    accentGain.gain.setValueAtTime(0.0001, at);
+    accentGain.gain.exponentialRampToValueAtTime(shot.purpose === "payoff" ? .07 : .035, at + .025);
+    accentGain.gain.exponentialRampToValueAtTime(0.0001, at + (shot.purpose === "payoff" ? .46 : .22));
+    accent.connect(accentGain).connect(master);
+    accent.start(at);
+    accent.stop(at + .55);
+  }
   const audioTrack = destination.stream.getAudioTracks()[0];
   if (audioTrack) stream.addTrack(audioTrack);
   return () => {
@@ -932,7 +979,8 @@ function paintOutput(renderCanvas: HTMLCanvasElement, outputCanvas: HTMLCanvasEl
 async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: CanvasRenderingContext2D, outputCanvas: HTMLCanvasElement, outputContext: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[]) {
   if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
   const stream = outputCanvas.captureStream(30);
-  const stopSoundtrack = await addAmbientSoundtrack(stream);
+  const plan = buildMotionPlan(photos.length);
+  const stopSoundtrack = await addAmbientSoundtrack(stream, plan, options.profile.durationMs);
   const mimeType = videoMimeType();
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: options.profile.videoBitrate });
   const chunks: BlobPart[] = [];
@@ -949,7 +997,7 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
       const animate = (now: number) => {
         const elapsed = now - startedAt;
         const progress = Math.min(elapsed / duration, 1);
-        drawMotionFrame(renderContext, options, photos, progress === 1 ? 0.999 : progress);
+        drawMotionFrame(renderContext, options, photos, plan, progress === 1 ? 0.999 : progress);
         paintOutput(renderCanvas, outputCanvas, outputContext);
         options.onProgress?.(0.3 + progress * 0.55);
         if (progress < 1) requestAnimationFrame(animate);

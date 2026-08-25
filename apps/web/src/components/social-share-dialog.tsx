@@ -45,7 +45,7 @@ const socialTargets: SocialTarget[] = [
 
 const socialExportRendererVersion: Record<SocialExportFormat, string> = {
   image: "carousel-v3",
-  video: "motion-v8",
+  video: "motion-v9-directed",
 };
 
 interface ExportAsset {
@@ -371,6 +371,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             <section>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Preview and export</p>
               <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to build its crop, safe area and pacing. The preview appears first; select it again to download.</p>
+              {format === "video" ? <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Directed motion:</strong> your story now builds toward one chosen visual payoff, with camera energy, transitions and soundtrack accents following the same arc.</p> : null}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
                   {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
@@ -421,7 +422,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
               <div className="w-full max-w-xs rounded-[24px] border border-white/10 bg-[#26372f] p-6 text-center text-[#fff8ec] shadow-[0_24px_70px_rgba(0,0,0,.35)]">
                 <span className="mx-auto grid size-14 place-items-center rounded-full bg-white/10"><Spinner /></span>
                 <strong className="mt-5 block font-display text-2xl leading-tight">{phase === "rendering" ? `Rendering for ${target.platform}` : "Opening saved export"}</strong>
-                <p className="mt-2 text-xs leading-5 text-white/60">{phase === "rendering" ? "Building the cover, chapter slides and closing card." : "Preparing the existing master for preview."}</p>
+                <p className="mt-2 text-xs leading-5 text-white/60">{phase === "rendering" ? target.format === "video" ? "Directing the arc, visual payoff and soundtrack cues." : "Building the cover, chapter slides and closing card." : "Preparing the existing master for preview."}</p>
                 <div className="mt-6 flex items-center justify-between text-xs font-bold uppercase tracking-[.14em] text-[#efc46f]"><span>Progress</span><span>{Math.round(progress * 100)}%</span></div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full w-full origin-left rounded-full bg-[#efc46f]" style={{ transform: `scaleX(${Math.max(0.05, progress)})` }} /></div>
               </div>
