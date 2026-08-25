@@ -26,6 +26,7 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    emptyOutDir: true,
+    // Keep prior hashed bundles available while cached HTML documents expire.
+    emptyOutDir: false,
   },
 });
