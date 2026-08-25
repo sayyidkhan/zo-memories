@@ -101,6 +101,33 @@ export const storyStyleSchema = z.enum(["classic", "flipbook", "comic", "scrapbo
 export const storyStylePreferenceSchema = z.enum(["auto", "classic", "scrapbook", "cinematic"]);
 export const storyStyleSourceSchema = z.enum(["auto", "manual", "ai"]);
 export const storyBeatSchema = z.enum(["arrival", "discovery", "highlight", "turning-point", "reflection"]);
+export const directorShotKindSchema = z.enum(["opening", "moment", "closing"]);
+export const directorPurposeSchema = z.enum(["recognition", "journey", "build", "payoff", "resolution"]);
+export const directorCameraSchema = z.enum(["push-in", "pan-left", "pan-right", "pull-back"]);
+export const directorTransitionSchema = z.enum(["cut", "dissolve", "dip-to-ink"]);
+
+export const directorShotSchema = z.object({
+  id: z.string(),
+  kind: directorShotKindSchema,
+  momentId: z.string().nullable(),
+  start: z.number().min(0).max(1),
+  end: z.number().min(0).max(1),
+  camera: directorCameraSchema,
+  transitionIn: directorTransitionSchema,
+  purpose: directorPurposeSchema,
+});
+
+export const directorPlanSchema = z.object({
+  id: z.string(),
+  storyId: z.string(),
+  spaceId: z.string(),
+  version: z.literal("v1"),
+  inputHash: z.string().min(16).max(128),
+  source: z.literal("deterministic"),
+  heroMomentId: z.string().nullable(),
+  shots: z.array(directorShotSchema).min(3).max(32),
+  createdAt: isoDateSchema,
+});
 
 export const storyChapterSchema = z.object({
   id: z.string(),
@@ -214,6 +241,10 @@ export const updateStoryCanvasSchema = z.object({
   canvas: storyCanvasSchema,
 });
 
+export const createDirectorPlanSchema = z.object({
+  heroMomentId: z.string().optional(),
+});
+
 export const suggestStoryStyleSchema = z.object({
   momentIds: z.array(z.string()).min(2).max(30).transform((ids) => [...new Set(ids)]),
 });
@@ -318,6 +349,8 @@ export type StoryStyle = z.infer<typeof storyStyleSchema>;
 export type StoryStylePreference = z.infer<typeof storyStylePreferenceSchema>;
 export type StoryStyleSource = z.infer<typeof storyStyleSourceSchema>;
 export type StoryBeat = z.infer<typeof storyBeatSchema>;
+export type DirectorShot = z.infer<typeof directorShotSchema>;
+export type DirectorPlan = z.infer<typeof directorPlanSchema>;
 export type StoryChapter = z.infer<typeof storyChapterSchema>;
 export type StoryBlueprint = z.infer<typeof storyBlueprintSchema>;
 export type ObjectKind = z.infer<typeof objectKindSchema>;
@@ -329,6 +362,7 @@ export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
 export type UpdateStoryInput = z.infer<typeof updateStorySchema>;
 export type UpdateStoryCanvasInput = z.infer<typeof updateStoryCanvasSchema>;
+export type CreateDirectorPlanInput = z.infer<typeof createDirectorPlanSchema>;
 export type SuggestStoryStyleInput = z.infer<typeof suggestStoryStyleSchema>;
 export type SuggestStoryOpeningInput = z.infer<typeof suggestStoryOpeningSchema>;
 export type SuggestStoryBlueprintInput = z.infer<typeof suggestStoryBlueprintSchema>;

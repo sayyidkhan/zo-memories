@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Clapperboard, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
-import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
+import type { DirectorPlan, MomentObject, Story, StoryStyle } from "@zo-moments/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { assessMotionPlan, buildMotionPlan, generateSocialExport, isShareCancellation, type SocialExportFormat, type SocialExportProfile } from "@/lib/social-export";
@@ -88,6 +88,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const [includeLocation, setIncludeLocation] = useState(Boolean(story.location));
   const [includeDate, setIncludeDate] = useState(true);
   const [heroMomentSelection, setHeroMomentSelection] = useState("");
+  const [savedDirectorPlan, setSavedDirectorPlan] = useState<DirectorPlan | null>(null);
   const [shareCaption, setShareCaption] = useState(() => initialShareCaption(story));
   const [appearanceChanged, setAppearanceChanged] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -152,6 +153,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setIncludeLocation(Boolean(story.location));
     setIncludeDate(true);
     setHeroMomentSelection("");
+    setSavedDirectorPlan(null);
     setShareCaption(initialShareCaption(story));
     setAppearanceChanged(false);
     setError("");
@@ -275,11 +277,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
     setProgress(0);
     setPhase("rendering");
     try {
+      const director = next.format === "video"
+        ? await api.createDirectorPlan(story.spaceId, story.id, { heroMomentId: heroMomentId || undefined })
+        : null;
+      if (director) setSavedDirectorPlan(director.plan);
       const rendered = await generateSocialExport({
         story,
         moments,
         format: next.format,
         heroMomentId: next.format === "video" ? heroMomentId || undefined : undefined,
+        directorPlan: director?.plan,
         includeLocation,
         includeDate,
         outputWidth: next.width,
@@ -384,6 +391,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   </button>)}
                 </div>
                 <div className="mt-3 grid gap-1.5 border-t border-[#ddcfbc] pt-3">{directorChecks.map((check) => <div key={check.id} className="flex gap-2 text-[10px] leading-4 text-[#625d54]"><Check className={cn("mt-0.5 size-3 shrink-0", check.status === "pass" ? "text-[#3f7658]" : "text-[#a9503f]")} /><span><strong className="text-[#3d493f]">{check.label}.</strong> {check.detail}</span></div>)}</div>
+                {savedDirectorPlan ? <p className="mt-3 rounded-xl bg-[#e7efe8] px-3 py-2 text-[10px] leading-4 text-[#3f6650]"><strong>Zo production plan saved.</strong> {savedDirectorPlan.shots.length} scenes are cached for this exact story and payoff choice.</p> : null}
               </div> : null}
               <label className="mt-3 block rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
                 <span className="flex items-center justify-between gap-3 text-xs font-bold text-[#34443a]"><span>Post caption</span><span className="font-medium text-[#8a8176]">{shareCaption.length}/500</span></span>

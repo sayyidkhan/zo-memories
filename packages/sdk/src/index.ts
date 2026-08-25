@@ -5,6 +5,7 @@ import type {
   DemoMode,
   DemoLoginInput,
   CreateAlbumInput,
+  CreateDirectorPlanInput,
   CreateShareInvitationInput,
   CreateSpaceInput,
   CreateStoryInput,
@@ -19,6 +20,7 @@ import type {
   SpaceDetail,
   SpaceSummary,
   Story,
+  DirectorPlan,
   StoryRevision,
   StoryBlueprint,
   StoryStyle,
@@ -318,6 +320,13 @@ export class ZoMomentsClient {
 
   suggestStoryBlueprint(spaceId: string, input: SuggestStoryBlueprintInput): Promise<{ blueprint: StoryBlueprint; source: "ai" | "auto" }> {
     return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/suggest-blueprint`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  createDirectorPlan(spaceId: string, storyId: string, input: CreateDirectorPlanInput = {}): Promise<{ plan: DirectorPlan; cached: boolean }> {
+    return this.request(`/api/spaces/${encodeURIComponent(spaceId)}/stories/${encodeURIComponent(storyId)}/director-plan`, {
       method: "POST",
       body: JSON.stringify(input),
     });

@@ -1,5 +1,6 @@
 import type {
   Album,
+  DirectorPlan,
   Avatar,
   Invitation,
   Member,
@@ -19,6 +20,7 @@ export interface Repositories {
   shareInvitations: JsonCollection<ShareInvitation>;
   albums: JsonCollection<Album>;
   stories: JsonCollection<Story>;
+  directorPlans: JsonCollection<DirectorPlan>;
   storyRevisions: JsonCollection<StoryRevision>;
   objects: JsonCollection<MomentObject>;
   avatars: JsonCollection<Avatar>;
@@ -32,6 +34,7 @@ export function createRepositories(store: BlobStore): Repositories {
     shareInvitations: new JsonCollection(store, "share-invitations"),
     albums: new JsonCollection(store, "albums"),
     stories: new JsonCollection(store, "stories"),
+    directorPlans: new JsonCollection(store, "director-plans"),
     storyRevisions: new JsonCollection(store, "story-revisions"),
     objects: new JsonCollection(store, "objects"),
     avatars: new JsonCollection(store, "avatars"),

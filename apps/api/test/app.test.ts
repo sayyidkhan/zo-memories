@@ -255,6 +255,22 @@ describe("Zo Moments API", () => {
     expect(created.body.story.canvas?.moments.map(({ title }) => title)).toEqual(samples.map(([, caption]) => caption));
     expect(created.body.story.blueprint?.chapters).toHaveLength(2);
 
+    const director = await member.json<{ plan: { inputHash: string; heroMomentId: string | null; shots: Array<{ purpose: string; momentId: string | null }> }; cached: boolean }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/director-plan`, {
+      method: "POST",
+      body: JSON.stringify({ heroMomentId: momentIds[1] }),
+    });
+    expect(director.response.status).toBe(201);
+    expect(director.body.cached).toBe(false);
+    expect(director.body.plan.heroMomentId).toBe(momentIds[1]!);
+    expect(director.body.plan.shots.find((shot) => shot.purpose === "payoff")?.momentId).toBe(momentIds[1]!);
+    const cachedDirector = await member.json<{ plan: { inputHash: string }; cached: boolean }>(`/api/spaces/${spaceId}/stories/${created.body.story.id}/director-plan`, {
+      method: "POST",
+      body: JSON.stringify({ heroMomentId: momentIds[1] }),
+    });
+    expect(cachedDirector.response.status).toBe(200);
+    expect(cachedDirector.body.cached).toBe(true);
+    expect(cachedDirector.body.plan.inputHash).toBe(director.body.plan.inputHash);
+
     const shared = await member.json<{ stories: { title: string }[] }>(`/api/spaces/${spaceId}/stories`);
     expect(shared.response.status).toBe(200);
     expect(shared.body.stories.map(({ title }) => title)).toContain("The weekend the rain followed us");

@@ -1,5 +1,5 @@
 import { api } from "@zo-moments/sdk";
-import type { MomentObject, Story, StoryStyle } from "@zo-moments/types";
+import type { DirectorPlan, MomentObject, Story, StoryStyle } from "@zo-moments/types";
 
 export type SocialExportFormat = "image" | "video";
 
@@ -25,6 +25,7 @@ interface SocialExportOptions {
   moments: MomentObject[];
   format: SocialExportFormat;
   heroMomentId?: string | undefined;
+  directorPlan?: DirectorPlan | undefined;
   includeLocation: boolean;
   includeDate: boolean;
   outputWidth: number;
@@ -446,6 +447,24 @@ export function assessMotionPlan(plan: MotionPlanShot[], photoCount: number): Mo
     { id: "camera", label: "Camera moves vary by scene", detail: `${new Set(sourceShots.map((shot) => shot.camera)).size} camera treatments with ${cameraChanges} deliberate changes.`, status: new Set(sourceShots.map((shot) => shot.camera)).size >= Math.min(2, sourceShots.length) ? "pass" : "warn" },
     { id: "payoff", label: "One chosen image receives the payoff", detail: payoff ? `Scene ${plan.indexOf(payoff) + 1} gets the longest hold, gold bloom and an impact cue.` : "Choose a hero image to set the payoff.", status: payoff ? "pass" : "warn" },
   ];
+}
+
+function hydrateDirectorPlan(plan: DirectorPlan, photos: LoadedPhoto[]): MotionPlanShot[] | null {
+  const photoIndexes = new Map(photos.map((photo, index) => [photo.moment.id, index]));
+  const hydrated = plan.shots.map((shot) => {
+    const photoIndex = shot.momentId ? photoIndexes.get(shot.momentId) : undefined;
+    if (shot.kind !== "closing" && photoIndex === undefined) return null;
+    return {
+      kind: shot.kind,
+      photoIndexes: shot.kind === "closing" ? Array.from({ length: Math.min(3, photos.length) }, (_, index) => Math.max(0, photos.length - 3 + index)) : [photoIndex!],
+      start: shot.start,
+      end: shot.end,
+      camera: shot.camera,
+      transitionIn: shot.transitionIn,
+      purpose: shot.purpose,
+    } satisfies MotionPlanShot;
+  });
+  return hydrated.some((shot) => !shot) ? null : hydrated as MotionPlanShot[];
 }
 
 function motionCamera(shot: MotionPlanShot, progress: number) {
@@ -1007,8 +1026,9 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
   if (!("MediaRecorder" in window) || typeof outputCanvas.captureStream !== "function") throw new Error("Video creation is not supported in this browser. Try the image format instead.");
   const stream = outputCanvas.captureStream(30);
   const heroPhotoIndex = options.heroMomentId ? photos.findIndex((photo) => photo.moment.id === options.heroMomentId) : undefined;
-  const plan = buildMotionPlan(photos.length, heroPhotoIndex === -1 ? undefined : heroPhotoIndex);
-  const stopSoundtrack = await addAmbientSoundtrack(stream, plan, options.profile.durationMs);
+  const plan = options.directorPlan ? hydrateDirectorPlan(options.directorPlan, photos) : null;
+  const resolvedPlan = plan ?? buildMotionPlan(photos.length, heroPhotoIndex === -1 ? undefined : heroPhotoIndex);
+  const stopSoundtrack = await addAmbientSoundtrack(stream, resolvedPlan, options.profile.durationMs);
   const mimeType = videoMimeType();
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: options.profile.videoBitrate });
   const chunks: BlobPart[] = [];
@@ -1025,7 +1045,7 @@ async function recordVideo(renderCanvas: HTMLCanvasElement, renderContext: Canva
       const animate = (now: number) => {
         const elapsed = now - startedAt;
         const progress = Math.min(elapsed / duration, 1);
-        drawMotionFrame(renderContext, options, photos, plan, progress === 1 ? 0.999 : progress);
+        drawMotionFrame(renderContext, options, photos, resolvedPlan, progress === 1 ? 0.999 : progress);
         paintOutput(renderCanvas, outputCanvas, outputContext);
         options.onProgress?.(0.3 + progress * 0.55);
         if (progress < 1) requestAnimationFrame(animate);

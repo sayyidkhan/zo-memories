@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import {
   changePasswordSchema,
   createAlbumSchema,
+  createDirectorPlanSchema,
   createShareInvitationSchema,
   createSpaceSchema,
   createStorySchema,
@@ -19,6 +20,8 @@ import {
   updateStorySchema,
   type Album,
   type Avatar,
+  type DirectorPlan,
+  type DirectorShot,
   type Invitation,
   type Member,
   type MomentObject,
@@ -350,6 +353,71 @@ function automaticStoryBlueprint(moments: MomentObject[], opening: string): Stor
   };
 }
 
+async function directorInputHash(story: Story, photos: MomentObject[], heroMomentId: string | null): Promise<string> {
+  const input = JSON.stringify({
+    version: "v1",
+    storyId: story.id,
+    title: story.canvas?.title ?? story.title,
+    opening: story.canvas?.opening ?? story.opening,
+    blueprint: story.canvas?.blueprint ?? story.blueprint,
+    photos: photos.map(({ id, caption, occurredAt }) => ({ id, caption, occurredAt })),
+    heroMomentId,
+  });
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function createDeterministicDirectorShots(photos: MomentObject[], heroPhotoIndex: number): DirectorShot[] {
+  const count = photos.length;
+  const sceneWeights = photos.map((_, index) => index === heroPhotoIndex ? 1.8 : index === count - 1 ? .9 : index < heroPhotoIndex ? .95 + index * .08 : 1.08);
+  const weightTotal = sceneWeights.reduce((total, weight) => total + weight, 0);
+  const raw: Array<Omit<DirectorShot, "start" | "end"> & { duration: number }> = [
+    { id: "opening", kind: "opening", momentId: photos[0]?.id ?? null, duration: .15, camera: "push-in", transitionIn: "cut", purpose: "recognition" },
+    ...photos.map((photo, index) => {
+      const purpose: DirectorShot["purpose"] = index === heroPhotoIndex ? "payoff" : index === count - 1 ? "resolution" : index === 0 ? "journey" : index < heroPhotoIndex ? "build" : "journey";
+      const cameras: DirectorShot["camera"][] = ["pan-left", "pull-back", "pan-right", "push-in"];
+      const transitionIn: DirectorShot["transitionIn"] = purpose === "payoff" ? "dip-to-ink" : purpose === "build" ? "cut" : "dissolve";
+      return {
+        id: `scene-${String(index + 1).padStart(2, "0")}`,
+        kind: "moment" as const,
+        momentId: photo.id,
+        duration: .68 * (sceneWeights[index] ?? 1) / weightTotal,
+        camera: purpose === "payoff" ? "push-in" : cameras[index % cameras.length]!,
+        transitionIn,
+        purpose,
+      };
+    }),
+    { id: "closing", kind: "closing", momentId: photos.at(-1)?.id ?? null, duration: .17, camera: "pull-back", transitionIn: "dissolve", purpose: "resolution" },
+  ];
+  let cursor = 0;
+  return raw.map(({ duration, ...shot }, index) => {
+    const start = cursor;
+    cursor = index === raw.length - 1 ? 1 : cursor + duration;
+    return { ...shot, start, end: cursor };
+  });
+}
+
+async function createDirectorPlan(story: Story, moments: MomentObject[], heroMomentId: string | null): Promise<DirectorPlan> {
+  const photos = story.momentIds.map((momentId) => moments.find((moment) => moment.id === momentId)).filter((moment): moment is MomentObject => moment?.kind === "photo");
+  if (!photos.length) throw new HTTPException(400, { message: "Add at least one photo before creating a motion story" });
+  if (heroMomentId && !photos.some((photo) => photo.id === heroMomentId)) throw new HTTPException(400, { message: "The payoff image must be a photo in this story" });
+  const defaultHeroIndex = photos.length === 1 ? 0 : Math.min(photos.length - 1, Math.max(1, Math.round((photos.length - 1) * .62)));
+  const heroPhotoIndex = heroMomentId ? photos.findIndex((photo) => photo.id === heroMomentId) : defaultHeroIndex;
+  const resolvedHeroMomentId = photos[heroPhotoIndex]?.id ?? null;
+  const inputHash = await directorInputHash(story, photos, resolvedHeroMomentId);
+  return {
+    id: `director-${inputHash.slice(0, 32)}`,
+    storyId: story.id,
+    spaceId: story.spaceId,
+    version: "v1",
+    inputHash,
+    source: "deterministic",
+    heroMomentId: resolvedHeroMomentId,
+    shots: createDeterministicDirectorShots(photos, heroPhotoIndex),
+    createdAt: now(),
+  };
+}
+
 function sanitiseStoryBlueprint(value: unknown, moments: MomentObject[]): StoryBlueprint | null {
   const parsed = storyBlueprintSchema.safeParse(value);
   if (!parsed.success) return null;
@@ -558,6 +626,7 @@ async function ensureDemoWorkspace(
     await Promise.all(exportKeys.map((key) => store.delete(key)));
     await repositories.stories.delete(story.id);
     await repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id);
+    await repositories.directorPlans.deleteWhere((plan) => plan.storyId === story.id);
   }));
   await Promise.all(seededStories.map(async (story) => {
     if (!(await repositories.stories.get(story.id))) await repositories.stories.put(story);
@@ -1128,6 +1197,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
       repositories.albums.deleteWhere((album) => album.spaceId === spaceId),
       repositories.stories.deleteWhere((story) => story.spaceId === spaceId),
       repositories.storyRevisions.deleteWhere((revision) => revision.spaceId === spaceId),
+      repositories.directorPlans.deleteWhere((plan) => plan.spaceId === spaceId),
       repositories.invitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.shareInvitations.deleteWhere((invitation) => invitation.spaceId === spaceId),
       repositories.members.deleteWhere((member) => member.spaceId === spaceId),
@@ -1319,6 +1389,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
           await Promise.all(exportKeys.map((key) => store.delete(key)));
           await repositories.stories.delete(story.id);
           await repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id);
+          await repositories.directorPlans.deleteWhere((plan) => plan.storyId === story.id);
         }));
         await Promise.all(seeded.map(async (story) => {
           const current = await repositories.stories.get(story.id);
@@ -1334,6 +1405,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
           await Promise.all([
             repositories.stories.put(story),
             repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
+            repositories.directorPlans.deleteWhere((plan) => plan.storyId === story.id),
             ...(current ? [clearStoryExports(store, current)] : []),
           ]);
         }));
@@ -1388,6 +1460,21 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     return c.json(blueprint
       ? { blueprint, source: "ai" as const }
       : { blueprint: automaticStoryBlueprint(selectedMoments, input.opening), source: "auto" as const });
+  });
+
+  app.post("/api/spaces/:spaceId/stories/:storyId/director-plan", zValidator("json", createDirectorPlanSchema), async (c) => {
+    const user = c.get("user")!;
+    const spaceId = c.req.param("spaceId");
+    await requireMember(repositories, spaceId, user.id);
+    const story = await repositories.stories.get(c.req.param("storyId"));
+    if (!story || story.spaceId !== spaceId) throw new HTTPException(404, { message: "Story not found" });
+    const moments = await Promise.all(story.momentIds.map((momentId) => repositories.objects.get(momentId)));
+    const selectedMoments = moments.filter((moment): moment is MomentObject => Boolean(moment));
+    const plan = await createDirectorPlan(story, selectedMoments, c.req.valid("json").heroMomentId ?? null);
+    const cached = await repositories.directorPlans.get(plan.id);
+    if (cached?.inputHash === plan.inputHash) return c.json({ plan: cached, cached: true });
+    await repositories.directorPlans.put(plan);
+    return c.json({ plan, cached: false }, 201);
   });
 
   app.post("/api/spaces/:spaceId/stories", zValidator("json", createStorySchema), async (c) => {
@@ -1638,6 +1725,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
     await Promise.all([
       repositories.stories.delete(story.id),
       repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
+      repositories.directorPlans.deleteWhere((plan) => plan.storyId === story.id),
       ...exportKeys.map((key) => store.delete(key)),
     ]);
     return c.body(null, 204);
@@ -1753,6 +1841,7 @@ export function createApp({ store, log = process.env.NODE_ENV !== "test" }: Crea
         await Promise.all([
           repositories.stories.delete(story.id),
           repositories.storyRevisions.deleteWhere((revision) => revision.storyId === story.id),
+          repositories.directorPlans.deleteWhere((plan) => plan.storyId === story.id),
           clearStoryExports(store, story),
         ]);
         return;
