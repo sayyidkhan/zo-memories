@@ -136,6 +136,13 @@ function storyOpening(story: Story) {
 function storyClosing(story: Story) {
   return story.canvas?.blueprint?.closing ?? story.blueprint?.closing ?? storyOpening(story);
 }
+function storySignature(story: Story, moments: MomentObject[]) {
+  const people = new Set(moments.map((moment) => moment.uploadedBy)).size;
+  const parts = [`${moments.length} ${moments.length === 1 ? "moment" : "moments"}`, `${people} ${people === 1 ? "person" : "people"}`];
+  const place = story.canvas?.location ?? story.location;
+  if (place) parts.push(place);
+  return parts.join("  ·  ");
+}
 
 function chapterNarration(story: Story, momentId: string | undefined) {
   return chapterForMoment(story, momentId)?.narration ?? storyOpening(story);
@@ -691,6 +698,13 @@ function drawCarouselClosing(context: CanvasRenderingContext2D, options: SocialE
   context.fillStyle = light ? "rgba(255,248,236,.76)" : "#655f56";
   context.font = "500 20px sans-serif";
   wrapText(context, storyClosing(options.story), side, height * .525 + titleLines * 54 + 28, width - side * 2, 29, 4);
+  const signature = storySignature(options.story, options.moments);
+  const signatureY = height - Math.max(96, safeArea(width, height, options.profile).bottom + 52);
+  context.save();
+  context.fillStyle = light ? palette.gold : palette.coral;
+  context.font = "700 18px sans-serif";
+  context.fillText(signature.toUpperCase(), side, signatureY);
+  context.restore();
   brand(context, width, height, light ? palette.cream : palette.ink, options.profile);
   storyRail(context, options, index, total, light ? palette.gold : palette.coral);
   slideNumber(context, options, index, total, light);

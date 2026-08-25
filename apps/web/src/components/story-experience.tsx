@@ -25,26 +25,31 @@ function storyDateRange(objects: MomentObject[]) {
 
 const storyStyleNames: Record<StoryStyle, string> = { classic: "Classic", flipbook: "Flipbook", comic: "Comic", scrapbook: "Scrapbook", cinematic: "Cinematic" };
 
+function hookLine(story: Story) {
+  const opening = (story.canvas?.opening ?? story.opening).trim();
+  const sentence = opening.split(/(?<=[.!?])\s+/)[0] ?? opening;
+  return sentence.length > 130 ? `${sentence.slice(0, 127).trimEnd()}…` : sentence;
+}
+
 function StoryCover({ story, objects, onOpen }: { story: Story; objects: MomentObject[]; onOpen: () => void }) {
   const moments = storyMoments(story, objects);
-  const photos = moments.filter((object) => object.kind === "photo").slice(0, 3);
+  const hero = moments.find((object) => object.kind === "photo");
   const formatLabel = story.styleSource === "auto" ? `Auto · ${storyStyleNames[story.style]}` : storyStyleNames[story.style];
   return (
-    <button onClick={onOpen} className="story-cover group relative min-h-[28rem] overflow-hidden rounded-[32px] bg-[#183128] text-left text-[#fff9ee] shadow-[0_30px_75px_rgba(37,47,39,.18)]">
-      <div className="absolute inset-0 grid grid-cols-[1.45fr_.75fr] gap-1 bg-[#344b40]">
-        {photos[0] ? <img src={api.objectContentUrl(photos[0].spaceId, photos[0].id)} alt="" className="size-full object-cover transition duration-1000 group-hover:scale-[1.025]" /> : <div className="bg-[#415a4c]" />}
-        <div className="grid grid-rows-2 gap-1">
-          {photos.slice(1, 3).map((photo) => <img key={photo.id} src={api.objectContentUrl(photo.spaceId, photo.id)} alt="" className="size-full object-cover transition duration-1000 group-hover:scale-[1.04]" />)}
-        </div>
+    <button onClick={onOpen} className="story-cover group relative min-h-[30rem] overflow-hidden rounded-[32px] bg-[#183128] text-left text-[#fff9ee] shadow-[0_30px_75px_rgba(37,47,39,.18)] sm:min-h-[34rem]">
+      <div className="absolute inset-0 bg-[#344b40]">
+        {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="size-full object-cover transition duration-[1400ms] ease-out group-hover:scale-[1.035]" /> : <div className="size-full bg-[#415a4c]" />}
       </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,27,20,.9)_0%,rgba(10,27,20,.48)_48%,rgba(10,27,20,.12)_100%),linear-gradient(0deg,rgba(10,27,20,.72),transparent_60%)]" />
-      <div className="relative flex min-h-[28rem] max-w-2xl flex-col justify-between p-7 sm:p-10 lg:p-12">
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-[#f0c681]"><Sparkles className="size-4" />{formatLabel} · {moments.length} moments</div>
-        <div>
-          {story.location ? <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#e9ddc7]"><MapPin className="size-4" />{story.location}</p> : null}
-          <h2 className="max-w-xl font-display text-[clamp(3rem,6vw,6.3rem)] leading-[.88] tracking-[-.055em]">{story.title}</h2>
-          <p className="mt-5 max-w-lg line-clamp-2 text-sm leading-6 text-[#e7dfd2] sm:text-base">{story.opening}</p>
-          <span className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#fff8ec] px-5 py-3 text-sm font-bold text-[#26372f] shadow-lg transition group-hover:translate-x-1">Read the story <ArrowRight className="size-4" /></span>
+      <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(9,24,17,.9)_0%,rgba(9,24,17,.35)_45%,rgba(9,24,17,.28)_100%)]" />
+      <div className="relative flex min-h-[30rem] flex-col justify-between p-7 sm:min-h-[34rem] sm:p-10 lg:p-12">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.24em] text-[#f0c681]"><Sparkles className="size-4" />{formatLabel} · {moments.length} moments</span>
+          {story.location ? <span className="flex items-center gap-2 rounded-full bg-black/30 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#e9ddc7] backdrop-blur-sm"><MapPin className="size-3.5" />{story.location}</span> : null}
+        </div>
+        <div className="max-w-4xl">
+          <h2 className="font-display text-[clamp(3.4rem,9vw,8.5rem)] leading-[.84] tracking-[-.055em] [text-shadow:0_4px_36px_rgba(0,0,0,.35)]">{story.title}</h2>
+          <p className="mt-6 max-w-xl border-l-2 border-[#f0c681] pl-4 font-display text-lg italic leading-7 text-[#f3ead9] sm:text-2xl sm:leading-9">{hookLine(story)}</p>
+          <span className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#fff8ec] px-5 py-3 text-sm font-bold text-[#26372f] shadow-lg transition group-hover:translate-x-1">Read the story <ArrowRight className="size-4" /></span>
         </div>
       </div>
     </button>
@@ -404,7 +409,7 @@ function StoryHistoryDialog({ open, story, currentCanvas, onClose, onRestored }:
   );
 }
 
-export function StoryReader({ story, objects, canEdit, canDelete, onClose, onStoryChanged, onDelete }: { story: Story | null; objects: MomentObject[]; canEdit: boolean; canDelete: boolean; onClose: () => void; onStoryChanged: (story: Story) => void; onDelete: (story: Story) => void }) {
+export function StoryReader({ story, objects, canEdit, canDelete, reveal = false, onClose, onStoryChanged, onDelete }: { story: Story | null; objects: MomentObject[]; canEdit: boolean; canDelete: boolean; reveal?: boolean; onClose: () => void; onStoryChanged: (story: Story) => void; onDelete: (story: Story) => void }) {
   const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -503,19 +508,19 @@ export function StoryReader({ story, objects, canEdit, canDelete, onClose, onSto
   const saveLabel = !canvasValid ? "Finish required text" : saveCanvas.isPending ? "Saving…" : saveCanvas.isError ? "Save failed" : dirty ? "Changes pending" : "Saved";
   return (
     <>
-      <article data-editing={editing || undefined} className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
+      <article data-editing={editing || undefined} data-reveal={reveal || undefined} className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
         <div className="fixed right-3 top-[max(.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2 sm:right-4 sm:top-4">
           {editing ? <><span className={cn("inline-flex size-11 items-center justify-center rounded-full bg-[#183128]/88 text-[#fff9ee] shadow-xl backdrop-blur-md sm:hidden", saveCanvas.isError && "bg-[#8a372b]")} aria-label={saveLabel}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}</span><span className={cn("hidden h-11 items-center gap-2 rounded-full bg-[#183128]/88 px-4 text-xs font-bold text-[#fff9ee] shadow-xl backdrop-blur-md sm:inline-flex", saveCanvas.isError && "bg-[#8a372b]")}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}{saveLabel}</span><button onClick={() => setHistoryOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/94 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md sm:h-12 sm:w-auto sm:px-5" aria-label="Version history"><History className="size-4" /><span className="hidden sm:inline">Versions</span></button><button onClick={finishEditing} disabled={!canvasValid || saveCanvas.isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl transition hover:bg-[#f6d795] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:px-5"><Check className="size-4" />Done</button></> : <>{canEdit ? <button onClick={() => setEditing(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}<button onClick={() => setShareOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button><button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button></>}
         </div>
         <header className="relative min-h-[76dvh] overflow-hidden bg-[#183128] text-[#fff9ee] sm:min-h-[88vh]">
-          {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="absolute inset-0 size-full object-cover" /> : null}
+          {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="story-reveal-photo absolute inset-0 size-full object-cover" /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,26,19,.96),rgba(9,26,19,.47)_60%,rgba(9,26,19,.18)),linear-gradient(0deg,rgba(9,26,19,.74),transparent_58%)]" />
           <div className="relative mx-auto flex min-h-[76dvh] max-w-[92rem] flex-col justify-between px-5 pb-9 pt-[max(1.25rem,env(safe-area-inset-top))] sm:min-h-[88vh] sm:px-10 sm:py-10 lg:px-16 lg:py-14">
             {editing ? <span className="mt-14 flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681] sm:mt-0"><PencilLine className="size-4" />Tap any outlined text to edit</span> : <button onClick={onClose} className="flex w-fit items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#f0c681]"><ArrowLeft className="size-4" />All stories</button>}
             <div className="max-w-4xl pb-8">
               <div className="mb-6 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[.18em] text-[#e9ddc7]"><span className="flex items-center gap-2"><CalendarDays className="size-4 shrink-0" /><InlineText value={canvas.dateRange} onChange={(value) => updateCanvas("dateRange", value)} editing={editing} label="story date" maxLength={100} singleLine className="min-w-24" /></span>{editing || canvas.location ? <span className="flex items-center gap-2"><MapPin className="size-4 shrink-0" /><InlineText value={canvas.location} onChange={(value) => updateCanvas("location", value)} editing={editing} label="place or route" maxLength={100} singleLine className="min-w-24" /></span> : null}<span className="flex items-center gap-2"><Sparkles className="size-4" />{storyStyleNames[story.style]} · {story.styleSource === "ai" ? "AI suggested" : story.styleSource === "manual" ? "Chosen by you" : "Auto selected"}</span></div>
               {editing ? <div className="mb-6 grid w-full max-w-md grid-cols-3 gap-1 rounded-[18px] border border-white/15 bg-black/20 p-1">{(["classic", "scrapbook", "cinematic"] as const).map((theme) => <button key={theme} type="button" disabled={changeTheme.isPending} onClick={() => changeTheme.mutate(theme)} className={cn("min-w-0 rounded-[14px] px-1.5 py-2 text-[9px] font-bold uppercase tracking-[.08em] transition sm:px-3 sm:text-[10px]", story.style === theme ? "bg-[#f0c681] text-[#26372f]" : "text-white/65 hover:text-white")}>{storyStyleNames[theme]}</button>)}</div> : null}
-              <InlineText value={canvas.title} onChange={(value) => updateCanvas("title", value)} editing={editing} label="story title" maxLength={100} singleLine className="font-display text-[clamp(3.15rem,14vw,10rem)] leading-[.82] tracking-[-.06em]" />
+              <InlineText value={canvas.title} onChange={(value) => updateCanvas("title", value)} editing={editing} label="story title" maxLength={100} singleLine className="story-reveal-title font-display text-[clamp(3.15rem,14vw,10rem)] leading-[.82] tracking-[-.06em]" />
               <InlineText value={canvas.opening} onChange={(value) => updateCanvas("opening", value)} editing={editing} label="story opening" maxLength={1200} className="mt-6 max-w-2xl whitespace-pre-wrap text-base leading-7 text-[#eee4d6] sm:mt-8 sm:text-xl sm:leading-9" />
             </div>
           </div>

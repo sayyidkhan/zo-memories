@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Album as AlbumIcon, BookOpen, CircleHelp, ImagePlus, Images, Search, Sparkles } from "lucide-react";
+import { Album as AlbumIcon, BookOpen, Check, CircleHelp, ImagePlus, Images, Search, Sparkles, UserPlus, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story } from "@zo-moments/types";
@@ -51,11 +51,51 @@ function MemberAvatarStack({ members, objects, onOpen }: { members: Member[]; ob
   );
 }
 
+type ChecklistAction = "upload" | "story" | "invite";
+
+function GettingStartedChecklist({ spaceId, momentCount, storyCount, peopleCount, pendingInvites, canInvite, onAction }: { spaceId: string; momentCount: number; storyCount: number; peopleCount: number; pendingInvites: number; canInvite: boolean; onAction: (action: ChecklistAction) => void }) {
+  const storageKey = `zo-moments-start-${spaceId}`;
+  const [dismissed, setDismissed] = useState(() => window.localStorage.getItem(storageKey) === "done");
+  const steps: Array<{ id: string; title: string; promise: string; done: boolean; progress?: string; action: ChecklistAction | null; cta: string; icon: typeof ImagePlus }> = [
+    { id: "photos", title: "Add 3 photos", promise: "They become a browsable timeline instantly.", done: momentCount >= 3, progress: `${Math.min(momentCount, 3)}/3`, action: "upload", cta: "Add photos", icon: ImagePlus },
+    { id: "story", title: "See your story", promise: "One tap turns them into a finished storybook.", done: storyCount >= 1, action: momentCount >= 2 ? "story" : "upload", cta: momentCount >= 2 ? "Craft it now" : "Add moments first", icon: Sparkles },
+    { id: "invite", title: "Invite one person", promise: "A story is better when they can retell it too.", done: peopleCount > 1 || pendingInvites > 0, action: canInvite ? "invite" : null, cta: canInvite ? "Send an invite" : "Owner sends invites", icon: UserPlus },
+  ];
+  const completed = steps.filter((step) => step.done).length;
+  if (dismissed || completed === steps.length) return null;
+  const next = steps.find((step) => !step.done);
+  return (
+    <section aria-label="Getting started checklist" className="mb-8 overflow-hidden rounded-[26px] border border-[#d6c8b3] bg-[#20372d] text-[#fffaf2] shadow-[0_18px_50px_rgba(32,55,45,.16)]">
+      <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-6">
+        <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#f0c681]">Get to your first story · {completed} of 3 done</p>
+        <button type="button" onClick={() => { window.localStorage.setItem(storageKey, "done"); setDismissed(true); }} className="grid size-8 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white" aria-label="Dismiss getting started checklist"><X className="size-4" /></button>
+      </div>
+      <div className="mx-5 mt-2 h-1.5 overflow-hidden rounded-full bg-white/12 sm:mx-6"><div className="h-full rounded-full bg-[#f0c681] transition-all duration-700" style={{ width: `${Math.max(8, (completed / 3) * 100)}%` }} /></div>
+      <div className="grid gap-2 p-4 sm:grid-cols-3 sm:gap-3 sm:p-5">
+        {steps.map((step, index) => {
+          const isNext = step.id === next?.id;
+          return (
+            <div key={step.id} className={`flex flex-col rounded-[18px] border p-4 transition ${step.done ? "border-white/10 bg-white/5" : isNext ? "border-[#f0c681]/70 bg-white/10" : "border-white/10 bg-white/[.04]"}`}>
+              <div className="flex items-center gap-2.5">
+                <span className={`grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold ${step.done ? "bg-[#f0c681] text-[#20372d]" : "border border-white/25 bg-white/5 text-white/70"}`}>{step.done ? <Check className="size-4" /> : index + 1}</span>
+                <p className={`min-w-0 truncate text-sm font-bold ${step.done ? "text-white/55 line-through decoration-white/30" : "text-[#fffaf2]"}`}>{step.title}{step.progress && !step.done ? <span className="ml-2 rounded-full bg-white/12 px-2 py-0.5 text-[9px] font-bold text-[#f0c681]">{step.progress}</span> : null}</p>
+              </div>
+              <p className="mt-2 text-[11px] leading-4 text-white/60">{step.promise}</p>
+              {!step.done && isNext ? <button type="button" disabled={!step.action} onClick={() => step.action && onAction(step.action)} className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-[#f0c681] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[.1em] text-[#20372d] transition hover:bg-[#f6d795] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/50"><step.icon className="size-3.5" />{step.cta}</button> : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolean }) {
   const queryClient = useQueryClient();
   const [dialog, setDialog] = useState<"upload" | "invite" | "album" | "story" | "guide" | "members" | null>(null);
   const [preview, setPreview] = useState<MomentObject | null>(null);
   const [openStory, setOpenStory] = useState<Story | null>(null);
+  const [revealStoryId, setRevealStoryId] = useState<string | null>(null);
   const [view, setView] = useState<"stories" | "moments">("stories");
   const { selectedAlbumId, setSelectedAlbumId, search, setSearch } = useAppStore();
   const deferredSearch = useDeferredValue(search);
@@ -139,6 +179,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       </div>
 
       <main className="px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-11">
+        {!isDemo && !allObjects.isPending && !stories.isPending ? <GettingStartedChecklist spaceId={spaceId} momentCount={objectList.length} storyCount={storyList.length} peopleCount={members.length} pendingInvites={invitations.length} canInvite={membership.role === "owner"} onAction={(action) => setDialog(action)} /> : null}
         {invitations.length ? (
           <div className="mb-8 flex items-center gap-4 rounded-[22px] border border-[#d9cbb8] bg-[#fff8ec] px-5 py-4 text-sm text-[#5d665f]">
             <div className="flex -space-x-2">{invitations.slice(0, 3).map((invite) => <span key={invite.id} className="grid size-9 place-items-center rounded-full border-2 border-[#fff8ec] bg-[#cfb99b] text-xs font-bold text-[#34443a]">{invite.email[0]?.toUpperCase()}</span>)}</div>
@@ -185,6 +226,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
         objects={objectList}
         story={null}
         onSaved={(story) => {
+          setRevealStoryId(story.id);
           setOpenStory(story);
           setView("stories");
           setDialog(null);
@@ -193,7 +235,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <HowItWorksDialog open={dialog === "guide"} onClose={() => setDialog(null)} members={members} momentCount={objectList.length} storyCount={storyList.length} albumCount={albums.length} canInvite={membership.role === "owner"} onAction={(action) => { if (action === "moments" || action === "stories") { setView(action); setDialog(null); return; } setDialog(action); }} />
       <MembersDialog open={dialog === "members"} onClose={() => setDialog(null)} spaceId={spaceId} spaceName={space.name} membership={membership} members={members} invitations={invitations} objects={objectList} onInvite={() => setDialog("invite")} />
       <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
-      <StoryReader story={openStory} objects={objectList} canEdit={!isDemo && Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} onClose={() => setOpenStory(null)} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
+      <StoryReader story={openStory} objects={objectList} canEdit={!isDemo && Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} reveal={Boolean(openStory && openStory.id === revealStoryId)} onClose={() => { setRevealStoryId(null); setOpenStory(null); }} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
     </div>
   );
 }
