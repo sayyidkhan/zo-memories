@@ -181,13 +181,14 @@ function brand(context: CanvasRenderingContext2D, width: number, height: number,
   const side = Math.max(54, safe.left);
   const baseline = height - Math.max(46, safe.bottom);
   context.save();
+  context.globalAlpha = .84;
   context.fillStyle = colour;
-  context.font = "700 20px Georgia, serif";
+  context.font = "700 14px Georgia, serif";
   context.fillText("ZO MOMENTS", side, baseline);
-  context.globalAlpha = 0.65;
-  context.font = "600 16px sans-serif";
+  context.globalAlpha = 0.48;
+  context.font = "600 12px sans-serif";
   context.textAlign = "right";
-  context.fillText("A shared story", width - Math.max(54, safe.right), baseline - 1);
+  context.fillText("PRIVATE PHOTO STORY", width - Math.max(54, safe.right), baseline - 1);
   context.restore();
 }
 
@@ -217,7 +218,7 @@ function motionProgress(context: CanvasRenderingContext2D, profile: SocialExport
   context.save();
   context.lineCap = "round";
   context.strokeStyle = "rgba(255,255,255,.38)";
-  context.lineWidth = 5;
+  context.lineWidth = 3;
   context.beginPath();
   context.moveTo(left, y);
   context.lineTo(right, y);
@@ -228,11 +229,11 @@ function motionProgress(context: CanvasRenderingContext2D, profile: SocialExport
   context.lineTo(left + (right - left) * progress, y);
   context.stroke();
   context.fillStyle = palette.cream;
-  context.shadowColor = "rgba(8,20,14,.65)";
-  context.shadowBlur = 8;
-  context.font = "700 15px sans-serif";
+  context.shadowColor = "rgba(8,20,14,.6)";
+  context.shadowBlur = 7;
+  context.font = "700 12px sans-serif";
   context.textBaseline = "top";
-  context.fillText(`MOTION STORY  ·  ${String(scene).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, left, y + 18);
+  context.fillText(`${String(scene).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, left, y + 14);
   context.restore();
 }
 
@@ -477,6 +478,40 @@ function motionCamera(shot: MotionPlanShot, progress: number) {
   }
 }
 
+function storyHeadingSize(value: string, preferred: number, minimum: number) {
+  if (value.length <= 30) return preferred;
+  if (value.length <= 52) return Math.max(minimum, preferred - 8);
+  return minimum;
+}
+
+function drawMotionCaption(
+  context: CanvasRenderingContext2D,
+  options: SocialExportOptions,
+  heading: string,
+  body: string,
+  label: string,
+  emphasis: "normal" | "payoff" = "normal",
+) {
+  const { width, height } = context.canvas;
+  const safe = safeArea(width, height, options.profile);
+  const side = Math.max(54, safe.left);
+  const right = Math.max(54, safe.right);
+  const contentWidth = width - side - right;
+  const titleTop = Math.min(height * .675, height - Math.max(250, safe.bottom + 230));
+  const size = storyHeadingSize(heading, emphasis === "payoff" ? 62 : 54, 42);
+  context.save();
+  context.fillStyle = emphasis === "payoff" ? palette.gold : "rgba(255,248,236,.76)";
+  context.font = "700 13px sans-serif";
+  context.letterSpacing = "1.6px";
+  context.fillText(label.toUpperCase(), side, titleTop - 30);
+  context.letterSpacing = "0px";
+  const lines = title(context, heading, side, titleTop, contentWidth, palette.cream, size, 2);
+  context.fillStyle = "rgba(255,248,236,.78)";
+  context.font = "500 18px sans-serif";
+  wrapText(context, body, side, titleTop + lines * size * .9 + 18, contentWidth, 25, 2);
+  context.restore();
+}
+
 function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], shot: MotionPlanShot, localProgress: number, index: number, total: number) {
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, options.profile);
@@ -496,9 +531,11 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     context.fillStyle = glow;
     context.fillRect(0, 0, width, height);
     context.fillStyle = palette.gold;
-    context.font = "700 17px sans-serif";
-    context.fillText("THE PART WE KEEP", side, height * .54);
-    const closingLines = title(context, "Some journeys end. The story keeps moving.", side, height * .58, width - side * 2, palette.cream, 58, 3);
+    context.font = "700 14px sans-serif";
+    context.letterSpacing = "1.6px";
+    context.fillText("THE LAST FRAME", side, height * .54);
+    context.letterSpacing = "0px";
+    const closingLines = title(context, options.story.canvas?.title ?? options.story.title, side, height * .58, width - side * 2, palette.cream, storyHeadingSize(options.story.canvas?.title ?? options.story.title, 58, 44), 2);
     context.fillStyle = "rgba(255,248,236,.76)";
     context.font = "500 20px sans-serif";
     wrapText(context, storyClosing(options.story), side, height * .58 + closingLines * 54 + 28, width - side * 2, 29, 3);
@@ -531,10 +568,12 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     context.save();
     context.globalAlpha = intro;
     context.fillStyle = palette.gold;
-    context.font = "700 17px sans-serif";
-    context.fillText("A SHARED STORY", side, Math.max(92, safe.top + 42));
+    context.font = "700 13px sans-serif";
+    context.letterSpacing = "1.6px";
+    context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate).toUpperCase() || "A PRIVATE PHOTO STORY", side, Math.max(72, safe.top + 32));
+    context.letterSpacing = "0px";
     const heading = options.story.canvas?.title ?? options.story.title;
-    const headingSize = heading.length > 34 ? 62 : 76;
+    const headingSize = storyHeadingSize(heading, 72, 48);
     const titleTop = Math.min(height * .54, height - safe.bottom - 420);
     const lines = title(context, heading, side, titleTop, width - side * 2, palette.cream, headingSize, 3);
     context.fillStyle = "rgba(255,248,236,.83)";
@@ -543,14 +582,8 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     context.restore();
   } else {
     const chapter = chapterForMoment(options.story, photo?.moment.id);
-    context.fillStyle = palette.gold;
-    context.font = "700 17px sans-serif";
-    const sceneLabel = shot.purpose === "payoff" ? "THE MOMENT IT ALL LANDED" : chapter?.beat.toUpperCase().replace("-", " ") ?? "MOMENT";
-    context.fillText(`${sceneLabel}  ·  ${String(index).padStart(2, "0")}`, side, height * .63);
-    const lines = title(context, chapter?.title ?? photoTitle(options.story, photo), side, height * .675, width - side - Math.max(54, safe.right), palette.cream, 56, 2);
-    context.fillStyle = "rgba(255,248,236,.78)";
-    context.font = "500 19px sans-serif";
-    wrapText(context, chapterNarration(options.story, photo?.moment.id), side, height * .675 + lines * 52 + 20, width - side * 2, 27, 2);
+    const sceneLabel = shot.purpose === "payoff" ? "The moment it landed" : chapter?.beat.replace("-", " ") ?? "From the journey";
+    drawMotionCaption(context, options, chapter?.title ?? photoTitle(options.story, photo), chapterNarration(options.story, photo?.moment.id), sceneLabel, shot.purpose === "payoff" ? "payoff" : "normal");
   }
   motionProgress(context, options.profile, clamp((localProgress + index) / total), index + 1, total, palette.gold);
   brand(context, width, height, palette.cream, options.profile);
@@ -724,19 +757,21 @@ function drawCarouselCover(context: CanvasRenderingContext2D, options: SocialExp
   context.fillStyle = shade;
   context.fillRect(0, 0, width, height);
   const side = Math.max(58, safe.left);
+  const meta = metadata(options.story, options.moments, options.includeLocation, options.includeDate);
+  context.fillStyle = "rgba(255,248,236,.14)";
+  fillRounded(context, "rgba(255,248,236,.14)", side, Math.max(46, safe.top + 18), Math.min(width - side * 2, Math.max(210, context.measureText(meta || "PRIVATE PHOTO STORY").width + 54)), 40, 20);
   context.fillStyle = palette.gold;
-  context.font = "700 18px sans-serif";
-  context.fillText("A JOURNEY WORTH KEEPING", side, Math.max(82, safe.top + 28));
+  context.font = "700 13px sans-serif";
+  context.letterSpacing = "1.4px";
+  context.fillText(meta.toUpperCase() || "PRIVATE PHOTO STORY", side + 20, Math.max(72, safe.top + 44));
+  context.letterSpacing = "0px";
   const heading = options.story.canvas?.title ?? options.story.title;
-  const headingSize = heading.length > 34 ? 64 : 78;
-  const titleTop = Math.min(height * 0.57, height - safe.bottom - 430);
+  const headingSize = storyHeadingSize(heading, 74, 48);
+  const titleTop = Math.min(height * .56, height - safe.bottom - 360);
   const titleLines = title(context, heading, side, titleTop, width - side - Math.max(58, safe.right), palette.cream, headingSize, 3);
   context.fillStyle = "rgba(255,248,236,.86)";
-  context.font = "500 22px sans-serif";
-  wrapText(context, storyOpening(options.story), side, titleTop + titleLines * headingSize * .92 + 30, width - side - Math.max(70, safe.right), 32, 3);
-  context.fillStyle = palette.gold;
-  context.font = "700 17px sans-serif";
-  context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate), side, height - Math.max(112, safe.bottom + 64));
+  context.font = "500 19px sans-serif";
+  wrapText(context, storyOpening(options.story), side, titleTop + titleLines * headingSize * .92 + 25, width - side - Math.max(70, safe.right), 28, 2);
   brand(context, width, height, palette.cream, options.profile);
   storyRail(context, options, index, total, palette.gold);
   slideNumber(context, options, index, total, true);
@@ -880,19 +915,26 @@ function drawCinematicCarouselMoment(context: CanvasRenderingContext2D, options:
   if (photos.length > 1) drawPhotoMosaic(context, photos, 0, 0, width, height, 0);
   else if (photos[0]) cover(context, photos[0].image, 0, 0, width, height, options.profile.cropScale);
   else { context.fillStyle = palette.ink; context.fillRect(0, 0, width, height); }
-  const shade = context.createLinearGradient(0, height * .3, 0, height);
+  const shade = context.createLinearGradient(0, height * .22, 0, height);
   shade.addColorStop(0, "rgba(7,18,12,.04)");
-  shade.addColorStop(1, "rgba(7,18,12,.96)");
+  shade.addColorStop(.5, "rgba(7,18,12,.08)");
+  shade.addColorStop(1, "rgba(7,18,12,.94)");
   context.fillStyle = shade;
   context.fillRect(0, 0, width, height);
   const side = Math.max(54, safe.left);
+  const chapter = chapterForMoment(options.story, photos[0]?.moment.id);
+  const heading = chapter?.title ?? photoTitle(options.story, photos[0]);
+  const headingSize = storyHeadingSize(heading, 58, 42);
+  const titleTop = Math.min(height * .69, height - Math.max(240, safe.bottom + 205));
   context.fillStyle = palette.gold;
-  context.font = "700 17px sans-serif";
-  context.fillText(`SCENE ${String(index).padStart(2, "0")}  ·  ${photos.length > 1 ? `${photos.length} MOMENTS` : "A SHARED STORY"}`, side, height * .68);
-  const titleLines = title(context, photoTitle(options.story, photos[0]), side, height * .72, width - side - Math.max(54, safe.right), palette.cream, 62, 2);
-  context.fillStyle = "rgba(255,248,236,.8)";
-  context.font = "500 19px sans-serif";
-  wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side, height * .72 + titleLines * 57 + 20, width - side * 2, 27, 2);
+  context.font = "700 13px sans-serif";
+  context.letterSpacing = "1.4px";
+  context.fillText((chapter?.beat.replace("-", " ") ?? "FROM THE JOURNEY").toUpperCase(), side, titleTop - 28);
+  context.letterSpacing = "0px";
+  const titleLines = title(context, heading, side, titleTop, width - side - Math.max(54, safe.right), palette.cream, headingSize, 2);
+  context.fillStyle = "rgba(255,248,236,.78)";
+  context.font = "500 17px sans-serif";
+  wrapText(context, chapterNarration(options.story, photos[0]?.moment.id), side, titleTop + titleLines * headingSize * .9 + 17, width - side * 2, 24, 2);
   brand(context, width, height, palette.cream, options.profile);
   storyRail(context, options, index, total, palette.gold);
   slideNumber(context, options, index, total, true);
@@ -905,11 +947,14 @@ function drawCarouselClosing(context: CanvasRenderingContext2D, options: SocialE
   context.fillStyle = options.story.style === "cinematic" ? "#14271f" : palette.paper;
   context.fillRect(0, 0, width, height);
   if (photos.length) drawPhotoMosaic(context, photos, side, height * .08, width - side * 2, height * .3, 18);
-  context.fillStyle = palette.coral;
-  context.font = "700 17px sans-serif";
-  context.fillText("WHAT STAYED WITH US", side, height * .48);
   const light = options.story.style === "cinematic";
-  const titleLines = title(context, "Some journeys end. The story keeps moving.", side, height * .525, width - side * 2, light ? palette.cream : palette.ink, 58, 3);
+  context.fillStyle = light ? palette.gold : palette.coral;
+  context.font = "700 13px sans-serif";
+  context.letterSpacing = "1.5px";
+  context.fillText("THE LAST FRAME", side, height * .48);
+  context.letterSpacing = "0px";
+  const closingHeading = options.story.canvas?.title ?? options.story.title;
+  const titleLines = title(context, closingHeading, side, height * .525, width - side * 2, light ? palette.cream : palette.ink, storyHeadingSize(closingHeading, 58, 42), 2);
   context.fillStyle = light ? "rgba(255,248,236,.76)" : "#655f56";
   context.font = "500 20px sans-serif";
   wrapText(context, storyClosing(options.story), side, height * .525 + titleLines * 54 + 28, width - side * 2, 29, 4);
