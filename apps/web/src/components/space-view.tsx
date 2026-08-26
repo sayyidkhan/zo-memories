@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Album as AlbumIcon, BookOpen, Check, CircleHelp, ImagePlus, Images, Search, Sparkles, UserPlus, X } from "lucide-react";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { api } from "@zo-moments/sdk";
 import type { Member, MomentObject, Story } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { AlbumDialog, InviteDialog, UploadDialog } from "./dialogs";
 import { MemoryCard, MemoryPreview } from "./memory-card";
 import { StoryDialog, StoryReader, StoryShelf } from "./story-experience";
 import { HowItWorksDialog, MembersDialog } from "./space-dialogs";
+import { InterfaceTour } from "./interface-tour";
 import { Button, EmptyState, Spinner } from "./ui";
 
 const memberColours = [
@@ -97,7 +98,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
   const [openStory, setOpenStory] = useState<Story | null>(null);
   const [revealStoryId, setRevealStoryId] = useState<string | null>(null);
   const [view, setView] = useState<"stories" | "moments">("stories");
-  const demoOpened = useRef(false);
+  const [tourVersion, setTourVersion] = useState(0);
   const { selectedAlbumId, setSelectedAlbumId, search, setSearch } = useAppStore();
   const deferredSearch = useDeferredValue(search);
   const detail = useQuery({ queryKey: ["space", spaceId], queryFn: () => api.getSpace(spaceId) });
@@ -152,14 +153,6 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
     onError: () => toast.error("Your moments are safe. We could not draft the first story yet."),
   });
 
-  useEffect(() => {
-    if (!isDemo || demoOpened.current || !storyList.length || allObjects.isPending) return;
-    demoOpened.current = true;
-    const featured = storyList.find((story) => story.style === "cinematic") ?? storyList[0]!;
-    setOpenStory(featured);
-    setRevealStoryId(featured.id);
-  }, [allObjects.isPending, isDemo, storyList]);
-
   if (detail.isPending) return <div className="grid min-h-[70vh] place-items-center text-[#607066]"><Spinner /></div>;
   if (detail.isError || !detail.data) return <EmptyState icon={<Images className="size-7" />} title="This space could not open" body="Refresh the page and try again." />;
 
@@ -172,7 +165,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
 
   return (
     <div className="min-w-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="relative overflow-hidden border-b border-[#d9cebe] px-4 pb-5 pt-6 sm:px-8 sm:pb-8 sm:pt-7 lg:px-12 lg:pb-10 lg:pt-11">
+      <header data-interface-tour="overview" className="relative overflow-hidden border-b border-[#d9cebe] px-4 pb-5 pt-6 sm:px-8 sm:pb-8 sm:pt-7 lg:px-12 lg:pb-10 lg:pt-11">
         <div className="absolute right-[-5%] top-[-85%] size-80 rounded-full bg-[#d9bea3]/30 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-5 sm:gap-7 xl:flex-row xl:items-end">
           <div>
@@ -180,12 +173,13 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
             <h1 className="font-display text-4xl leading-[.96] tracking-[-.045em] text-[#26372f] sm:text-6xl">{space.name}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 text-sm text-[#746d63]">
               {space.description ? <p className="basis-full">{space.description}</p> : null}
-              <button type="button" onClick={() => setDialog("members")} className="flex flex-wrap items-center gap-2 rounded-full text-left transition hover:text-[#34443a]" aria-label="View and manage space members"><span className="flex -space-x-1.5">{members.slice(0, 3).map((member, index) => <span key={member.id} className={`grid size-7 place-items-center rounded-full border-2 border-[#f4ede1] text-[8px] font-bold ${["bg-[#789083] text-white", "bg-[#b1604c] text-white", "bg-[#d7bd96] text-[#34443a]"][index % 3]}`}>{initials(member.name)}</span>)}</span><span className="font-semibold">{members.map((member) => member.name.split(" ")[0]).join(", ")}</span><span className="text-xs underline decoration-[#b9aa97] underline-offset-4">Manage</span></button>
+              <button data-interface-tour="people" type="button" onClick={() => setDialog("members")} className="flex flex-wrap items-center gap-2 rounded-full text-left transition hover:text-[#34443a]" aria-label="View and manage space members"><span className="flex -space-x-1.5">{members.slice(0, 3).map((member, index) => <span key={member.id} className={`grid size-7 place-items-center rounded-full border-2 border-[#f4ede1] text-[8px] font-bold ${["bg-[#789083] text-white", "bg-[#b1604c] text-white", "bg-[#d7bd96] text-[#34443a]"][index % 3]}`}>{initials(member.name)}</span>)}</span><span className="font-semibold">{members.map((member) => member.name.split(" ")[0]).join(", ")}</span><span className="text-xs underline decoration-[#b9aa97] underline-offset-4">Manage</span></button>
               <span className="h-4 w-px bg-[#cfc2b0]" aria-hidden="true" />
-              <button type="button" onClick={() => setDialog("guide")} className="group inline-flex h-9 items-center gap-2 rounded-full border border-[#cab793] bg-[#fffaf2] px-3 text-xs font-bold text-[#34443a] shadow-[0_7px_20px_rgba(56,43,26,.08)] transition hover:-translate-y-0.5 hover:border-[#a9503f] hover:text-[#a9503f]"><CircleHelp className="size-4" />{isDemo ? "Start 7-step tour" : "Learn how it works"}<span className="rounded-full bg-[#f0c681] px-2 py-1 text-[8px] tracking-[.1em] text-[#26372f]">01–07</span></button>
+              <button type="button" onClick={() => setTourVersion((version) => version + 1)} className="inline-flex h-9 items-center gap-2 rounded-full bg-[#26372f] px-3 text-xs font-bold text-[#fffaf2] shadow-[0_7px_20px_rgba(56,43,26,.12)] transition hover:-translate-y-0.5 hover:bg-[#18251f]"><CircleHelp className="size-4" />Take interface tour</button>
+              <button type="button" onClick={() => setDialog("guide")} className="group inline-flex h-9 items-center gap-2 rounded-full border border-[#cab793] bg-[#fffaf2] px-3 text-xs font-bold text-[#34443a] shadow-[0_7px_20px_rgba(56,43,26,.08)] transition hover:-translate-y-0.5 hover:border-[#a9503f] hover:text-[#a9503f]"><CircleHelp className="size-4" />{isDemo ? "How this demo works" : "Learn how it works"}<span className="rounded-full bg-[#f0c681] px-2 py-1 text-[8px] tracking-[.1em] text-[#26372f]">01–07</span></button>
             </div>
           </div>
-          <div className="hidden gap-2 sm:flex sm:flex-nowrap">
+          <div data-interface-tour="create" className="hidden gap-2 sm:flex sm:flex-nowrap">
             <Button className="whitespace-nowrap" variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
             <Button className="whitespace-nowrap" onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
           </div>
@@ -195,8 +189,8 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 border-b border-[#ddd2c2] bg-[#f4ede1]/95 px-4 py-3 backdrop-blur-xl sm:top-16 sm:px-8 sm:py-4 lg:top-0 lg:px-12">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="grid max-w-full grid-cols-2 gap-2 md:flex md:overflow-x-auto md:pb-1 no-scrollbar">
-            <button onClick={() => setView("stories")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "stories" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><BookOpen className="size-4" />Stories{storyList.length ? <span className="opacity-65">{storyList.length}</span> : null}</button>
-            <button onClick={() => setView("moments")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "moments" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><Images className="size-4" />Moments <span className="opacity-65">{objectList.length}</span></button>
+            <button data-interface-tour="stories" onClick={() => setView("stories")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "stories" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><BookOpen className="size-4" />Stories{storyList.length ? <span className="opacity-65">{storyList.length}</span> : null}</button>
+            <button data-interface-tour="moments" onClick={() => setView("moments")} className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition md:shrink-0 ${view === "moments" ? "bg-[#26372f] text-[#fffaf2]" : "bg-[#e8dfd1] text-[#58645c] hover:bg-[#ddd2c2]"}`}><Images className="size-4" />Moments <span className="opacity-65">{objectList.length}</span></button>
           </div>
           {view === "moments" ? (
             <label className="relative block md:w-64">
@@ -238,7 +232,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
         )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbc] bg-[#fffaf2]/96 px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_42px_rgba(46,39,30,.12)] backdrop-blur-xl sm:hidden">
+      <div data-interface-tour="create" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbc] bg-[#fffaf2]/96 px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_42px_rgba(46,39,30,.12)] backdrop-blur-xl sm:hidden">
         <div className="grid grid-cols-2 gap-2">
           <Button className="h-12" variant="secondary" onClick={() => setDialog("upload")}><ImagePlus className="size-4" />Add moments</Button>
           <Button className="h-12" onClick={() => setDialog("story")} disabled={objectList.length < 2}><Sparkles className="size-4" />Craft a story</Button>
@@ -268,6 +262,7 @@ export function SpaceView({ spaceId, isDemo }: { spaceId: string; isDemo: boolea
       <MembersDialog open={dialog === "members"} onClose={() => setDialog(null)} spaceId={spaceId} spaceName={space.name} membership={membership} members={members} invitations={invitations} objects={objectList} onInvite={() => setDialog("invite")} />
       <MemoryPreview object={preview} uploader={members.find((member) => member.userId === preview?.uploadedBy)} onClose={() => setPreview(null)} onDelete={(object) => removeObject.mutate(object)} />
       <StoryReader story={openStory} objects={objectList} canEdit={!isDemo && Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} canDelete={Boolean(openStory && (membership.role === "owner" || openStory.createdBy === membership.userId))} reveal={Boolean(openStory && openStory.id === revealStoryId)} onClose={() => { setRevealStoryId(null); setOpenStory(null); }} onStoryChanged={setOpenStory} onDelete={(story) => { if (window.confirm("Delete this story? The original moments will stay in the space.")) removeStory.mutate(story); }} />
+      <InterfaceTour spaceId={spaceId} restartKey={tourVersion} onViewChange={setView} />
     </div>
   );
 }

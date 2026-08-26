@@ -201,7 +201,7 @@ function StoryMoments({ story, moments, canvas, editing, onMomentChange, onBluep
 export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMoments }: { stories: Story[]; objects: MomentObject[]; isDemo: boolean; onOpen: (story: Story) => void; onCreate: () => void; onAddMoments: () => void }) {
   if (!stories.length) {
     return (
-      <div className="mx-auto max-w-3xl rounded-[34px] border border-[#d9cdbc] bg-[#fff9ef] px-6 py-14 text-center shadow-[0_22px_65px_rgba(70,55,37,.08)] sm:px-12">
+      <div data-interface-tour="story" className="mx-auto max-w-3xl rounded-[34px] border border-[#d9cdbc] bg-[#fff9ef] px-6 py-14 text-center shadow-[0_22px_65px_rgba(70,55,37,.08)] sm:px-12">
         <div className="mx-auto grid size-16 place-items-center rounded-[22px] bg-[#26372f] text-[#f0c681]"><BookOpen className="size-7" /></div>
         <p className="mt-7 text-[10px] font-bold uppercase tracking-[.22em] text-[#a9503f]">More than an album</p>
         <h2 className="mx-auto mt-3 max-w-xl font-display text-4xl leading-[.98] tracking-[-.035em] text-[#26372f] sm:text-6xl">Turn the moments into something worth retelling.</h2>
@@ -216,7 +216,7 @@ export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMo
       if (!storyByFormat.has(story.style)) storyByFormat.set(story.style, story);
     });
     return (
-      <div>
+      <div data-interface-tour="story">
         <div className="mb-7 overflow-hidden rounded-[30px] border border-[#d8cbb8] bg-[#fff8ec] px-6 py-7 sm:px-8 sm:py-8">
           <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#a9503f]">Demo story gallery</p>
           <div className="mt-3 max-w-3xl">
@@ -233,7 +233,7 @@ export function StoryShelf({ stories, objects, isDemo, onOpen, onCreate, onAddMo
       </div>
     );
   }
-  return <div className="grid gap-8">{stories.map((story) => <StoryCover key={story.id} story={story} objects={objects} onOpen={() => onOpen(story)} />)}</div>;
+  return <div data-interface-tour="story" className="grid gap-8">{stories.map((story) => <StoryCover key={story.id} story={story} objects={objects} onOpen={() => onOpen(story)} />)}</div>;
 }
 
 export function StoryDialog({ open, onClose, spaceId, objects, story, onSaved }: { open: boolean; onClose: () => void; spaceId: string; objects: MomentObject[]; story?: Story | null; onSaved: (story: Story) => void }) {
