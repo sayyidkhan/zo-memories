@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { assessMotionPlan, buildCarouselPlan, buildMotionPlan, isShareCancellation } from "../src/lib/social-export";
+import { chooseAdaptivePhotoLayout, fitHeadingSize } from "../src/lib/layout-engine";
 
 describe("buildCarouselPlan", () => {
   test("adds a cover and closing card around one slide per photo", () => {
@@ -21,6 +22,37 @@ describe("buildCarouselPlan", () => {
     const plan = buildCarouselPlan(10, 4);
     expect(plan).toHaveLength(4);
     expect(plan.filter((slide) => slide.kind === "moment").flatMap((slide) => slide.photoIndexes)).toEqual(Array.from({ length: 10 }, (_, index) => index));
+  });
+
+  test("uses the narrative hero as the cover without dropping chronological moments", () => {
+    const plan = buildCarouselPlan(6, 20, 4);
+    expect(plan[0]?.photoIndexes).toEqual([4]);
+    expect(plan.filter((slide) => slide.kind === "moment").flatMap((slide) => slide.photoIndexes)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe("adaptive layout engine", () => {
+  test("stacks landscape photos instead of forcing them into narrow columns", () => {
+    expect(chooseAdaptivePhotoLayout([1.8, 1.55], 0.8).kind).toBe("landscape-stack");
+  });
+
+  test("gives portrait pairs full-height side-by-side frames", () => {
+    const layout = chooseAdaptivePhotoLayout([0.62, 0.7], 0.8);
+    expect(layout.kind).toBe("portrait-duo");
+    expect(layout.frames.every((frame) => frame.height === 1)).toBe(true);
+  });
+
+  test("uses an asymmetric editorial rhythm for mixed media", () => {
+    const first = chooseAdaptivePhotoLayout([1.7, 0.65, 1], 0.8, 1);
+    const second = chooseAdaptivePhotoLayout([1.7, 0.65, 1], 0.8, 2);
+    expect(first.kind).toBe("asymmetric-mosaic");
+    expect(first.frames[0]?.x).not.toBe(second.frames[0]?.x);
+  });
+
+  test("fits long headings within the available line budget", () => {
+    const size = fitHeadingSize((value, fontSize) => value.length * fontSize * 0.55, "A much longer chapter heading that needs room", 420, 2, 64, 32);
+    expect(size).toBeLessThan(64);
+    expect(size).toBeGreaterThanOrEqual(32);
   });
 });
 

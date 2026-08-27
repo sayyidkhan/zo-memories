@@ -1,5 +1,6 @@
 import { api } from "@zo-moments/sdk";
 import type { DirectorPlan, MomentObject, Story, StoryStyle } from "@zo-moments/types";
+import { chooseAdaptivePhotoLayout, fitHeadingSize } from "./layout-engine";
 
 export type SocialExportFormat = "image" | "video";
 
@@ -190,6 +191,13 @@ function brand(context: CanvasRenderingContext2D, width: number, height: number,
   context.textAlign = "right";
   context.fillText("PRIVATE PHOTO STORY", width - Math.max(54, safe.right), baseline - 1);
   context.restore();
+}
+
+function measuredHeadingSize(context: CanvasRenderingContext2D, value: string, width: number, preferred: number, minimum: number, maxLines = 2) {
+  return fitHeadingSize((text, size) => {
+    context.font = `700 ${size}px Fraunces, Georgia, serif`;
+    return context.measureText(text).width;
+  }, value, width, maxLines, preferred, minimum);
 }
 
 function title(context: CanvasRenderingContext2D, value: string, x: number, y: number, width: number, colour: string, size: number, maxLines = 3) {
@@ -478,10 +486,8 @@ function motionCamera(shot: MotionPlanShot, progress: number) {
   }
 }
 
-function storyHeadingSize(value: string, preferred: number, minimum: number) {
-  if (value.length <= 30) return preferred;
-  if (value.length <= 52) return Math.max(minimum, preferred - 8);
-  return minimum;
+function storyHeadingSize(context: CanvasRenderingContext2D, value: string, width: number, preferred: number, minimum: number, maxLines = 2) {
+  return measuredHeadingSize(context, value, width, preferred, minimum, maxLines);
 }
 
 function drawMotionCaption(
@@ -498,7 +504,7 @@ function drawMotionCaption(
   const right = Math.max(54, safe.right);
   const contentWidth = width - side - right;
   const titleTop = Math.min(height * .675, height - Math.max(250, safe.bottom + 230));
-  const size = storyHeadingSize(heading, emphasis === "payoff" ? 62 : 54, 42);
+  const size = storyHeadingSize(context, heading, contentWidth, emphasis === "payoff" ? 62 : 54, 42);
   context.save();
   context.fillStyle = emphasis === "payoff" ? palette.gold : "rgba(255,248,236,.76)";
   context.font = "700 13px sans-serif";
@@ -535,7 +541,9 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     context.letterSpacing = "1.6px";
     context.fillText("THE LAST FRAME", side, height * .54);
     context.letterSpacing = "0px";
-    const closingLines = title(context, options.story.canvas?.title ?? options.story.title, side, height * .58, width - side * 2, palette.cream, storyHeadingSize(options.story.canvas?.title ?? options.story.title, 58, 44), 2);
+    const closingHeading = options.story.canvas?.title ?? options.story.title;
+    const closingWidth = width - side * 2;
+    const closingLines = title(context, closingHeading, side, height * .58, closingWidth, palette.cream, storyHeadingSize(context, closingHeading, closingWidth, 58, 40), 2);
     context.fillStyle = "rgba(255,248,236,.76)";
     context.font = "500 20px sans-serif";
     wrapText(context, storyClosing(options.story), side, height * .58 + closingLines * 54 + 28, width - side * 2, 29, 3);
@@ -573,7 +581,8 @@ function drawMotionShot(context: CanvasRenderingContext2D, options: SocialExport
     context.fillText(metadata(options.story, options.moments, options.includeLocation, options.includeDate).toUpperCase() || "A PRIVATE PHOTO STORY", side, Math.max(72, safe.top + 32));
     context.letterSpacing = "0px";
     const heading = options.story.canvas?.title ?? options.story.title;
-    const headingSize = storyHeadingSize(heading, 72, 48);
+    const headingWidth = width - side * 2;
+    const headingSize = storyHeadingSize(context, heading, headingWidth, 72, 42, 3);
     const titleTop = Math.min(height * .54, height - safe.bottom - 420);
     const lines = title(context, heading, side, titleTop, width - side * 2, palette.cream, headingSize, 3);
     context.fillStyle = "rgba(255,248,236,.83)";
@@ -623,7 +632,7 @@ function drawMotionFrame(context: CanvasRenderingContext2D, options: SocialExpor
   drawMotionShot(context, options, photos, shot, localProgress, index, plan.length);
 }
 
-export function buildCarouselPlan(photoCount: number, maxSlides: number): CarouselPlanSlide[] {
+export function buildCarouselPlan(photoCount: number, maxSlides: number, coverPhotoIndex = 0): CarouselPlanSlide[] {
   const contentSlots = Math.max(1, maxSlides - 2);
   const moments = Array.from({ length: Math.min(photoCount, contentSlots) }, (_, slot) => {
     const start = Math.floor((slot * photoCount) / Math.min(photoCount, contentSlots));
@@ -631,7 +640,7 @@ export function buildCarouselPlan(photoCount: number, maxSlides: number): Carous
     return { kind: "moment" as const, photoIndexes: Array.from({ length: end - start }, (_, offset) => start + offset) };
   });
   return [
-    { kind: "cover", photoIndexes: photoCount ? [0] : [] },
+    { kind: "cover", photoIndexes: photoCount ? [Math.min(photoCount - 1, Math.max(0, coverPhotoIndex))] : [] },
     ...moments,
     { kind: "closing", photoIndexes: Array.from({ length: Math.min(3, photoCount) }, (_, index) => photoCount - Math.min(3, photoCount) + index) },
   ];
@@ -687,35 +696,25 @@ function photoCaption(photo: LoadedPhoto) {
   return photo.moment.caption?.trim() ?? photo.moment.name.replace(/\.[^.]+$/, "");
 }
 
-function drawPhotoMosaic(context: CanvasRenderingContext2D, photos: LoadedPhoto[], x: number, y: number, width: number, height: number, radius: number) {
-  if (photos.length <= 1) {
-    clippedPhoto(context, photos[0], x, y, width, height, radius, 1.02);
-    return;
-  }
-  const gap = 14;
-  const leadWidth = photos.length === 2 ? (width - gap) / 2 : width * 0.62;
-  clippedPhoto(context, photos[0], x, y, leadWidth, height, radius, 1.02);
-  if (photos.length === 2) {
-    clippedPhoto(context, photos[1], x + leadWidth + gap, y, width - leadWidth - gap, height, radius, 1.02);
-    return;
-  }
-  if (photos.length > 3) {
-    const columns = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(photos.length * (width / height)))));
-    const rows = Math.ceil(photos.length / columns);
-    const cellWidth = (width - gap * (columns - 1)) / columns;
-    const cellHeight = (height - gap * (rows - 1)) / rows;
-    photos.forEach((photo, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      clippedPhoto(context, photo, x + column * (cellWidth + gap), y + row * (cellHeight + gap), cellWidth, cellHeight, Math.min(radius, 12), 1.02);
-    });
-    return;
-  }
-  const smallX = x + leadWidth + gap;
-  const smallWidth = width - leadWidth - gap;
-  const smallHeight = (height - gap) / 2;
-  clippedPhoto(context, photos[1], smallX, y, smallWidth, smallHeight, radius, 1.02);
-  clippedPhoto(context, photos[2], smallX, y + smallHeight + gap, smallWidth, smallHeight, radius, 1.02);
+function drawPhotoMosaic(context: CanvasRenderingContext2D, photos: LoadedPhoto[], x: number, y: number, width: number, height: number, radius: number, ordinal = 0) {
+  const decision = chooseAdaptivePhotoLayout(
+    photos.map((photo) => photo.image.naturalWidth / Math.max(1, photo.image.naturalHeight)),
+    width / Math.max(1, height),
+    ordinal,
+  );
+  decision.frames.forEach((frame, index) => {
+    const edgeRadius = decision.kind === "balanced-grid" ? Math.min(radius, 12) : radius;
+    clippedPhoto(
+      context,
+      photos[index],
+      x + frame.x * width,
+      y + frame.y * height,
+      frame.width * width,
+      frame.height * height,
+      edgeRadius,
+      1.018,
+    );
+  });
 }
 
 function drawScrapbookPrint(context: CanvasRenderingContext2D, photo: LoadedPhoto | undefined, x: number, y: number, width: number, height: number, angle: number, caption: string, compact = false) {
@@ -766,7 +765,8 @@ function drawCarouselCover(context: CanvasRenderingContext2D, options: SocialExp
   context.fillText(meta.toUpperCase() || "PRIVATE PHOTO STORY", side + 20, Math.max(72, safe.top + 44));
   context.letterSpacing = "0px";
   const heading = options.story.canvas?.title ?? options.story.title;
-  const headingSize = storyHeadingSize(heading, 74, 48);
+  const headingWidth = width - side - Math.max(58, safe.right);
+  const headingSize = storyHeadingSize(context, heading, headingWidth, 74, 40, 3);
   const titleTop = Math.min(height * .56, height - safe.bottom - 360);
   const titleLines = title(context, heading, side, titleTop, width - side - Math.max(58, safe.right), palette.cream, headingSize, 3);
   context.fillStyle = "rgba(255,248,236,.86)";
@@ -781,65 +781,103 @@ function drawClassicCarouselMoment(context: CanvasRenderingContext2D, options: S
   const { width, height } = context.canvas;
   const safe = safeArea(width, height, options.profile);
   const side = Math.max(54, safe.left);
-  const variant = (index - 1) % 3;
   const lead = photos[0];
   const chapter = chapterForMoment(options.story, lead?.moment.id);
-  context.fillStyle = variant === 2 ? palette.ink : palette.paper;
-  context.fillRect(0, 0, width, height);
+  const heading = chapter?.title ?? photoTitle(options.story, lead);
+  const narration = chapterNarration(options.story, lead?.moment.id);
+  const decision = chooseAdaptivePhotoLayout(
+    photos.map((photo) => photo.image.naturalWidth / Math.max(1, photo.image.naturalHeight)),
+    width / height,
+    index,
+  );
   if (photos.length > 1) {
     context.fillStyle = palette.cream;
     context.fillRect(0, 0, width, height);
-    drawPhotoMosaic(context, photos, side, height * .12, width - side - Math.max(side, safe.right), height * .63, 22);
+    drawPhotoMosaic(context, photos, side, height * .12, width - side - Math.max(side, safe.right), height * .59, 22, index);
     context.fillStyle = palette.coral;
-    context.font = "700 17px sans-serif";
-    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}  ·  ${photos.length} MOMENTS`, side, height * .79);
-    title(context, chapter?.title ?? photoTitle(options.story, lead), side, height * .82, width - side * 2, palette.ink, 48, 2);
+    context.font = "700 15px sans-serif";
+    context.letterSpacing = "1.4px";
+    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}  ·  ${photos.length} MOMENTS`, side, height * .755);
+    context.letterSpacing = "0px";
+    const headingWidth = width - side * 2;
+    const headingSize = storyHeadingSize(context, heading, headingWidth, 50, 34);
+    const lines = title(context, heading, side, height * .79, headingWidth, palette.ink, headingSize, 2);
+    context.fillStyle = "#71685e";
+    context.font = "500 17px sans-serif";
+    wrapText(context, narration, side, height * .79 + lines * headingSize * .92 + 18, headingWidth, 24, 2);
     brand(context, width, height, palette.ink, options.profile);
+    storyRail(context, options, index, total, palette.coral);
     slideNumber(context, options, index, total);
     return;
   }
-  if (variant === 0) {
-    clippedPhoto(context, lead, 48, 48, width - 96, height * .68, 26, 1.02);
+
+  if (decision.kind === "landscape-stage") {
+    context.fillStyle = palette.paper;
+    context.fillRect(0, 0, width, height);
+    clippedPhoto(context, lead, side, height * .13, width - side * 2, height * .48, 22, 1.01);
     context.fillStyle = palette.coral;
-    context.font = "700 17px sans-serif";
-    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? `MOMENT ${String(index).padStart(2, "0")}`, side, height * .735);
-    title(context, photoTitle(options.story, lead), side, height * .77, width - side * 2, palette.ink, 52, 2);
-  } else if (variant === 1) {
-    context.fillStyle = palette.coral;
-    context.font = "700 17px sans-serif";
-    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}`, side, height * .105);
-    const titleLines = title(context, photoTitle(options.story, lead), side, height * .14, width - side * 2, palette.ink, 58, 2);
+    context.font = "700 15px sans-serif";
+    context.letterSpacing = "1.4px";
+    context.fillText((chapter?.beat.replace("-", " ") ?? `MOMENT ${String(index).padStart(2, "0")}`).toUpperCase(), side, height * .68);
+    context.letterSpacing = "0px";
+    const headingWidth = width - side * 2;
+    const headingSize = storyHeadingSize(context, heading, headingWidth, 58, 38);
+    const lines = title(context, heading, side, height * .72, headingWidth, palette.ink, headingSize, 2);
     context.fillStyle = "#71685e";
     context.font = "500 18px sans-serif";
-    wrapText(context, chapterNarration(options.story, lead?.moment.id), side, height * .14 + titleLines * 54 + 16, width - side * 2, 26, 2);
-    clippedPhoto(context, lead, side, height * .35, width - side * 2, height * .52, 22, 1.02);
-  } else {
-    clippedPhoto(context, lead, 0, 0, width, height, 0, options.profile.cropScale);
-    const shade = context.createLinearGradient(0, 0, 0, height);
-    shade.addColorStop(0, "rgba(10,24,18,.12)");
-    shade.addColorStop(.55, "rgba(10,24,18,.02)");
-    shade.addColorStop(1, "rgba(10,24,18,.5)");
-    context.fillStyle = shade;
-    context.fillRect(0, 0, width, height);
-    const cardX = side;
-    const cardY = height * .61;
-    const cardWidth = width - side - Math.max(54, safe.right);
-    const cardHeight = Math.min(height * .265, height - cardY - Math.max(90, safe.bottom));
-    fillRounded(context, "rgba(255,248,236,.94)", cardX, cardY, cardWidth, cardHeight, 28);
-    fillRounded(context, palette.coral, cardX + 26, cardY + 27, 184, 36, 18);
-    context.fillStyle = palette.cream;
-    context.font = "700 14px sans-serif";
-    context.textBaseline = "middle";
-    context.fillText(chapter?.beat.toUpperCase().replace("-", " ") ?? "THE JOURNEY", cardX + 44, cardY + 45);
-    context.textBaseline = "alphabetic";
-    const titleLines = title(context, photoTitle(options.story, lead), cardX + 28, cardY + 82, cardWidth - 56, palette.ink, 54, 2);
-    context.fillStyle = "#655f56";
-    context.font = "500 18px sans-serif";
-    wrapText(context, chapterNarration(options.story, lead?.moment.id), cardX + 28, cardY + 90 + titleLines * 50, cardWidth - 56, 25, 2);
+    wrapText(context, narration, side, height * .72 + lines * headingSize * .92 + 20, headingWidth, 26, 3);
+    brand(context, width, height, palette.ink, options.profile);
+    storyRail(context, options, index, total, palette.coral);
+    slideNumber(context, options, index, total);
+    return;
   }
-  brand(context, width, height, variant === 2 ? palette.cream : palette.ink, options.profile);
-  storyRail(context, options, index, total, variant === 2 ? palette.gold : palette.coral);
-  slideNumber(context, options, index, total, variant === 2);
+
+  if (decision.kind === "editorial-split") {
+    context.fillStyle = palette.paper;
+    context.fillRect(0, 0, width, height);
+    const photoOnRight = index % 2 === 0;
+    const photoX = photoOnRight ? width * .43 : 0;
+    clippedPhoto(context, lead, photoX, 0, width * .57, height, 0, 1.02);
+    const textX = photoOnRight ? side : width * .61;
+    const textWidth = width * .34;
+    context.fillStyle = palette.coral;
+    context.font = "700 13px sans-serif";
+    context.letterSpacing = "1.2px";
+    context.fillText(`CHAPTER ${String(index).padStart(2, "0")}`, textX, height * .24);
+    context.letterSpacing = "0px";
+    const headingSize = storyHeadingSize(context, heading, textWidth, 48, 30, 3);
+    const titleLines = title(context, heading, textX, height * .29, textWidth, palette.ink, headingSize, 3);
+    context.fillStyle = "#71685e";
+    context.font = "500 16px sans-serif";
+    wrapText(context, narration, textX, height * .31 + titleLines * headingSize * .92 + 18, textWidth, 23, 4);
+    brand(context, width, height, palette.ink, options.profile);
+    storyRail(context, options, index, total, palette.coral);
+    slideNumber(context, options, index, total);
+    return;
+  }
+
+  clippedPhoto(context, lead, 0, 0, width, height, 0, options.profile.cropScale);
+  const shade = context.createLinearGradient(0, height * .24, 0, height);
+  shade.addColorStop(0, "rgba(10,24,18,.02)");
+  shade.addColorStop(.58, "rgba(10,24,18,.12)");
+  shade.addColorStop(1, "rgba(10,24,18,.9)");
+  context.fillStyle = shade;
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = palette.gold;
+  context.font = "700 14px sans-serif";
+  context.letterSpacing = "1.4px";
+  const titleTop = Math.min(height * .68, height - Math.max(280, safe.bottom + 240));
+  context.fillText((chapter?.beat.replace("-", " ") ?? "FROM THE JOURNEY").toUpperCase(), side, titleTop - 31);
+  context.letterSpacing = "0px";
+  const contentWidth = width - side - Math.max(54, safe.right);
+  const headingSize = storyHeadingSize(context, heading, contentWidth, 58, 38);
+  const titleLines = title(context, heading, side, titleTop, contentWidth, palette.cream, headingSize, 2);
+  context.fillStyle = "rgba(255,248,236,.8)";
+  context.font = "500 18px sans-serif";
+  wrapText(context, narration, side, titleTop + titleLines * headingSize * .92 + 20, contentWidth, 26, 2);
+  brand(context, width, height, palette.cream, options.profile);
+  storyRail(context, options, index, total, palette.gold);
+  slideNumber(context, options, index, total, true);
 }
 
 function drawScrapbookCarouselMoment(context: CanvasRenderingContext2D, options: SocialExportOptions, photos: LoadedPhoto[], relatedPhoto: LoadedPhoto | undefined, index: number, total: number) {
@@ -924,7 +962,8 @@ function drawCinematicCarouselMoment(context: CanvasRenderingContext2D, options:
   const side = Math.max(54, safe.left);
   const chapter = chapterForMoment(options.story, photos[0]?.moment.id);
   const heading = chapter?.title ?? photoTitle(options.story, photos[0]);
-  const headingSize = storyHeadingSize(heading, 58, 42);
+  const headingWidth = width - side - Math.max(54, safe.right);
+  const headingSize = storyHeadingSize(context, heading, headingWidth, 58, 38);
   const titleTop = Math.min(height * .69, height - Math.max(240, safe.bottom + 205));
   context.fillStyle = palette.gold;
   context.font = "700 13px sans-serif";
@@ -954,7 +993,8 @@ function drawCarouselClosing(context: CanvasRenderingContext2D, options: SocialE
   context.fillText("THE LAST FRAME", side, height * .48);
   context.letterSpacing = "0px";
   const closingHeading = options.story.canvas?.title ?? options.story.title;
-  const titleLines = title(context, closingHeading, side, height * .525, width - side * 2, light ? palette.cream : palette.ink, storyHeadingSize(closingHeading, 58, 42), 2);
+  const closingWidth = width - side * 2;
+  const titleLines = title(context, closingHeading, side, height * .525, closingWidth, light ? palette.cream : palette.ink, storyHeadingSize(context, closingHeading, closingWidth, 58, 38), 2);
   context.fillStyle = light ? "rgba(255,248,236,.76)" : "#655f56";
   context.font = "500 20px sans-serif";
   wrapText(context, storyClosing(options.story), side, height * .525 + titleLines * 54 + 28, width - side * 2, 29, 4);
@@ -1006,6 +1046,18 @@ async function loadPhotos(moments: MomentObject[], maxPhotos: number, onProgress
 
 function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The image could not be rendered")), "image/jpeg", 0.9));
+}
+
+function carouselHeroIndex(options: SocialExportOptions, photos: LoadedPhoto[]) {
+  if (options.heroMomentId) {
+    const selected = photos.findIndex((photo) => photo.moment.id === options.heroMomentId);
+    if (selected >= 0) return selected;
+  }
+  const chapters = options.story.canvas?.blueprint?.chapters ?? options.story.blueprint?.chapters ?? [];
+  const heroChapter = chapters.find((chapter) => chapter.beat === "turning-point") ?? chapters.find((chapter) => chapter.beat === "highlight");
+  const narrativeHero = photos.findIndex((photo) => heroChapter?.momentIds.includes(photo.moment.id));
+  if (narrativeHero >= 0) return narrativeHero;
+  return photos.length <= 1 ? 0 : Math.min(photos.length - 1, Math.max(0, Math.round((photos.length - 1) * .62)));
 }
 
 function videoMimeType() {
@@ -1121,7 +1173,7 @@ export async function generateSocialExport(options: SocialExportOptions): Promis
   if (!renderContext || !outputContext) throw new Error("Your browser could not start the story renderer");
   try {
     if (options.format === "image") {
-      const slides = buildCarouselPlan(photos.length, options.profile.maxSlides ?? 10);
+      const slides = buildCarouselPlan(photos.length, options.profile.maxSlides ?? 10, carouselHeroIndex(options, photos));
       const blobs: Blob[] = [];
       for (const [index, slide] of slides.entries()) {
         drawCarouselSlide(renderContext, options, photos, slide, index, slides.length);

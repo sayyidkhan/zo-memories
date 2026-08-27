@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Clapperboard, Cloud, CloudAlert, Download, Eye, Film, Image, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clapperboard, Cloud, CloudAlert, Download, Eye, Film, Image, LayoutGrid, LockKeyhole, Maximize2, Minimize2, Pause, Play, RefreshCw, Share2, Smartphone, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ZoMomentsApiError, type SocialExportPreset } from "@zo-moments/sdk";
 import type { DirectorPlan, MomentObject, Story, StoryStyle } from "@zo-moments/types";
@@ -44,7 +44,7 @@ const socialTargets: SocialTarget[] = [
 ];
 
 const socialExportRendererVersion: Record<SocialExportFormat, string> = {
-  image: "carousel-v4-editorial-cut",
+  image: "carousel-v5-adaptive-layout",
   video: "motion-v11-editorial-cut",
 };
 
@@ -285,7 +285,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
         story,
         moments,
         format: next.format,
-        heroMomentId: next.format === "video" ? heroMomentId || undefined : undefined,
+        heroMomentId: heroMomentId || undefined,
         directorPlan: director?.plan,
         includeLocation,
         includeDate,
@@ -350,7 +350,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const styleLabel = story.styleSource === "auto" ? `Auto · ${styleNames[story.style]}` : styleNames[story.style];
   const aspectRatio = `${target.width} / ${target.height}`;
   const activePreviewUrl = asset?.urls[Math.min(previewIndex, asset.urls.length - 1)];
-  const previewPhoto = moments.find((moment) => moment.kind === "photo");
+  const previewPhoto = photos.find((photo) => photo.id === heroMomentId) ?? photos[0];
   const previewPhotoUrl = previewPhoto ? api.objectContentUrl(previewPhoto.spaceId, previewPhoto.id) : "";
   const expandedPreviewWidth = `min(${previewZoom * 92}vw, ${previewZoom * 78 * (target.width / target.height)}dvh)`;
   const zoomBy = (amount: number) => setPreviewZoom((current) => Math.min(2, Math.max(.5, Math.round((current + amount) * 4) / 4)));
@@ -374,7 +374,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[.88fr_1.12fr] lg:overflow-hidden">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[.88fr_1.12fr] lg:overflow-hidden">
           <div className="grid content-start gap-4 sm:gap-5 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
             <section>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose what appears</p>
@@ -382,6 +382,15 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]">Story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
                 <label className={cn("flex items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
               </div>
+              {format === "image" ? <div className="mt-3 rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
+                <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><LayoutGrid className="size-4" /></span><div><p className="text-xs font-bold text-[#26372f]">Smart composition</p><p className="mt-0.5 text-[11px] leading-4 text-[#756d63]">Zo balances portrait and landscape photos, text length, chapter rhythm, and each destination’s safe area. Choose the image that should anchor the cover.</p></div></div>
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Choose carousel cover">
+                  {photos.map((photo, index) => <button key={photo.id} type="button" disabled={isBusy} onClick={() => { setHeroMomentSelection(photo.id); setAppearanceChanged(true); replaceAsset(null); }} aria-pressed={photo.id === heroMomentId} className={cn("relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition", photo.id === heroMomentId ? "border-[#a9503f] shadow-[0_0_0_3px_rgba(169,80,63,.13)]" : "border-transparent opacity-65 hover:opacity-100")}>
+                    <img src={api.objectContentUrl(photo.spaceId, photo.id)} alt={`Use ${photo.caption || photo.name} on the cover`} className="size-full object-cover" />
+                    <span className={cn("absolute inset-x-1 bottom-1 rounded-md px-1 py-0.5 text-[8px] font-bold uppercase tracking-[.08em]", photo.id === heroMomentId ? "bg-[#a9503f] text-white" : "bg-[#14271f]/78 text-white")}>{photo.id === heroMomentId ? "Cover" : String(index + 1).padStart(2, "0")}</span>
+                  </button>)}
+                </div>
+              </div> : null}
               {format === "video" ? <div className="mt-3 rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
                 <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><Clapperboard className="size-4" /></span><div><p className="text-xs font-bold text-[#26372f]">Director's cut</p><p className="mt-0.5 text-[11px] leading-4 text-[#756d63]">Choose the image where the film should peak. Everything else leads into it, then resolves into the closing card.</p></div></div>
                 <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Choose payoff moment">
@@ -402,7 +411,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
             <section>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Preview and export</p>
               <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to build its crop, safe area and pacing. The preview appears first; select it again to download.</p>
-              {format === "video" ? <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Directed motion:</strong> the photos stay front and centre while the opening, payoff, transitions and soundtrack follow one deliberate arc.</p> : null}
+              {format === "video" ? <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Directed motion:</strong> the photos stay front and centre while the opening, payoff, transitions and soundtrack follow one deliberate arc.</p> : <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Adaptive layout:</strong> every slide gets one clear job and a composition chosen for its actual photos and story text.</p>}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
                   {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
@@ -424,7 +433,7 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
               {asset && activePreviewUrl && !isBusy ? <button type="button" onClick={() => { setPreviewZoom(1); setPreviewExpanded(true); }} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#fff8ec]/95 px-3 text-xs font-bold text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Expand export preview"><Maximize2 className="size-4" /><span className="hidden min-[390px]:inline">Expand</span></button> : null}
             </div>
             {asset && activePreviewUrl ? asset.format === "image"
-              ? <div className="relative grid place-items-center">
+              ? <div className="relative grid w-full min-w-0 max-w-full place-items-center overflow-hidden">
                 <img src={activePreviewUrl} alt={`${target.platform} carousel slide ${previewIndex + 1} of ${asset.urls.length} for ${story.title}`} className="max-h-[min(58dvh,32rem)] w-auto max-w-full rounded-[14px] shadow-[0_22px_60px_rgba(0,0,0,.4)] sm:max-h-[27rem] sm:rounded-[18px]" />
                 {asset.urls.length > 1 ? <>
                   <button type="button" onClick={() => setPreviewIndex((index) => (index - 1 + asset.urls.length) % asset.urls.length)} className="absolute left-2 grid size-11 place-items-center rounded-full bg-[#fff8ec]/90 text-[#26372f] shadow-lg transition hover:bg-white" aria-label="Previous carousel slide"><ChevronLeft className="size-5" /></button>
