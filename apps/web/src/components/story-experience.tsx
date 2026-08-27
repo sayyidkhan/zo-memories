@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, Cloud, FileAudio, FileText, Film, History, ImagePlus, MapPin, PencilLine, Route, RotateCcw, Share2, Sparkles, Trash2, WandSparkles, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type UIEvent } from "react";
 import { api, ZoMomentsApiError } from "@zo-moments/sdk";
 import type { MomentObject, Story, StoryBlueprint, StoryCanvas, StoryCanvasMoment, StoryRevision, StoryStyle, StoryStylePreference, StoryStyleSource } from "@zo-moments/types";
 import { toast } from "sonner";
@@ -436,6 +436,8 @@ function StoryHistoryDialog({ open, story, currentCanvas, onClose, onRestored }:
 export function StoryReader({ story, objects, canEdit, canDelete, reveal = false, onClose, onStoryChanged, onDelete }: { story: Story | null; objects: MomentObject[]; canEdit: boolean; canDelete: boolean; reveal?: boolean; onClose: () => void; onStoryChanged: (story: Story) => void; onDelete: (story: Story) => void }) {
   const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareCue, setShareCue] = useState(false);
+  const [shareCueDismissed, setShareCueDismissed] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [canvas, setCanvas] = useState<StoryCanvas>({ title: "", location: "", dateRange: "", opening: "", moments: [] });
@@ -488,9 +490,16 @@ export function StoryReader({ story, objects, canEdit, canDelete, reveal = false
     setCanvas(next);
     setEditing(false);
     setShareOpen(false);
+    setShareCue(false);
+    setShareCueDismissed(false);
     setHistoryOpen(false);
     saveCanvas.reset();
   }, [story?.id]);
+  useEffect(() => {
+    if (!story || editing || shareOpen || shareCueDismissed) return;
+    const timer = window.setTimeout(() => setShareCue(true), 5_500);
+    return () => window.clearTimeout(timer);
+  }, [editing, shareCueDismissed, shareOpen, story?.id]);
   useEffect(() => {
     if (!editing || !story || !canvasValid || !dirty || saveCanvas.isPending) return;
     const timer = window.setTimeout(() => saveCanvas.mutate({ spaceId: story.spaceId, storyId: story.id, value: canvas }), 800);
@@ -530,11 +539,22 @@ export function StoryReader({ story, objects, canEdit, canDelete, reveal = false
     onStoryChanged(restoredStory);
   };
   const saveLabel = !canvasValid ? "Finish required text" : saveCanvas.isPending ? "Saving…" : saveCanvas.isError ? "Save failed" : dirty ? "Changes pending" : "Saved";
+  const openShare = () => {
+    setShareCue(false);
+    setShareCueDismissed(true);
+    setShareOpen(true);
+  };
+  const reviewProgress = (event: UIEvent<HTMLElement>) => {
+    if (editing || shareCueDismissed) return;
+    const target = event.currentTarget;
+    const scrollable = target.scrollHeight - target.clientHeight;
+    if (scrollable > 0 && target.scrollTop / scrollable >= .66) setShareCue(true);
+  };
   return (
     <>
-      <article data-editing={editing || undefined} data-reveal={reveal || undefined} className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
+      <article data-editing={editing || undefined} data-reveal={reveal || undefined} onScroll={reviewProgress} className="fixed inset-0 z-[60] overflow-y-auto bg-[#f3eadc] text-[#23372d]">
         <div className="fixed right-3 top-[max(.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2 sm:right-4 sm:top-4">
-          {editing ? <><span className={cn("inline-flex size-11 items-center justify-center rounded-full bg-[#183128]/88 text-[#fff9ee] shadow-xl backdrop-blur-md sm:hidden", saveCanvas.isError && "bg-[#8a372b]")} aria-label={saveLabel}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}</span><span className={cn("hidden h-11 items-center gap-2 rounded-full bg-[#183128]/88 px-4 text-xs font-bold text-[#fff9ee] shadow-xl backdrop-blur-md sm:inline-flex", saveCanvas.isError && "bg-[#8a372b]")}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}{saveLabel}</span><button onClick={() => setHistoryOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/94 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md sm:h-12 sm:w-auto sm:px-5" aria-label="Version history"><History className="size-4" /><span className="hidden sm:inline">Versions</span></button><button onClick={finishEditing} disabled={!canvasValid || saveCanvas.isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl transition hover:bg-[#f6d795] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:px-5"><Check className="size-4" />Done</button></> : <>{canEdit ? <button onClick={() => setEditing(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}<button onClick={() => setShareOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5" aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button><button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button></>}
+          {editing ? <><span className={cn("inline-flex size-11 items-center justify-center rounded-full bg-[#183128]/88 text-[#fff9ee] shadow-xl backdrop-blur-md sm:hidden", saveCanvas.isError && "bg-[#8a372b]")} aria-label={saveLabel}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}</span><span className={cn("hidden h-11 items-center gap-2 rounded-full bg-[#183128]/88 px-4 text-xs font-bold text-[#fff9ee] shadow-xl backdrop-blur-md sm:inline-flex", saveCanvas.isError && "bg-[#8a372b]")}>{saveCanvas.isPending ? <Spinner /> : <Cloud className="size-4" />}{saveLabel}</span><button onClick={() => setHistoryOpen(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/94 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md sm:h-12 sm:w-auto sm:px-5" aria-label="Version history"><History className="size-4" /><span className="hidden sm:inline">Versions</span></button><button onClick={finishEditing} disabled={!canvasValid || saveCanvas.isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] px-4 text-sm font-bold text-[#26372f] shadow-xl transition hover:bg-[#f6d795] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:px-5"><Check className="size-4" />Done</button></> : <>{canEdit ? <button onClick={() => setEditing(true)} className="inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#fff9ee]/90 text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] sm:h-12 sm:w-auto sm:px-5" aria-label="Edit story"><PencilLine className="size-4" /><span className="hidden sm:inline">Edit</span></button> : null}<button onClick={openShare} onAnimationEnd={(event) => { if (event.animationName === "story-share-cue") { setShareCue(false); setShareCueDismissed(true); } }} className={cn("inline-flex size-11 items-center justify-center gap-2 rounded-full bg-[#f0c681] text-sm font-bold text-[#26372f] shadow-xl backdrop-blur-md transition hover:scale-[1.03] hover:bg-[#f6d795] sm:h-12 sm:w-auto sm:px-5", shareCue && "story-share-cue")} aria-label="Share story"><Share2 className="size-4" /><span className="hidden sm:inline">Share story</span></button><button onClick={onClose} className="grid size-11 place-items-center rounded-full bg-[#fff9ee]/90 shadow-xl backdrop-blur-md transition hover:scale-105 sm:size-12" aria-label="Close story"><X className="size-5" /></button></>}
         </div>
         <header className="relative min-h-[76dvh] overflow-hidden bg-[#183128] text-[#fff9ee] sm:min-h-[88vh]">
           {hero ? <img src={api.objectContentUrl(hero.spaceId, hero.id)} alt="" className="story-reveal-photo absolute inset-0 size-full object-cover" /> : null}
@@ -551,7 +571,7 @@ export function StoryReader({ story, objects, canEdit, canDelete, reveal = false
         </header>
         <StoryMoments story={story} moments={moments} canvas={canvas} editing={editing} onMomentChange={updateMoment} onBlueprintChange={updateBlueprint} />
         <div className="mx-auto max-w-[86rem] px-5 pb-20 sm:px-8 lg:pb-28">
-          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit && !editing ? <Button variant="secondary" className="mt-8" onClick={() => setEditing(true)}><PencilLine className="size-4" />Edit on the canvas</Button> : null}{!editing ? <Button className="mt-8" onClick={() => setShareOpen(true)}><Share2 className="size-4" />Share this story</Button> : null}{canDelete && !editing ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
+          <footer className="mt-28 border-t border-[#d4c6b3] pt-10 text-center"><BookOpen className="mx-auto size-8 text-[#a9503f]" /><p className="mx-auto mt-5 max-w-xl font-display text-3xl italic">The files are stored. The story is what stays.</p>{canEdit && !editing ? <Button variant="secondary" className="mt-8" onClick={() => setEditing(true)}><PencilLine className="size-4" />Edit on the canvas</Button> : null}{!editing ? <Button className="mt-8" onClick={openShare}><Share2 className="size-4" />Share this story</Button> : null}{canDelete && !editing ? <Button variant="ghost" className="mt-8 text-[#9f3f31]" onClick={() => onDelete(story)}><Trash2 className="size-4" />Delete story</Button> : null}</footer>
         </div>
       </article>
       <SocialShareDialog story={story} objects={objects} open={shareOpen} onClose={() => setShareOpen(false)} />
