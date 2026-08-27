@@ -356,9 +356,9 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
   const zoomBy = (amount: number) => setPreviewZoom((current) => Math.min(2, Math.max(.5, Math.round((current + amount) * 4) / 4)));
   return (
     <div className="fixed inset-0 z-[80] grid place-items-end bg-[#102019]/70 backdrop-blur-md sm:place-items-center" role="presentation" onMouseDown={() => { if (!isBusy) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-[94dvh] sm:max-w-[76rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="social-share-title" className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[#fff8ec] shadow-[0_40px_120px_rgba(8,18,13,.45)] sm:h-[94dvh] sm:w-[94vw] sm:max-w-[90rem] sm:rounded-[36px]" onMouseDown={(event) => event.stopPropagation()}>
         <header className="relative z-20 shrink-0 border-b border-[#ded2c1] bg-[#fff8ec]/95 px-3 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-7 sm:py-5">
-          <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(25rem,.82fr)_auto] lg:items-end">
+          <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(25rem,.82fr)_auto] lg:items-end">
             <div className="pr-12 lg:pr-0">
               <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.16em] text-[#a9503f] sm:mb-2 sm:gap-2 sm:text-[10px] sm:tracking-[.18em]"><Share2 className="size-3.5 sm:size-4" />Share this story <span className="rounded-full bg-[#e8ded0] px-2 py-0.5 text-[#526158] sm:px-2.5 sm:py-1">{styleLabel}</span></div>
               <h2 id="social-share-title" className="font-display text-[1.45rem] leading-[.95] text-[#26372f] sm:text-[2.35rem]">Turn it into something shareable.</h2>
@@ -374,16 +374,16 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[.88fr_1.12fr] lg:overflow-hidden">
-          <div className="grid content-start gap-4 sm:gap-5 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
-            <section>
+        <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,.86fr)_minmax(0,1.14fr)] lg:overflow-hidden">
+          <div className="grid min-w-0 content-start gap-4 overflow-x-hidden sm:gap-5 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+            <section className="min-w-0">
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">2 · Choose what appears</p>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]">Story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
-                <label className={cn("flex items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 accent-[#a9503f]" /></label>
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                <label className="flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]">Story date<input type="checkbox" checked={includeDate} disabled={isBusy} onChange={(event) => { setIncludeDate(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 shrink-0 accent-[#a9503f]" /></label>
+                <label className={cn("flex min-w-0 items-center justify-between gap-3 rounded-[16px] border border-[#ded3c3] bg-[#fffdf8] px-3.5 py-3 text-xs font-semibold text-[#34443a]", story.location ? "cursor-pointer" : "opacity-45")}>Place<input type="checkbox" checked={includeLocation} disabled={isBusy || !story.location} onChange={(event) => { setIncludeLocation(event.target.checked); setAppearanceChanged(true); replaceAsset(null); }} className="size-5 shrink-0 accent-[#a9503f]" /></label>
               </div>
-              {format === "image" ? <div className="mt-3 rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
-                <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><LayoutGrid className="size-4" /></span><div><p className="text-xs font-bold text-[#26372f]">Smart composition</p><p className="mt-0.5 text-[11px] leading-4 text-[#756d63]">Zo balances portrait and landscape photos, text length, chapter rhythm, and each destination’s safe area. Choose the image that should anchor the cover.</p></div></div>
+              {format === "image" ? <div className="mt-3 min-w-0 overflow-hidden rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
+                <div className="flex min-w-0 items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><LayoutGrid className="size-4" /></span><div className="min-w-0"><p className="text-xs font-bold text-[#26372f]">Smart composition</p><p className="mt-0.5 break-words text-[11px] leading-4 text-[#756d63]">Zo balances portrait and landscape photos, text length, chapter rhythm, and each destination’s safe area. Choose the image that should anchor the cover.</p></div></div>
                 <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Choose carousel cover">
                   {photos.map((photo, index) => <button key={photo.id} type="button" disabled={isBusy} onClick={() => { setHeroMomentSelection(photo.id); setAppearanceChanged(true); replaceAsset(null); }} aria-pressed={photo.id === heroMomentId} className={cn("relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition", photo.id === heroMomentId ? "border-[#a9503f] shadow-[0_0_0_3px_rgba(169,80,63,.13)]" : "border-transparent opacity-65 hover:opacity-100")}>
                     <img src={api.objectContentUrl(photo.spaceId, photo.id)} alt={`Use ${photo.caption || photo.name} on the cover`} className="size-full object-cover" />
@@ -391,8 +391,8 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                   </button>)}
                 </div>
               </div> : null}
-              {format === "video" ? <div className="mt-3 rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
-                <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><Clapperboard className="size-4" /></span><div><p className="text-xs font-bold text-[#26372f]">Director's cut</p><p className="mt-0.5 text-[11px] leading-4 text-[#756d63]">Choose the image where the film should peak. Everything else leads into it, then resolves into the closing card.</p></div></div>
+              {format === "video" ? <div className="mt-3 min-w-0 overflow-hidden rounded-[20px] border border-[#d4c4ad] bg-[linear-gradient(135deg,#fffdf8,#f3eadc)] p-4 shadow-[0_10px_25px_rgba(74,59,40,.06)]">
+                <div className="flex min-w-0 items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#26372f] text-[#efc46f]"><Clapperboard className="size-4" /></span><div className="min-w-0"><p className="text-xs font-bold text-[#26372f]">Director's cut</p><p className="mt-0.5 break-words text-[11px] leading-4 text-[#756d63]">Choose the image where the film should peak. Everything else leads into it, then resolves into the closing card.</p></div></div>
                 <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Choose payoff moment">
                   {photos.map((photo, index) => <button key={photo.id} type="button" disabled={isBusy} onClick={() => { setHeroMomentSelection(photo.id); setAppearanceChanged(true); replaceAsset(null); }} aria-pressed={photo.id === heroMomentId} className={cn("relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition", photo.id === heroMomentId ? "border-[#a9503f] shadow-[0_0_0_3px_rgba(169,80,63,.13)]" : "border-transparent opacity-65 hover:opacity-100")}>
                     <img src={api.objectContentUrl(photo.spaceId, photo.id)} alt={`Set ${photo.caption || photo.name} as the payoff`} className="size-full object-cover" />
@@ -402,18 +402,18 @@ export function SocialShareDialog({ story, objects, open, onClose }: { story: St
                 <div className="mt-3 grid gap-1.5 border-t border-[#ddcfbc] pt-3">{directorChecks.map((check) => <div key={check.id} className="flex gap-2 text-[10px] leading-4 text-[#625d54]"><Check className={cn("mt-0.5 size-3 shrink-0", check.status === "pass" ? "text-[#3f7658]" : "text-[#a9503f]")} /><span><strong className="text-[#3d493f]">{check.label}.</strong> {check.detail}</span></div>)}</div>
                 {savedDirectorPlan ? <p className="mt-3 rounded-xl bg-[#e7efe8] px-3 py-2 text-[10px] leading-4 text-[#3f6650]"><strong>Zo production plan saved.</strong> {savedDirectorPlan.shots.length} scenes are cached for this exact story and payoff choice.</p> : null}
               </div> : null}
-              <label className="mt-3 block rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
+              <label className="mt-3 block min-w-0 overflow-hidden rounded-[20px] border border-[#ded3c3] bg-[#fffdf8] p-4">
                 <span className="flex items-center justify-between gap-3 text-xs font-bold text-[#34443a]"><span>Post caption</span><span className="font-medium text-[#8a8176]">{shareCaption.length}/500</span></span>
-                <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={4} className="mt-3 w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />
+                <textarea value={shareCaption} maxLength={500} disabled={isBusy} onChange={(event) => setShareCaption(event.target.value)} rows={4} className="mt-3 block w-full min-w-0 max-w-full resize-y bg-transparent text-sm leading-6 text-[#4f5c54] outline-none placeholder:text-[#9a9186]" placeholder="Write the caption that should travel with your story…" />
               </label>
             </section>
 
-            <section>
+            <section className="min-w-0">
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#8c594d]">3 · Preview and export</p>
               <p className="mb-3 text-xs leading-5 text-[#756d63]">Select a destination to build its crop, safe area and pacing. The preview appears first; select it again to download.</p>
               {format === "video" ? <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Directed motion:</strong> the photos stay front and centre while the opening, payoff, transitions and soundtrack follow one deliberate arc.</p> : <p className="mb-3 rounded-[14px] bg-[#e8efe8] px-3 py-2 text-[11px] leading-4 text-[#496052]"><strong>Adaptive layout:</strong> every slide gets one clear job and a composition chosen for its actual photos and story text.</p>}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
+              <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
+                {availableTargets.map((item) => <button key={item.id} type="button" disabled={isBusy} onClick={() => void exportTo(item)} aria-label={asset?.preset === item.preset ? `Download for ${item.platform} ${item.placement}` : `Preview for ${item.platform} ${item.placement}`} className={cn("relative min-w-0 rounded-[16px] border px-3 py-3 text-left transition disabled:cursor-wait disabled:opacity-55", item.id === target.id ? "border-[#a9503f] bg-[#fffdf8] shadow-[0_8px_22px_rgba(169,80,63,.1)]" : "border-[#ded3c3] bg-[#f3ebdf] hover:border-[#b9aa96]")}>
                   {asset?.preset === item.preset ? <Download className="absolute right-2.5 top-2.5 size-3.5 text-[#3e6651]" /> : <Eye className="absolute right-2.5 top-2.5 size-3.5 text-[#a9503f]" />}
                   <strong className="block pr-5 text-xs text-[#26372f]">{item.platform}</strong>
                   <span className="mt-1 block text-[10px] leading-4 text-[#756d63]">{asset?.preset === item.preset && asset.format === "image" ? `${asset.urls.length} slides ready · tap to download` : item.placement}</span>
