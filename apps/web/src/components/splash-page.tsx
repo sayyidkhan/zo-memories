@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Check, CircleCheck, Eye, FolderPlus, ImagePlus, Link2, LockKeyhole, MessageCircle, Send, Sparkles, Star, UserPlus } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, CircleCheck, Eye, FolderPlus, GitFork, ImagePlus, Link2, LockKeyhole, MessageCircle, Send, Sparkles, Star, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "./brand-mark";
 import { DemoAccess } from "./demo-access";
@@ -35,6 +35,9 @@ export function SplashPage({ onGetStarted, onSignIn }: { onGetStarted: () => voi
             </div>
             <div className="flex items-center gap-5">
               <span className="hidden text-[9px] font-bold uppercase tracking-[.2em] text-[#91a499] md:inline">Private shared journals</span>
+              <a href="https://github.com/sayyidkhan/zo-memories" target="_blank" rel="noreferrer" aria-label="View Zo Moments on GitHub" className="group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-3 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12] sm:px-4">
+                <GitFork className="size-4" /><span className="hidden sm:inline">GitHub</span>
+              </a>
               <button onClick={onSignIn} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-5 text-sm font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[.12]">
               Sign in <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </button>
